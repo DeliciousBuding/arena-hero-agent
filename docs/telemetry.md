@@ -104,14 +104,27 @@ are append-only like TypeScript and are not fsynced per write.
 
 ## Redaction
 
-`sanitize_value` / `sanitize_text` replicate the TypeScript secret patterns:
+`sanitize_text` follows the TypeScript text patterns for `sk-` prefixes,
+`Bearer` tokens, credential assignments, `ARENA_HERO_API_KEY_*` assignments, and
+bare 32+ character alphanumeric runs. UUIDs (hyphenated), normal text, and
+`sha256:`-prefixed identifiers pass through unchanged.
 
-- `sk-` prefixes, `Bearer` tokens, `authorization`/`api_key`/`token`/`cookie`/
-  `secret`/`password` assignments, `ARENA_HERO_API_KEY_*` assignments, and bare
-  32+ character alphanumeric runs.
-- `sha256:`-prefixed hex identifiers and the `configHash`/`strategyHash`/`planHash`
-  fields are protected so audit-chain identity keys are never redacted.
-- UUIDs (hyphenated) and normal text pass through unchanged.
+`sanitize_value` adds mapping-aware, recursive fail-closed protection before a
+record reaches disk:
+
+- Mapping keys are split into lowercase semantic tokens across camelCase,
+  snake_case, kebab-case, and capitalization variants.
+- Direct credential keys (`authorization`, `apiKey`, `token`, `cookie`, `secret`,
+  `password`, `credential`) and credential compounds such as `accessToken`,
+  `clientSecret`, or `serviceCredential` have their entire value replaced by
+  `[REDACTED]`, regardless of whether that value is a string, mapping, list,
+  number, boolean, or null. The key remains visible for diagnostics.
+- Payload-qualified credential keys such as `authorizationHeader`, `tokenValue`,
+  and `apiTokenHash` are also redacted. Metadata concepts with a different
+  semantic suffix, including `tokenCount` and `passwordPolicy`, are preserved.
+- Only the exact `configHash`, `strategyHash`, and `planHash` mapping keys bypass
+  recursive value sanitization. Similar credential-bearing names such as
+  `apiTokenHash` do not inherit that exception.
 
 ## Import boundaries
 
@@ -133,5 +146,8 @@ tests never open network connections.
 - The writer adds explicit path hardening, in-process single-writer enforcement,
   torn-tail recovery, and fail-closed rotation collisions; the TypeScript writer
   has none of these. IO-error counting (`dropped_count`) matches TypeScript.
+- Python mapping sanitization is intentionally stricter than the TypeScript
+  writer: it classifies credential-bearing key variants before recursively
+  sanitizing values, while retaining the TypeScript-compatible text patterns.
 - `validate_trace_record` messages are informative and include the first failing
   field path per schema, but are not byte-identical to TypeBox messages.

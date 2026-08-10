@@ -161,6 +161,58 @@ def test_redaction_hash_field_whitelist() -> None:
     assert "[REDACTED]" not in json.dumps(sanitized)
 
 
+def test_mapping_key_redaction_is_recursive_and_semantic() -> None:
+    sha = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    dirty = {
+        "apiToken": "secret-value",
+        "api_token": {"must": "not-survive"},
+        "apiKey": ["must-not-survive"],
+        "api_key": 123,
+        "api-key": None,
+        "Authorization": "Bearer abc",
+        "nested": [
+            {
+                "password": "p",
+                "serviceCredential": {"nested": "credential-value"},
+                "clientSecret": False,
+                "sessionCookie": 123,
+                "accessToken": None,
+                "safe": "ok",
+            }
+        ],
+        "configHash": f"sha256:{sha}",
+        "strategyHash": f"sha256:{sha}",
+        "planHash": "0123456789abcdef0123456789abcdef",
+        "apiTokenHash": f"sha256:{sha}",
+        "hash": f"sha256:{sha}",
+        "tokenCount": 17,
+        "passwordPolicy": "rotate-quarterly",
+    }
+
+    sanitized = cast(dict[str, object], sanitize_value(dirty))
+
+    for key in (
+        "apiToken",
+        "api_token",
+        "apiKey",
+        "api_key",
+        "api-key",
+        "Authorization",
+        "apiTokenHash",
+    ):
+        assert sanitized[key] == "[REDACTED]"
+    nested = cast(list[dict[str, object]], sanitized["nested"])
+    for key in ("password", "serviceCredential", "clientSecret", "sessionCookie", "accessToken"):
+        assert nested[0][key] == "[REDACTED]"
+    assert nested[0]["safe"] == "ok"
+    assert sanitized["configHash"] == f"sha256:{sha}"
+    assert sanitized["strategyHash"] == f"sha256:{sha}"
+    assert sanitized["planHash"] == "0123456789abcdef0123456789abcdef"
+    assert sanitized["hash"] == f"sha256:{sha}"
+    assert sanitized["tokenCount"] == 17
+    assert sanitized["passwordPolicy"] == "rotate-quarterly"
+
+
 def test_redaction_sha256_prefix_protection_and_bare_hex() -> None:
     sha = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     sanitized = sanitize_text(f"config=sha256:{sha} note={sha}")
@@ -222,6 +274,41 @@ def test_writer_redacts_on_disk_and_keeps_hashes(tmp_path: Path) -> None:
     assert parsed["strategyHash"] == f"sha256:{sha}"
     assert parsed["runId"] == "[REDACTED]"
     assert "sk-abcdefghijklmnop123456" not in line
+
+
+def test_writer_redacts_mapping_extension_fields_on_disk(tmp_path: Path) -> None:
+    sha = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    path = tmp_path / "extended-runtime.jsonl"
+    record = to_json_object(runtime_trace({**RT, "configHash": f"sha256:{sha}"}))
+    record.update(
+        {
+            "apiToken": "secret-value",
+            "authorization": "Bearer abc",
+            "nested": [{"password": "p", "safe": "ok"}],
+            "credential": {"nested": "credential-value"},
+            "apiTokenHash": f"sha256:{sha}",
+            "tokenCount": 3,
+            "passwordPolicy": "managed",
+        }
+    )
+
+    writer = JsonlWriter(path)
+    writer.write(record)
+    writer.close()
+
+    line = path.read_text(encoding="utf-8").strip()
+    parsed = json.loads(line)
+    assert parsed["apiToken"] == "[REDACTED]"
+    assert parsed["authorization"] == "[REDACTED]"
+    assert parsed["nested"][0]["password"] == "[REDACTED]"
+    assert parsed["nested"][0]["safe"] == "ok"
+    assert parsed["credential"] == "[REDACTED]"
+    assert parsed["apiTokenHash"] == "[REDACTED]"
+    assert parsed["configHash"] == f"sha256:{sha}"
+    assert parsed["tokenCount"] == 3
+    assert parsed["passwordPolicy"] == "managed"
+    for leaked in ("secret-value", "Bearer abc", "credential-value"):
+        assert leaked not in line
 
 
 def test_invalid_record_raises_and_does_not_create_file(tmp_path: Path) -> None:

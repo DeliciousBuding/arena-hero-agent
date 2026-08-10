@@ -16,9 +16,11 @@ plus explicit hardening required by the Python-first spec:
 - Best-effort IO errors increment ``dropped_count`` and never block the decision
   path, mirroring TypeScript. Validation failures always raise before any IO.
 
-Redaction follows the TypeScript secret patterns exactly, including the
-``sha256:`` prefix protection for hash identifiers and the ``configHash`` /
-``strategyHash`` / ``planHash`` field whitelist.
+Text redaction follows the TypeScript secret patterns. Mapping redaction is
+deliberately stricter: credential-bearing keys are recognized across common
+camelCase, snake_case, and kebab-case variants before their values can reach
+disk. Only the exact ``configHash`` / ``strategyHash`` / ``planHash`` fields
+bypass value sanitization.
 """
 
 from __future__ import annotations
@@ -156,6 +158,25 @@ def _remove_regular(path: Path) -> None:
 
 HASH_FIELD_KEYS: Final = frozenset({"configHash", "strategyHash", "planHash"})
 
+_CREDENTIAL_KEY_MARKERS: Final = frozenset(
+    {
+        "authorization",
+        "apikey",
+        "token",
+        "cookie",
+        "secret",
+        "password",
+        "credential",
+        "credentials",
+    }
+)
+_CREDENTIAL_VALUE_SUFFIXES: Final = frozenset(
+    {"value", "hash", "data", "text", "bytes", "raw", "header"}
+)
+_CAMEL_ACRONYM_BOUNDARY_RE: Final = re.compile(r"([A-Z]+)([A-Z][a-z])")
+_CAMEL_WORD_BOUNDARY_RE: Final = re.compile(r"([a-z0-9])([A-Z])")
+_NON_ALNUM_RE: Final = re.compile(r"[^A-Za-z0-9]+")
+
 _SECRET_PATTERNS: Final = [
     re.compile(r"sk-[A-Za-z0-9_-]{10,}"),
     re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]+", re.IGNORECASE),
@@ -215,11 +236,50 @@ def sanitize_text(text: str) -> str:
     return redact_text(text)
 
 
+def _normalized_mapping_key_tokens(key: str) -> tuple[str, ...]:
+    """Split a mapping key into lowercase semantic tokens.
+
+    The two camel-case boundaries handle both ``apiToken`` and ``APIKey``;
+    punctuation then makes snake_case and kebab-case equivalent.
+    """
+    separated = _CAMEL_ACRONYM_BOUNDARY_RE.sub(r"\1 \2", key)
+    separated = _CAMEL_WORD_BOUNDARY_RE.sub(r"\1 \2", separated)
+    return tuple(part.casefold() for part in _NON_ALNUM_RE.split(separated) if part)
+
+
+def _is_sensitive_mapping_key(key: object) -> bool:
+    """Return whether ``key`` denotes a credential value.
+
+    Direct credential nouns and compounds ending in one (``apiToken``,
+    ``clientSecret``) are sensitive. A marker followed only by payload-like
+    qualifiers (``apiTokenHash``, ``authorizationHeader``) is also sensitive,
+    preventing a cosmetic ``Hash`` suffix from bypassing redaction. Metadata
+    concepts such as ``tokenCount`` and ``passwordPolicy`` are not matched.
+    """
+    if not isinstance(key, str):
+        return False
+    tokens = _normalized_mapping_key_tokens(key)
+    if not tokens:
+        return False
+
+    for index, token in enumerate(tokens):
+        is_api_key = token == "api" and index + 1 < len(tokens) and tokens[index + 1] == "key"
+        marker_width = 2 if is_api_key else 1
+        if not is_api_key and token not in _CREDENTIAL_KEY_MARKERS:
+            continue
+        suffix = tokens[index + marker_width :]
+        if not suffix or all(part in _CREDENTIAL_VALUE_SUFFIXES for part in suffix):
+            return True
+    return False
+
+
 def sanitize_value(value: object) -> object:
     """Recursively sanitize a JSON value.
 
-    ``configHash`` / ``strategyHash`` / ``planHash`` values are kept verbatim
-    because they are audit-chain identity keys, not credentials.
+    Credential-key values are replaced wholesale regardless of their type;
+    keys remain present for diagnostics. The exact ``configHash`` /
+    ``strategyHash`` / ``planHash`` fields are kept verbatim because they are
+    audit-chain identity keys, not credentials.
     """
     if isinstance(value, str):
         return redact_text(value)
@@ -228,7 +288,12 @@ def sanitize_value(value: object) -> object:
     if isinstance(value, Mapping):
         out: dict[str, object] = {}
         for key, item in value.items():
-            out[key] = item if key in HASH_FIELD_KEYS else sanitize_value(item)
+            if key in HASH_FIELD_KEYS:
+                out[key] = item
+            elif _is_sensitive_mapping_key(key):
+                out[key] = "[REDACTED]"
+            else:
+                out[key] = sanitize_value(item)
         return out
     return value
 
