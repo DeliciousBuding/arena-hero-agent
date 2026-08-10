@@ -20,12 +20,16 @@ EXPLORE_RING_COUNT = 5
 class UnknownTraversalPolicy(StrEnum):
     """Caller-selected treatment of cells absent from terrain observations."""
 
+    __canonical_name__ = "arena-hero.unknown-traversal-policy.v1"
+
     BLOCK = "block"
     ALLOW = "allow"
 
 
 class CellState(StrEnum):
     """Semantic terrain knowledge for a coordinate."""
+
+    __canonical_name__ = "arena-hero.cell-state.v1"
 
     UNKNOWN = "unknown"
     OPEN = "open"
@@ -43,6 +47,8 @@ class SearchLimitExceeded(RuntimeError):
 @dataclass(frozen=True, slots=True)
 class SearchLimits:
     """Finite BFS envelope for searches that may traverse unknown unbounded terrain."""
+
+    __canonical_name__ = "arena-hero.search-limits.v1"
 
     node_budget: int
     search_radius: int
@@ -62,6 +68,8 @@ TS_COMPATIBLE_SEARCH_LIMITS = SearchLimits(node_budget=4096, search_radius=24)
 @dataclass(frozen=True, slots=True)
 class Bounds:
     """Inclusive signed-coordinate navigation bounds."""
+
+    __canonical_name__ = "arena-hero.navigation-bounds.v1"
 
     min_x: int
     max_x: int
@@ -89,6 +97,8 @@ class NavigationGrid:
     Cells in neither collection are unknown. Unknown cells are never silently treated as
     empty: every traversal operation requires an :class:`UnknownTraversalPolicy`.
     """
+
+    __canonical_name__ = "arena-hero.navigation-grid.v1"
 
     open_cells: frozenset[Coordinate] = field(default_factory=frozenset)
     blocked_cells: frozenset[Coordinate] = field(default_factory=frozenset)
