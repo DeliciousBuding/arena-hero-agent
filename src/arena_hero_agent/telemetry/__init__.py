@@ -1,1 +1,93 @@
-"""Agent-side trace/events built on SDK-owned telemetry contracts."""
+"""Local telemetry primitives: versioned trace records, JSONL persistence, and
+deterministic plan hashing.
+
+This package is self-contained and has no dependency on the ``arena-hero`` SDK
+telemetry sink or any framework. Official wire contracts remain owned by the
+SDK; this package provides the agent-side, locally persisted audit trail.
+"""
+
+from arena_hero_agent.telemetry.decision_trace import (
+    DEFAULT_PROCESS_RUN_ID,
+    DEFAULT_TENANT_ID,
+    OUTCOME_COUNT_EVENT_TYPES,
+    OutcomeCountEvent,
+    OutcomeCountEventTypes,
+    OutcomeCountOwnershipContext,
+    OutcomeEventCounts,
+    count_outcome_events,
+    decision_trace,
+    outcome_trace,
+    plan_hash_of,
+    runtime_trace,
+)
+from arena_hero_agent.telemetry.jsonl_writer import (
+    DEFAULT_JSONL_ROTATION,
+    HASH_FIELD_KEYS,
+    JsonlRotationOptions,
+    JsonlWriter,
+    JsonlWriterError,
+    TornTailError,
+    append_jsonl_line,
+    redact_text,
+    rotated_jsonl_paths,
+    sanitize_text,
+    sanitize_value,
+    validate_rotation,
+    validate_write_path,
+)
+from arena_hero_agent.telemetry.schema import (
+    SCHEMA_VERSION,
+    UNSET,
+    BeaconTrace,
+    DecisionTraceRecord,
+    FailedEventTrace,
+    HumanOverrideTrace,
+    OutcomeTraceRecord,
+    RejectedOverrideTrace,
+    RuntimeTraceRecord,
+    TraceRecord,
+    to_json,
+    to_json_object,
+    validate_trace_record,
+)
+
+__all__ = [
+    "SCHEMA_VERSION",
+    "UNSET",
+    "DEFAULT_PROCESS_RUN_ID",
+    "DEFAULT_TENANT_ID",
+    "DEFAULT_JSONL_ROTATION",
+    "HASH_FIELD_KEYS",
+    "BeaconTrace",
+    "DecisionTraceRecord",
+    "FailedEventTrace",
+    "HumanOverrideTrace",
+    "OutcomeCountEvent",
+    "OutcomeCountEventTypes",
+    "OutcomeCountOwnershipContext",
+    "OutcomeEventCounts",
+    "OutcomeTraceRecord",
+    "RejectedOverrideTrace",
+    "RuntimeTraceRecord",
+    "TraceRecord",
+    "JsonlRotationOptions",
+    "JsonlWriter",
+    "JsonlWriterError",
+    "TornTailError",
+    "OUTCOME_COUNT_EVENT_TYPES",
+    "append_jsonl_line",
+    "count_outcome_events",
+    "decision_trace",
+    "outcome_trace",
+    "plan_hash_of",
+    "redact_text",
+    "rotated_jsonl_paths",
+    "runtime_trace",
+    "sanitize_text",
+    "sanitize_value",
+    "to_json",
+    "to_json_object",
+    "validate_rotation",
+    "validate_trace_record",
+    "validate_write_path",
+]
