@@ -1,1 +1,1 @@
-"""SDK, filesystem, SQLite, subprocess, and HTTP adapter implementations."""
+"""Concrete adapters for external systems."""
