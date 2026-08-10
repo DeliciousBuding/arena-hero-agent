@@ -290,10 +290,42 @@ async def test_close_is_idempotent_and_closed_adapter_rejects_work() -> None:
     await adapter.close()
 
     assert fake.close_calls == 1
-    with pytest.raises(SdkPermanentError, match="client is closed"):
+    with pytest.raises(SdkPermanentError, match="closing or closed"):
         await adapter.submit(CommandPlan(tick=1), decision_id=DecisionId("decision:closed"))
-    with pytest.raises(SdkPermanentError, match="client is closed"):
+    with pytest.raises(SdkPermanentError, match="closing or closed"):
         await _collect(adapter)
+
+
+@pytest.mark.asyncio
+async def test_close_continues_cleanup_when_calling_task_is_cancelled() -> None:
+    class BlockingCloseClient(FakeSdkClient):
+        def __init__(self) -> None:
+            super().__init__()
+            self.close_started = asyncio.Event()
+            self.allow_close = asyncio.Event()
+
+        async def close(self) -> None:
+            self.close_calls += 1
+            self.close_started.set()
+            await self.allow_close.wait()
+
+    fake = BlockingCloseClient()
+    adapter = ArenaHeroSdkGameClient(fake)
+    caller = asyncio.create_task(adapter.close())
+    await fake.close_started.wait()
+
+    caller.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await caller
+
+    with pytest.raises(SdkPermanentError, match="closing or closed"):
+        await adapter.submit(CommandPlan(tick=1), decision_id=DecisionId("decision:closing"))
+
+    fake.allow_close.set()
+    await adapter.close()
+    assert fake.close_calls == 1
+    with pytest.raises(SdkPermanentError, match="closing or closed"):
+        await adapter.submit(CommandPlan(tick=1), decision_id=DecisionId("decision:closed"))
 
 
 @pytest.mark.asyncio
@@ -321,6 +353,18 @@ def test_direction_mapping_is_explicit_and_bidirectional(
 def test_unknown_direction_value_is_rejected() -> None:
     with pytest.raises(SdkContractViolationError, match="expected an SDK Direction"):
         from_sdk_direction("UP")
+
+
+def test_composition_factory_classifies_construction_failures() -> None:
+    class RejectedClient:
+        def __init__(self, **options: object) -> None:
+            raise AuthenticationError("rejected")
+
+    bindings = replace(load_sdk_bindings(), async_client_type=RejectedClient)
+
+    with pytest.raises(SdkPermanentError) as raised:
+        create_sdk_game_client(api_key="test-only-key", bindings=bindings)
+    assert isinstance(raised.value.__cause__, AuthenticationError)
 
 
 @pytest.mark.asyncio

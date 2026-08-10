@@ -108,6 +108,7 @@ class ArenaHeroSdkGameClient:
         self._client = client
         self._bindings = bindings or load_sdk_bindings()
         self._close_lock = asyncio.Lock()
+        self._close_task: asyncio.Task[None] | None = None
         self._closed = False
 
     def events(self) -> AsyncIterator[AsyncGameEvent]:
@@ -116,8 +117,7 @@ class ArenaHeroSdkGameClient:
         return self._events()
 
     async def _events(self) -> AsyncIterator[AsyncGameEvent]:
-        if self._closed:
-            raise SdkPermanentError("events", "client is closed")
+        self._ensure_available("events")
         try:
             async for event in self._client.events():
                 if not isinstance(event, self._bindings.event_types):
@@ -135,11 +135,14 @@ class ArenaHeroSdkGameClient:
                 exc, operation="events", bindings=self._bindings
             ) from exc
 
+    def _ensure_available(self, operation: str) -> None:
+        if self._closed or self._close_task is not None:
+            raise SdkPermanentError(operation, "client is closing or closed")
+
     async def submit(self, plan: CommandPlan, *, decision_id: DecisionId) -> Accepted:
         """Submit an SDK-owned plan using ``DecisionId`` as the idempotency key."""
 
-        if self._closed:
-            raise SdkPermanentError("submit", "client is closed")
+        self._ensure_available("submit")
         if not isinstance(plan, self._bindings.command_plan_type):
             raise SdkContractViolationError(
                 "submit", f"unexpected SDK CommandPlan shape: {type(plan).__name__}"
@@ -172,20 +175,33 @@ class ArenaHeroSdkGameClient:
             raise SdkContractViolationError("submit", "SDK acknowledgement source is not AGENT")
 
     async def close(self) -> None:
-        """Close the underlying client once; cancellation remains cancellation."""
+        """Close once while allowing caller cancellation without cancelling cleanup."""
 
         async with self._close_lock:
             if self._closed:
                 return
-            try:
-                await self._client.close()
-            except asyncio.CancelledError:
-                raise
-            except Exception as exc:
-                raise _translate_sdk_exception(
-                    exc, operation="close", bindings=self._bindings
-                ) from exc
-            self._closed = True
+            if self._close_task is None:
+                self._close_task = asyncio.create_task(self._close_underlying())
+                self._close_task.add_done_callback(self._record_close_result)
+            close_task = self._close_task
+        await asyncio.shield(close_task)
+
+    async def _close_underlying(self) -> None:
+        try:
+            await self._client.close()
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            raise _translate_sdk_exception(exc, operation="close", bindings=self._bindings) from exc
+
+    def _record_close_result(self, task: asyncio.Task[None]) -> None:
+        if task.cancelled():
+            return
+        try:
+            task.result()
+        except Exception:
+            return
+        self._closed = True
 
 
 def create_sdk_game_client(
@@ -215,5 +231,8 @@ def create_sdk_game_client(
         options["base_url"] = base_url
     if websocket_url is not None:
         options["websocket_url"] = websocket_url
-    client = sdk.async_client_type(**options)
+    try:
+        client = sdk.async_client_type(**options)
+    except Exception as exc:
+        raise _translate_sdk_exception(exc, operation="compose", bindings=sdk) from exc
     return ArenaHeroSdkGameClient(client, bindings=sdk)

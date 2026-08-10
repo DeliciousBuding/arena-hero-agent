@@ -48,7 +48,8 @@ models, and prohibit socket connections. They do not use credentials or live end
 - `Accepted` must match the submitted plan tick and have source `AGENT`.
 - Domain directions map explicitly: north/up, east/right, south/down, west/left. Unknown values are
   rejected; the Agent never relies on matching enum values by accident.
-- `close()` is idempotent. Work requested after a successful close fails permanently.
+- `close()` is idempotent. Cleanup runs in one shielded task, so cancelling a caller does not cancel
+  the underlying close. Work requested while closing or after close fails permanently.
 - `asyncio.CancelledError` is re-raised unchanged.
 
 Adapter failures preserve four meanings without choosing an application retry policy:
