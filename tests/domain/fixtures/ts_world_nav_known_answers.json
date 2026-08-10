@@ -1,0 +1,70 @@
+{
+  "metadata": {
+    "oracle_commit": "8cf5cbbcccf396a8feee94404af44969c5388e15",
+    "source_files": [
+      "packages/arena-agent/src/domain/model.ts",
+      "packages/arena-agent/src/domain/nav.ts",
+      "packages/arena-agent/src/domain/world.ts",
+      "packages/arena-agent/test/nav-pathfinding.test.ts",
+      "packages/arena-agent/test/world-vision.test.ts"
+    ],
+    "captured_on": "2026-08-10",
+    "intentional_differences": [
+      "cell-key parsing is strict rather than JavaScript Number()-permissive",
+      "duplicate domain identifiers are rejected rather than last-write-wins",
+      "unbounded unknown traversal requires explicit search limits"
+    ]
+  },
+  "moves": {
+    "start": [3, -2],
+    "expected": {
+      "east": [4, -2],
+      "west": [2, -2],
+      "south": [3, -1],
+      "north": [3, -3]
+    }
+  },
+  "distances": {
+    "chebyshev": {
+      "start": [0, 0],
+      "target": [3, 4],
+      "expected": 4
+    }
+  },
+  "first_steps": [
+    {"start": [0, 0], "target": [5, 0], "expected": "east"},
+    {"start": [0, 0], "target": [0, 5], "expected": "south"},
+    {"start": [0, 0], "target": [-3, -4], "expected": "north"},
+    {
+      "start": [-316, 57],
+      "target": [-332, 41],
+      "blocked": [[-317, 57], [-315, 57], [-316, 58]],
+      "expected": "north"
+    }
+  ],
+  "unreachable": [
+    {
+      "start": [-316, 57],
+      "target": [-332, 41],
+      "blocked": [[-317, 57], [-315, 57], [-316, 58], [-316, 56]],
+      "reason": "start enclosed"
+    },
+    {
+      "start": [0, 0],
+      "target": [2, 0],
+      "blocked": [[2, 0]],
+      "reason": "target blocked"
+    }
+  ],
+  "vision": {
+    "origin": [0, 0],
+    "target": [2, 2],
+    "corner_blockers": [[1, 0], [0, 1]],
+    "target_obstacle_does_not_block": [2, 2]
+  },
+  "explore_rings": {
+    "base": 8,
+    "indices": [0, 1, 2, 3, 4, 5],
+    "expected": [8, 16, 24, 32, 40, 8]
+  }
+}

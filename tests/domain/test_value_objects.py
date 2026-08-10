@@ -19,6 +19,9 @@ from arena_hero_agent.domain import (
     Generation,
     StateDigest,
     TenantId,
+    cell_key,
+    codepoint_order_key,
+    parse_cell_key,
 )
 
 
@@ -132,3 +135,61 @@ def test_state_digest_requires_lowercase_sha256() -> None:
     assert len(valid.value) == 64
     with pytest.raises(ValueError):
         StateDigest(valid.value.upper())
+
+
+@given(
+    st.integers(min_value=-(2**31), max_value=2**31 - 1),
+    st.integers(min_value=-(2**31), max_value=2**31 - 1),
+)
+def test_cell_key_parser_is_strict_inverse(x: int, y: int) -> None:
+    coordinate = Coordinate(x, y)
+
+    assert parse_cell_key(cell_key(coordinate)) == coordinate
+    assert Coordinate.parse_cell_key(coordinate.cell_key) == coordinate
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        " 1,2",
+        "1,2 ",
+        "+1,2",
+        "01,2",
+        "-0,2",
+        "1.0,2",
+        "1e0,2",
+        "0x1,2",
+        "1,+2",
+        "1,02",
+        "1",
+        "1,2,3",
+        "",
+    ],
+)
+def test_cell_key_parser_rejects_noncanonical_number_forms(value: str) -> None:
+    with pytest.raises(ValueError, match="invalid canonical cell key"):
+        parse_cell_key(value)
+
+
+@pytest.mark.parametrize("value", [f"{2**31},0", f"0,{-(2**31) - 1}"])
+def test_cell_key_parser_rejects_out_of_range_coordinates(value: str) -> None:
+    with pytest.raises(ValueError, match="signed 32-bit"):
+        parse_cell_key(value)
+
+
+def test_coordinate_step_overflow_fails() -> None:
+    with pytest.raises(ValueError, match="signed 32-bit"):
+        Coordinate(2**31 - 1, 0).step(Direction.EAST)
+    with pytest.raises(ValueError, match="signed 32-bit"):
+        Coordinate(0, -(2**31)).step(Direction.NORTH)
+
+
+def test_neighbors_and_codepoint_order_are_stable() -> None:
+    origin = Coordinate(0, 0)
+    assert origin.neighbors() == (
+        Coordinate(0, -1),
+        Coordinate(1, 0),
+        Coordinate(0, 1),
+        Coordinate(-1, 0),
+    )
+    assert sorted(["ä", "z", "A"], key=codepoint_order_key) == ["A", "z", "ä"]

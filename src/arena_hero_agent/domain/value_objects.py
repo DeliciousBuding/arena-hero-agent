@@ -12,6 +12,7 @@ from .canonical import canonical_sha256
 _TENANT_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 _OPAQUE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_CELL_KEY = re.compile(r"^(0|-?[1-9][0-9]*),(0|-?[1-9][0-9]*)$")
 _COORDINATE_MIN = -(2**31)
 _COORDINATE_MAX = 2**31 - 1
 
@@ -198,6 +199,37 @@ class Coordinate:
         dx, dy = direction.delta
         return type(self)(self.x + dx * steps, self.y + dy * steps)
 
+    @property
+    def cell_key(self) -> str:
+        """Return the canonical, locale-independent map key for this coordinate."""
+
+        return f"{self.x},{self.y}"
+
+    @classmethod
+    def parse_cell_key(cls, value: object) -> Self:
+        """Parse only keys emitted by :attr:`cell_key`.
+
+        The grammar intentionally rejects JavaScript ``Number()`` conveniences such as
+        whitespace, signs on positive values, exponent/hex/decimal notation, and leading
+        zero variants. This keeps parsing a strict inverse of canonical formatting.
+        """
+
+        if not isinstance(value, str):
+            raise TypeError("cell key must be a string")
+        match = _CELL_KEY.fullmatch(value)
+        if match is None:
+            raise ValueError(f"invalid canonical cell key: {value!r}")
+        return cls(int(match.group(1)), int(match.group(2)))
+
+    def neighbors(self) -> tuple[Self, Self, Self, Self]:
+        """Return cardinal neighbors in domain order: north, east, south, west."""
+
+        north = self.step(Direction.NORTH)
+        east = self.step(Direction.EAST)
+        south = self.step(Direction.SOUTH)
+        west = self.step(Direction.WEST)
+        return north, east, south, west
+
 
 class Direction(StrEnum):
     """Domain cardinal direction, independent from any wire enumeration."""
@@ -226,3 +258,25 @@ class Direction(StrEnum):
             Direction.SOUTH: Direction.NORTH,
             Direction.WEST: Direction.EAST,
         }[self]
+
+
+def cell_key(coordinate: Coordinate) -> str:
+    """Return a coordinate's canonical cell key."""
+
+    if not isinstance(coordinate, Coordinate):
+        raise TypeError("cell_key requires a Coordinate")
+    return coordinate.cell_key
+
+
+def parse_cell_key(value: object) -> Coordinate:
+    """Parse a strict canonical cell key into a signed-32-bit coordinate."""
+
+    return Coordinate.parse_cell_key(value)
+
+
+def codepoint_order_key(value: str) -> tuple[int, ...]:
+    """Return an explicit Unicode-codepoint sort key, independent of locale."""
+
+    if not isinstance(value, str):
+        raise TypeError("codepoint ordering requires a string")
+    return tuple(ord(character) for character in value)

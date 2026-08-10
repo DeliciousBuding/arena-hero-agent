@@ -1,6 +1,25 @@
 """Pure domain models, invariants, and canonical value objects; no I/O."""
 
 from .canonical import canonical_json_bytes, canonical_sha256, canonicalize
+from .navigation import (
+    TS_COMPATIBLE_SEARCH_LIMITS,
+    Bounds,
+    CellState,
+    NavigationGrid,
+    SearchLimitExceeded,
+    SearchLimits,
+    UnknownTraversalPolicy,
+    UnreachableError,
+    chebyshev,
+    direction_to_adjacent,
+    explore_radius_for_ring,
+    first_step,
+    is_reachable,
+    manhattan,
+    reachable_cells,
+    shortest_path,
+    vision_line_blocked,
+)
 from .value_objects import (
     Coordinate,
     DeadlineBudget,
@@ -11,9 +30,14 @@ from .value_objects import (
     Generation,
     StateDigest,
     TenantId,
+    cell_key,
+    codepoint_order_key,
+    parse_cell_key,
 )
 
 __all__ = [
+    "Bounds",
+    "CellState",
     "Coordinate",
     "DeadlineBudget",
     "DecisionId",
@@ -21,9 +45,27 @@ __all__ = [
     "EntityId",
     "FencingToken",
     "Generation",
+    "NavigationGrid",
+    "SearchLimitExceeded",
+    "SearchLimits",
     "StateDigest",
+    "TS_COMPATIBLE_SEARCH_LIMITS",
     "TenantId",
+    "UnknownTraversalPolicy",
+    "UnreachableError",
     "canonical_json_bytes",
     "canonical_sha256",
     "canonicalize",
+    "cell_key",
+    "chebyshev",
+    "codepoint_order_key",
+    "direction_to_adjacent",
+    "explore_radius_for_ring",
+    "first_step",
+    "is_reachable",
+    "manhattan",
+    "parse_cell_key",
+    "reachable_cells",
+    "shortest_path",
+    "vision_line_blocked",
 ]
