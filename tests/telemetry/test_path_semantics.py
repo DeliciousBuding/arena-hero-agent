@@ -22,6 +22,7 @@ from arena_hero_agent.telemetry import (
     JsonlWriter,
     JsonlWriterError,
     runtime_trace,
+    validate_write_path,
 )
 
 RT = {
@@ -90,6 +91,59 @@ def test_empty_and_root_only_paths_rejected(tmp_path: Path) -> None:
         JsonlWriter("\\")
     with pytest.raises(JsonlWriterError):
         JsonlWriter(os.fspath(tmp_path) + "\\" + "..")
+
+
+@pytest.mark.parametrize(
+    "escape",
+    [
+        r"C:folder\..\escape.jsonl",
+        r"C:\folder\..\escape.jsonl",
+        r"\folder\..\escape.jsonl",
+        r"C:/folder\..\escape.jsonl",
+        r"folder/sub\..\..\escape.jsonl",
+    ],
+)
+def test_windows_spelled_traversal_rejected_portably(escape: str) -> None:
+    # This must pass unchanged on Linux: Pure POSIX pathlib treats backslashes
+    # as ordinary characters, but caller input semantics treat both separators
+    # as path boundaries before the host-native Path is constructed.
+    with pytest.raises(JsonlWriterError, match="traversal"):
+        validate_write_path(escape)
+
+
+@pytest.mark.parametrize(
+    "root_only",
+    [
+        "/",
+        "//",
+        "\\",
+        r"\\",
+        "C:",
+        "C:/",
+        "C:\\",
+        r"\\server\share",
+        "//server/share/",
+    ],
+)
+def test_portable_root_only_paths_rejected(root_only: str) -> None:
+    with pytest.raises(JsonlWriterError, match="concrete file"):
+        validate_write_path(root_only)
+
+
+@pytest.mark.parametrize(
+    "valid_path",
+    [
+        "telemetry-relative.jsonl",
+        r"C:telemetry-drive-relative.jsonl",
+        r"C:\telemetry\absolute.jsonl",
+        "C:/telemetry/absolute.jsonl",
+        r"\telemetry-root-relative.jsonl",
+        r"\\server\share\telemetry.jsonl",
+        "/var/tmp/telemetry.jsonl",
+    ],
+)
+def test_portable_file_path_forms_remain_constructible(valid_path: str) -> None:
+    assert validate_write_path(valid_path) == Path(valid_path)
 
 
 def test_non_string_path_rejected() -> None:

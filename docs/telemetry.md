@@ -78,9 +78,15 @@ non-ASCII characters are all covered.
 
 The write path is always supplied by the caller and validated:
 
-- NUL bytes and `..` traversal components are rejected at construction.
-- The final component must name a concrete file and is never followed if it is a
-  symlink; a directory target is rejected.
+- NUL bytes and `..` traversal components are rejected at construction. Both
+  `/` and `\` are parsed as separators on every host, so Windows-spelled paths
+  cannot bypass traversal checks on POSIX systems.
+- Empty paths, POSIX/Windows root-only paths, drive-only paths, UNC share roots,
+  and paths ending in a separator fail closed because they do not name a file.
+  Valid POSIX paths and Windows root-relative, drive-relative, drive-absolute,
+  and UNC file paths remain constructible.
+- The final component is never followed if it is a symlink; a directory target
+  is rejected.
 
 ### Rotation
 

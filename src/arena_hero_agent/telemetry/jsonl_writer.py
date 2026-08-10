@@ -32,7 +32,7 @@ import re
 import stat
 import threading
 from collections.abc import Mapping
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Final
 
 from arena_hero_agent.telemetry.schema import TraceRecord, to_json_object, validate_trace_record
@@ -96,28 +96,33 @@ def rotated_jsonl_paths(
 
 
 def validate_write_path(path: str | os.PathLike[str]) -> Path:
-    """Validate a caller-supplied write path shape.
+    r"""Validate a caller-supplied write path with portable input semantics.
 
-    Rejects NUL bytes, ``..`` traversal components, and paths that do not name
-    a concrete file. Final-component symlink/directory checks happen at open
-    time (see ``_assert_regular_target``).
+    Both ``/`` and ``\`` are treated as separators for validation on every OS,
+    so a Windows-spelled path cannot hide traversal from a POSIX host (or vice
+    versa). The returned ``Path`` keeps the host's native filesystem semantics.
+    Final-component symlink/directory checks happen at open time (see
+    ``_assert_regular_target``).
     """
-    if isinstance(path, (str, os.PathLike)):
-        candidate = Path(path)
-    else:
+    if not isinstance(path, (str, os.PathLike)):
         raise JsonlWriterError(f"path must be str or PathLike; actual={type(path).__name__}")
-    text = str(candidate)
+    text = os.fspath(path)
+    if not isinstance(text, str):
+        raise JsonlWriterError(f"path must resolve to str; actual={type(text).__name__}")
+    if not text:
+        raise JsonlWriterError("path must not be empty")
     if "\x00" in text:
         raise JsonlWriterError("path must not contain NUL bytes")
-    parts = candidate.parts
-    if not parts:
-        raise JsonlWriterError("path must not be empty")
-    if any(part == ".." for part in parts):
+
+    windows_view = PureWindowsPath(text)
+    posix_view = PurePosixPath(text)
+    if any(part == ".." for part in windows_view.parts) or any(
+        part == ".." for part in posix_view.parts
+    ):
         raise JsonlWriterError("path must not contain '..' traversal components")
-    name = candidate.name
-    if not name or name in {".", ".."}:
+    if text.endswith(("/", "\\")) or not windows_view.name or not posix_view.name:
         raise JsonlWriterError("path must name a concrete file")
-    return candidate
+    return Path(text)
 
 
 def _lstat_mode(path: Path) -> int | None:
