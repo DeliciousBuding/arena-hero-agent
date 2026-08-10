@@ -3,6 +3,7 @@ name = "arena-hero-agent"
 version = "0.1.0"
 description = "Deterministic Python agent runtime and control plane for Arena Hero"
 readme = "README.md"
+license = "Apache-2.0"
 keywords = ["arena-hero", "agent", "game-ai", "multi-agent"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
@@ -10,6 +11,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Typing :: Typed",
+    "License :: OSI Approved :: Apache Software License",
 ]
 requires-python = ">=3.11"
 dependencies = [
