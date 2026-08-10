@@ -52,4 +52,5 @@ outside the default development workflow.
 ## Contributing
 
 Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a change. Security issues should follow
-[`SECURITY.md`](SECURITY.md).
+[`SECURITY.md`](SECURITY.md). All community members are expected to follow the
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).

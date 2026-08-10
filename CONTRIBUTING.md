@@ -26,6 +26,12 @@ uv run pytest -q
 - Do not mix behavior migration with strategy retuning in the same change.
 - Preserve explicit uncertainty in differential results.
 
+## Community standards
+
+All contributors are expected to follow the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). Harassment
+or other unacceptable behavior may be reported to the maintainers through the repository's GitHub
+Security tab.
+
 ## Public content
 
 Do not include credentials, production logs, private endpoints, workstation paths, or internal
