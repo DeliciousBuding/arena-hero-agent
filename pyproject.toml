@@ -1,10 +1,19 @@
 [project]
 name = "arena-hero-agent"
 version = "0.1.0"
-description = "Arena Hero Python-first agent (Spec v4)"
+description = "Deterministic Python agent runtime and control plane for Arena Hero"
+readme = "README.md"
+keywords = ["arena-hero", "agent", "game-ai", "multi-agent"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+]
 requires-python = ">=3.11"
 dependencies = [
-    "arena-hero-sdk-py>=0.2.9",
+    "arena-hero>=0.2.9,<0.3",
 ]
 
 [dependency-groups]
