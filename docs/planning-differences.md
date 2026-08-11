@@ -1,14 +1,16 @@
-# P4-11/P4-12 SafetyPlanner/tactical + worker assignment — Behavior-Difference Registry
+# P4-11/P4-12/P4-13 SafetyPlanner/tactical + worker assignment + variants/human override — Behavior-Difference Registry
 
 最后更新：2026-08-12
 
 This file is the authoritative behavior-difference registry for the P4-11
 deterministic safety/tactical layer (`src/arena_hero_agent/planning/` and
-`src/arena_hero_agent/strategies/`) and the P4-12 worker assignment layer
+`src/arena_hero_agent/strategies/`), the P4-12 worker assignment layer
 (`src/arena_hero_agent/planning/worker_assignment.py` and
-`min_cost_assignment.py`). It classifies every observable difference
-between the Python implementation and the legacy TypeScript oracle
-(`arena-hero-agent-ts@8cf5cbb`).
+`min_cost_assignment.py`), and the P4-13 strategy variant selection +
+human override layer (`src/arena_hero_agent/strategies/variant_registry.py`
+and `src/arena_hero_agent/command_center/human_override.py`). It classifies
+every observable difference between the Python implementation and the
+legacy TypeScript oracle (`arena-hero-agent-ts@8cf5cbb`).
 
 Classification rules:
 
@@ -50,6 +52,19 @@ behavioral effect in either runtime at this layer. The `always_survey_noop`
 fixture case pins that the Python layer also ignores them. The config fields
 remain in `MissionConfig` for parity only.
 
+P4-13 sections:
+
+- `variant_config` — `resolveSafetyVariantConfig` /
+  `resolveVariantsConfig` outputs for every variant registered on the
+  Python config surface (`population-ceiling-30/35/40-v1`), including the
+  empty-list and merge-order cases. Field names are translated from the
+  oracle's camelCase to the Python snake_case surface.
+- `human_override` — `applyHumanOverrides` results for 23 deterministic
+  cases (one-shot command apply/reject, mine/goto goal flows, stale expiry,
+  disabled stores, core START_MOVE/CANCEL_MOVE/SPAWN, capability and unknown
+  unit rejections, far-target interpolation). Every oracle-expressible field
+  (active/applied/rejected/satisfied/updatedAt/plan actions) matches.
+
 ## ALLOWED_DIFFERENCES
 
 | id | Python behavior | Oracle behavior | Rationale |
@@ -61,6 +76,8 @@ remain in `MissionConfig` for parity only.
 | `threat_map_float_accumulation` | Threat contributions accumulate in enemy input order, then fixed `(dx, dy)` order, using IEEE-754 doubles. | Same accumulation order in the oracle. | The captured fixture values are bit-exact because both runtimes use doubles; registered so a future reorder cannot silently change values. |
 | `worker_assignment_refill_predictions_parameter` | `assign_worker_tasks` receives `refillPredictions` as an explicit `refill_predictions` parameter (default `None` = zero regression). | The oracle reads `snapshot.refillPredictions` as a snapshot field. | The prediction pipeline itself is EXPECTED_UNKNOWN; the deterministic layer takes the predictions as an input so the same snapshot contract stays pure and diffable. |
 | `worker_assignment_claims_explicit_state` | The cross-tick GO_RESOURCE claim lease is an explicit deterministic input/output (`claims` → result `claims`). | The oracle hides the lease in `WorkerTaskPlanner` class state (`this.claims`). | Same pruning/reservation/update behavior, but as a pure function: identical inputs always produce identical outputs and claims, which is what the P4-12 differential requires. |
+| `human_override.stale_override_ignored` | The Python result exposes an explicit `stale=True` audit flag when the store expired. | The oracle result has no stale field; expiry is inferred from `active=false` with a non-empty store. | All oracle-expressible fields are equal; the explicit flag makes the expiry auditable in the apply/reject loop. |
+| `action_from_wire_surface_strict` | Wire actions parse strictly against the target surface (core vs unit); a cross-surface type is rejected as `invalid_action`. | The oracle parses any shape and defers some cross-surface cases to plan validation. | Fail-closed parse: a unit can never silently receive a core-only action shape or vice versa. |
 
 ## EXPECTED_UNKNOWN (not migrated, never MATCH)
 
@@ -78,6 +95,21 @@ layer. These remain visible as open work for later phases:
 - `worker_liveness_blockade` — W5 cell-blocker view (`options.cellBlocker`):
   a stateful liveness-tracker hook that the deterministic worker-assignment
   layer does not take; the oracle default (no blocker) is bit-identical
+- `mine_hold_goals` — the oracle `mine_hold` goal kind (mine-belt watch)
+  is not carried by the Python store: the P5-3 store parses goal kinds
+  `mine|goto` only. The oracle's mine_hold behavior stays visible and is
+  never counted as MATCH.
+- `variant_config_unmigrated_ids` — every oracle variant whose effect is
+  not fully expressible on the Python `SafetyPlannerConfig` surface
+  (threat-recall, strike-core, tactical-squads, ...) is deliberately NOT
+  registered: enabling one in a Python config fails fast instead of
+  silently running with weakened behavior.
+- `human_override_path_abandon_pruning` — the oracle's `stepTowardPath`
+  abandon-factor pruning (abandon detours > 3x the direct distance) is not
+  migrated; Python reuses the oracle-compared domain `first_step` with the
+  oracle's adaptive search radius. Captured fixture cases match; a detour
+  beyond the abandon factor may still route in Python where the oracle
+  would WAIT.
 
 The registry test (`tests/planning/test_differential_registry.py`) enforces
 that every fixture section is classified and that the EXPECTED_UNKNOWN set can
