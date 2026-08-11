@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import BinaryIO, Literal
 
 from arena_hero_agent.adapters.recorder._common import (
+    RecorderError,
     acquire_process_lock,
     register_target,
     release_process_lock,
@@ -148,8 +149,8 @@ class RegistryStore:
         self._closed = True
         self._connection: sqlite3.Connection | None = None
         self._process_lock: BinaryIO | None = None
-        register_target(self._registry_key, self)
         try:
+            register_target(self._registry_key, self)
             self._path.parent.mkdir(parents=True, exist_ok=True)
             self._process_lock = acquire_process_lock(self._lock_path)
             self._connection = sqlite3.connect(self._path)
@@ -161,6 +162,9 @@ class RegistryStore:
         except CommandCenterError:
             self._cleanup_partial_init()
             raise
+        except RecorderError as exc:
+            self._cleanup_partial_init()
+            raise CommandCenterError(str(exc)) from exc
         except sqlite3.Error as exc:
             self._cleanup_partial_init()
             raise CommandCenterError(
@@ -390,6 +394,7 @@ class RegistryStore:
 
 __all__ = [
     "AGENT_MODES",
+    "AgentMode",
     "SIMKEY_HEX_BYTES",
     "SIMKEY_PREFIX",
     "RegisteredAgent",

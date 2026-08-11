@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any, BinaryIO, Literal
 
 from arena_hero_agent.adapters.recorder._common import (
+    RecorderError,
     acquire_process_lock,
     register_target,
     release_process_lock,
@@ -297,8 +298,8 @@ class SurveyDb:
         self._process_lock: BinaryIO | None = None
         self._registry_key = str(self._path.resolve())
         if write:
-            register_target(self._registry_key, self)
             try:
+                register_target(self._registry_key, self)
                 self._path.parent.mkdir(parents=True, exist_ok=True)
                 self._process_lock = acquire_process_lock(Path(f"{self._path}.lock"))
                 self._connection = sqlite3.connect(self._path)
@@ -311,6 +312,9 @@ class SurveyDb:
             except CommandCenterError:
                 self._cleanup_partial_init()
                 raise
+            except RecorderError as exc:
+                self._cleanup_partial_init()
+                raise CommandCenterError(str(exc)) from exc
             except sqlite3.Error as exc:
                 self._cleanup_partial_init()
                 raise CommandCenterError(
@@ -555,6 +559,7 @@ class SurveyDb:
 
 __all__ = [
     "AGENT_EVENT_KINDS",
+    "AgentEventKind",
     "AgentIngestEvent",
     "AgentRow",
     "SURVEY_DB_SCHEMA",
