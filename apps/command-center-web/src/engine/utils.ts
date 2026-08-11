@@ -41,7 +41,7 @@ export function hexA(hex: string, a: number): string {
 export const EASE_OUT_CUBIC = (t: number): number => 1 - Math.pow(1 - t, 3);
 export const EASE_OUT_QUART = (t: number): number => 1 - Math.pow(1 - t, 4);
 /** 单位类型 → 最大 HP（官方语义：VANGUARD 4，其余 2）。 */
-export function maxUnitHp(type: string): number { return type === 'VANGUARD' ? 4 : 2; }
+export function maxUnitHp(type: string): number { return type === 'VANGUARD' ? 4 : 2; } // P5-8 保留前端：差分测试锚定后端 planning.plan_validator.UNIT_MAX_HP，见 projections/README.md
 /** 单位类型 → 官方素材路径。 */
 export function unitSpritePath(type: string): string {
   if (type === 'VANGUARD') return SPRITE.vanguard;
@@ -59,11 +59,13 @@ export const pKey = (p: Position): string => `${p[0]},${p[1]}`;
 export const samePos = (a: Position | null | undefined, b: Position | null | undefined): boolean => !!(a && b && a[0] === b[0] && a[1] === b[1]);
 
 /** 缩放桶：2 的幂（半档）——静态缓存按缩放桶重建，避免每帧重建。 */
+// P5-8 保留前端（视口缩放桶，无后端等价；后端 map_lod 是数据 16×16 分块），见 projections/README.md。
 export function bucketScale(s: number): number {
   const k = Math.round(Math.log2(Math.max(0.05, Math.min(64, s))) * 2) / 2;
   return Math.pow(2, k);
 }
 /** 网格步长：2 的幂，满足 step*s ≥ targetPx（坐标刻度密度自适应缩放）。 */
+// P5-8 保留前端（视口网格步长，无迁移面），见 projections/README.md。
 export function gridStepFor(s: number, targetPx: number): number {
   let step = 4;
   while (step * s < targetPx && step < 2048) step *= 2;

@@ -45,3 +45,20 @@ Regenerate goldens with
 `uv run python tests/command_center/projections/tools/regenerate_goldens.py`
 (after deliberately changing a fixture; goldens are committed so the suite
 runs without Node).
+
+## Frontend rule-projection ownership map (P5-8, 2026-08-12)
+
+P5-8 处置结论：前端 `apps/command-center-web/src/engine/` 的规则投影计算与后端对照如下
+（完整盘点见 wave 15 PROGRESS.md 任务 0）。本表为延迟验证标注：前端保留项若与后端
+语义相关，在此指向权威模块；后端核心逻辑未改动。
+
+| 前端计算 | 后端权威实现（已覆盖） | 处置 |
+|---|---|---|
+| `tactical.ts:tactUnitCost` | `domain/economy.py:unit_price`（v0.14 定价） | 保留前端 + 差分测试锚定 |
+| `tactical.ts:tactCoreCapacity` | `domain/economy.py:core_resource_capacity` | 保留前端 + 差分测试锚定（负人口后端拒绝，前端 clamp，文档化差异） |
+| `utils.ts:maxUnitHp` | `planning/plan_validator.py:UNIT_MAX_HP` | 保留前端 + 差分测试锚定 |
+| `tactical.ts:tactRangerRange/tactRangerTargets` | `planning/plan_validator.py:RANGER_SHOOT_RANGE`（=3） | 保留前端（即时反馈）；射程常量后端已覆盖 |
+| `tactical.ts:tactAvailability`（动作可用性） | `planning/plan_validator.py`（服务端动作校验） | 保留前端（交互即时反馈）；合法性校验以后端为准 |
+| `mapEngine.ts:tactRenderHud` 内联测绘/生命周期聚合 | `mines.py` / `mining_effectiveness.py` | 渲染内联展示派生，不迁移；数据级聚合已由本模块覆盖 |
+| `utils.ts:bucketScale/gridStepFor`（视口 LOD） | 无等价（`map_lod.py` 是数据 16×16 分块） | 保留前端（视口参数，无迁移面） |
+| `commands.ts:squadSummary` 等交互聚合 | 无等价 | 保留前端（交互多选瞬时派生） |

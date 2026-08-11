@@ -97,6 +97,7 @@ export function unitCommandLabel(tac: any, tenant: string, unitId: any, plan: an
 
 /** 编队多选摘要（Shift 框选/加选 HUD）：受控 UNIT ≥2 时返回
  *  { count, parts(工/锋/射 构成), hpAvg, hpMin }；否则 null。纯派生可单测。 */
+// P5-8 保留前端（交互多选瞬时聚合，无后端等价），见 projections/README.md。
 export function squadSummary(tac: any, world: any): { count: number; parts: string; hpAvg: number; hpMin: number } | null {
   if (!tac || !world?.state?.objects) return null;
   const members = world.state.objects.filter((o: any) => tac.multi?.has?.(o.id) && o.kind === "UNIT");

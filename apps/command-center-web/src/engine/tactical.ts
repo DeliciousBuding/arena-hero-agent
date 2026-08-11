@@ -88,7 +88,8 @@ export function intentLabelCn(intent: any) {
   return String(intent).slice(0, 6);
 }
 
-export function tactCoreCapacity(pop: any) { return Math.max(10, Math.max(0, pop) * 5); }
+export function tactCoreCapacity(pop: any) { return Math.max(10, Math.max(0, pop) * 5); } // P5-8 保留前端：差分测试锚定后端 domain.economy.core_resource_capacity（负人口后端拒绝、前端 clamp，见 projections/README.md）
+// P5-8 保留前端：差分测试锚定后端 domain.economy.unit_price（v0.14 定价），见 projections/README.md。
 export function tactUnitCost(unitType: any, pop: any) {
   const base = TACT_UNIT_BASE_COST[unitType];
   const exp = pop < 20 ? 0 : Math.floor((pop - 20) / 5) + 1;
@@ -148,6 +149,7 @@ export function tactMoveTargets(world: any, obj: any) {
   return out;
 }
 
+// P5-8 保留前端（即时反馈）：射程常量与后端 RANGER_SHOOT_RANGE=3 对齐，见 projections/README.md。
 export function tactRangerRange(world: any, obj: any) {
   const obstacles = tactTerrain(world, "OBSTACLE");
   const out = [];
@@ -182,6 +184,7 @@ export function tactVisibility(world: any) {
   }
   return out;
 }
+// P5-8 保留前端（交互即时反馈）：动作合法性以后端 plan_validator 校验为准，见 projections/README.md。
 export function tactAvailability(world: any, obj: any) {
   const actions: Record<string, boolean> = { SELF_DESTRUCT: true, WAIT: true }, spawns: Record<string, any> = {}, reasons: Record<string, any> = {};
   if (!obj || obj.controlled !== true || !obj.position) return { actions, spawns, reasons };
