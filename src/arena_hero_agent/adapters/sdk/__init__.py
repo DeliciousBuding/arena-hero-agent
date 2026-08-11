@@ -14,6 +14,8 @@ from .errors import (
     SdkRetryableError,
 )
 from .mapping import from_sdk_direction, to_sdk_direction
+from .plans import build_command_plan, command_plan_payload
+from .turns import adapt_async_turn
 
 __all__ = [
     "ArenaHeroSdkGameClient",
@@ -23,6 +25,9 @@ __all__ = [
     "SdkFailureKind",
     "SdkPermanentError",
     "SdkRetryableError",
+    "adapt_async_turn",
+    "build_command_plan",
+    "command_plan_payload",
     "create_sdk_game_client",
     "from_sdk_direction",
     "load_sdk_bindings",
