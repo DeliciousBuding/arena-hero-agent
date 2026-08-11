@@ -3,6 +3,12 @@
 P5-3: the JSONL / SQLite / cache data base ported from the legacy TypeScript
 Command Center lives in the sibling modules (``paths``, ``jsonl``, ``cache``,
 ``goal_store``, ``human_store``, ``registry``, ``survey_db``).
+
+P5-4: deterministic read projections live in the ``projections`` subpackage.
+
+P5-5: the route registry, OpenAPI document generation, and the request
+pipeline (ETag / stream / backpressure) live in the ``api`` subpackage;
+import it explicitly (it resolves the P5-2 snapshot manifest).
 """
 
 from .cache import TtlCache
