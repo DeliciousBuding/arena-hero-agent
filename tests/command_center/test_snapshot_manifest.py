@@ -227,7 +227,13 @@ def test_no_session_text_in_snapshot() -> None:
 
 
 def test_manifest_check_passes_end_to_end() -> None:
-    """The generator's own check must pass with zero problems."""
+    """The generator's own check must pass with zero problems.
+
+    The full check recomputes route and fixture hashes from the legacy TS
+    checkout; skip when that checkout is not available.
+    """
+    if _ts_repo_or_none() is None:
+        pytest.skip("arena-hero-agent-ts checkout not available in this environment")
     from scripts.snapshot_command_center import run_check
 
     assert run_check(verbose=False) == 0
