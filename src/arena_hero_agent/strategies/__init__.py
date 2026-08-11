@@ -51,6 +51,13 @@ from .tactical_squads import (
     rally_slot_for_squad,
     reconcile_tactical_squads,
 )
+from .variant_registry import (
+    VARIANT_SAFETY_CONFIG,
+    apply_variant_overrides,
+    is_safety_variant,
+    resolve_safety_variant_config,
+    resolve_variants_config,
+)
 
 __all__ = [
     "AGGRESSIVE_SAFETY_CONFIG",
@@ -70,6 +77,7 @@ __all__ = [
     "ThreatProfile",
     "ThreatTier",
     "AggressionLevel",
+    "VARIANT_SAFETY_CONFIG",
     "VisibleEnemy",
     "aggressive_shot_priority",
     "can_shoot",
@@ -95,5 +103,9 @@ __all__ = [
     "threat_weighted_direction",
     "tier_of_damage_rank",
     "worker_dense_direction",
+    "apply_variant_overrides",
+    "is_safety_variant",
+    "resolve_safety_variant_config",
+    "resolve_variants_config",
     "yield_anchor",
 ]
