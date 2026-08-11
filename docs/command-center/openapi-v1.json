@@ -1,0 +1,3004 @@
+{
+  "info": {
+    "description": "Loopback-only JSON polling API for the Arena Hero Command Center (66 API + 5 static routes). Every route is request/response poll-json; there is no SSE or WebSocket surface. Only /api/map uses a weak HTTP ETag (304 when If-None-Match matches) with cache-control public, max-age=2. The WebSocket wire contract lives in the arena-hero-ts package.",
+    "title": "Arena Hero Command Center API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/agents": {
+      "get": {
+        "operationId": "getAgents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "ledger + supervisor + world merge",
+        "x-command-center": {
+          "cache": "direct read",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/alliance/advice": {
+      "get": {
+        "operationId": "getAllianceAdvice",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/alliance/advice",
+        "x-command-center": {
+          "cache": "30s ttl",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/alliance/cluster": {
+      "get": {
+        "operationId": "getAllianceCluster",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/alliance/cluster",
+        "x-command-center": {
+          "cache": "30s ttl",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/alliance/defense": {
+      "get": {
+        "operationId": "getAllianceDefense",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/alliance/defense",
+        "x-command-center": {
+          "cache": "30s (snapshot ttl)",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/alliance/director": {
+      "get": {
+        "operationId": "getAllianceDirector",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "fail-open when supervisor unreachable; mode ASSIST_ONLY, actionOwnership none",
+        "x-command-center": {
+          "cache": "supervisor 5s ttl",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/alliance/exploration": {
+      "get": {
+        "operationId": "getAllianceExploration",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/alliance/exploration",
+        "x-command-center": {
+          "cache": "30s ttl + warmup",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/alliance/mining": {
+      "get": {
+        "operationId": "getAllianceMining",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/alliance/mining",
+        "x-command-center": {
+          "cache": "30s ttl + warmup",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/alliance/snapshot": {
+      "get": {
+        "operationId": "getAllianceSnapshot",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/alliance/snapshot",
+        "x-command-center": {
+          "cache": "30s ttl",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/alliance/survey": {
+      "get": {
+        "operationId": "getAllianceSurvey",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "view=consensus lightweight mode",
+        "x-command-center": {
+          "cache": "30s aggregate",
+          "etag": null,
+          "query": [
+            "view"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/alliance/survey/arbitrate": {
+      "post": {
+        "operationId": "postAllianceSurveyArbitrate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "validates cell + winnerTenant in t1..t4; invalidates survey cache after write",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "write: append arbitration.jsonl"
+        }
+      }
+    },
+    "/api/alliance/survey/arbitrate/clear": {
+      "post": {
+        "operationId": "postAllianceSurveyArbitrateClear",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "cell required; invalidates survey cache after write",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "write: remove arbitration entry"
+        }
+      }
+    },
+    "/api/alliance/survey/arbitrations": {
+      "get": {
+        "operationId": "getAllianceSurveyArbitrations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "lists arbitration.jsonl",
+        "x-command-center": {
+          "cache": "direct read",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/alliance/survey/mining": {
+      "get": {
+        "operationId": "getAllianceSurveyMining",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/alliance/survey/mining",
+        "x-command-center": {
+          "cache": "30s ttl",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/audit/alignment": {
+      "get": {
+        "operationId": "getAuditAlignment",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/audit/alignment",
+        "x-command-center": {
+          "cache": "30s ttl",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/audit/decisions": {
+      "get": {
+        "operationId": "getAuditDecisions",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "window 200..20000",
+        "x-command-center": {
+          "cache": "30s ttl + warmup",
+          "etag": null,
+          "query": [
+            "tenant",
+            "window"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "all|tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/audit/decisions/trend": {
+      "get": {
+        "operationId": "getAuditDecisionsTrend",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "steps",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "tenant all rejected; window 100..2000, steps 2..12",
+        "x-command-center": {
+          "cache": "30s ttl",
+          "etag": null,
+          "query": [
+            "tenant",
+            "window",
+            "steps"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/audit/human": {
+      "get": {
+        "operationId": "getAuditHuman",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "human-command-audit.jsonl tail",
+        "x-command-center": {
+          "cache": "direct read",
+          "etag": null,
+          "query": [
+            "tenant",
+            "limit"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/audit/human/conflicts": {
+      "get": {
+        "operationId": "getAuditHumanConflicts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "window 200..20000",
+        "x-command-center": {
+          "cache": "30s ttl + warmup",
+          "etag": null,
+          "query": [
+            "tenant",
+            "window"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "all|tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/audit/lifecycle": {
+      "get": {
+        "operationId": "getAuditLifecycle",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/audit/lifecycle",
+        "x-command-center": {
+          "cache": "30s ttl + warmup",
+          "etag": null,
+          "query": [
+            "tenant"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "all|tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/audit/mines": {
+      "get": {
+        "operationId": "getAuditMines",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/audit/mines",
+        "x-command-center": {
+          "cache": "30s ttl + warmup",
+          "etag": null,
+          "query": [
+            "tenant"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "all|tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/audit/mines/trend": {
+      "get": {
+        "operationId": "getAuditMinesTrend",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "steps",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "tenant all rejected; window 500..4000, steps 2..10",
+        "x-command-center": {
+          "cache": "30s ttl",
+          "etag": null,
+          "query": [
+            "tenant",
+            "window",
+            "steps"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/audit/mining-effectiveness": {
+      "get": {
+        "operationId": "getAuditMiningEffectiveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/audit/mining-effectiveness",
+        "x-command-center": {
+          "cache": "30s ttl",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/audit/overview": {
+      "get": {
+        "operationId": "getAuditOverview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "composition of cached sub-audits",
+        "x-command-center": {
+          "cache": "30s ttl",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/audit/trail": {
+      "get": {
+        "operationId": "getAuditTrail",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "source in human|command|arbitration|supervisor; limit 1..500",
+        "x-command-center": {
+          "cache": "30s lazy ttl",
+          "etag": null,
+          "query": [
+            "tenant",
+            "source",
+            "limit"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "all|tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/audit/workers": {
+      "get": {
+        "operationId": "getAuditWorkers",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "window 200..20000",
+        "x-command-center": {
+          "cache": "5s ttl",
+          "etag": null,
+          "query": [
+            "tenant",
+            "window"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "all|tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/command": {
+      "delete": {
+        "operationId": "deleteCommand",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "scope all|action|goal; audit append",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": "tN",
+          "write_semantics": "write: human-commands/<tenant>.json (atomic)"
+        }
+      },
+      "post": {
+        "operationId": "postCommand",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "validates tenant, unitId, action.type in VALID_ACTION_TYPES (14); core-moving guard -> 409; replace per-unit; audit append",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": "tN",
+          "write_semantics": "write: human-commands/<tenant>.json (atomic)"
+        }
+      }
+    },
+    "/api/command/clear": {
+      "post": {
+        "operationId": "postCommandClear",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "clears commands+goals; audit append",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": "tN",
+          "write_semantics": "write: human-commands/<tenant>.json (atomic)"
+        }
+      }
+    },
+    "/api/command/goal": {
+      "post": {
+        "operationId": "postCommandGoal",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "validates kind mine|goto; dedupe window 30s; audit append",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": "tN",
+          "write_semantics": "write: human-commands/<tenant>.json (atomic)"
+        }
+      }
+    },
+    "/api/command/mode": {
+      "post": {
+        "operationId": "postCommandMode",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "mode override|disabled; audit append",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": "tN",
+          "write_semantics": "write: human-commands/<tenant>.json (atomic)"
+        }
+      }
+    },
+    "/api/commands": {
+      "get": {
+        "operationId": "getCommands",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "tenant required; reconciles satisfied/applied/unknown_unit and cancels stuck goals",
+        "x-command-center": {
+          "cache": "direct + reconcile",
+          "etag": null,
+          "query": [
+            "tenant"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "tN",
+          "write_semantics": "read + reconcile (may write-back cleanup)"
+        }
+      }
+    },
+    "/api/deeds": {
+      "get": {
+        "operationId": "getDeeds",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "limit clamped 1..200; alliance deeds merged when all",
+        "x-command-center": {
+          "cache": "45s ttl + warmup",
+          "etag": null,
+          "query": [
+            "tenant",
+            "limit"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "all|tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/deeds/journal": {
+      "get": {
+        "operationId": "getDeedsJournal",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "minStar",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "window 500..50000; filter keys part of cache key",
+        "x-command-center": {
+          "cache": "30s ttl",
+          "etag": null,
+          "query": [
+            "tenant",
+            "window",
+            "category",
+            "minStar"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "all|tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "operationId": "getEvents",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "n",
+            "required": false,
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/events",
+        "x-command-center": {
+          "cache": "direct read",
+          "etag": null,
+          "query": [
+            "tenant",
+            "n"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "t1",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/exploration": {
+      "get": {
+        "operationId": "getExploration",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "survey + lifecycle + current world subset",
+        "x-command-center": {
+          "cache": "survey cache 30s",
+          "etag": null,
+          "query": [
+            "tenant"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "t1",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/health/pipeline": {
+      "get": {
+        "operationId": "getHealthPipeline",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "may trigger background survey:sync when lag >60 ticks (debounced 60s, lock-guarded)",
+        "x-command-center": {
+          "cache": "15s ttl",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/ingest/agents": {
+      "post": {
+        "operationId": "postIngestAgents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "tenant allowlist t1..t4 + sim-* namespace; event kind allowlist register|connection|tick_summary|disconnected; per-event isolation; idempotent upsert",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "write: survey/<tenant>.db (agents + mapping tables)"
+        }
+      }
+    },
+    "/api/intel": {
+      "get": {
+        "operationId": "getIntel",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/intel",
+        "x-command-center": {
+          "cache": "30s lazy cache",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/intel/heat": {
+      "get": {
+        "operationId": "getIntelHeat",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "window",
+            "required": false,
+            "schema": {
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "window 100..50000; tenant validated",
+        "x-command-center": {
+          "cache": "30s ttl",
+          "etag": null,
+          "query": [
+            "tenant",
+            "window"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "all|tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/leaderboard": {
+      "get": {
+        "operationId": "getLeaderboard",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "stale >10min triggers background fetch (not awaited); 404 when snapshot missing",
+        "x-command-center": {
+          "cache": "lazy refresh check",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/leaderboard/refresh": {
+      "post": {
+        "operationId": "postLeaderboardRefresh",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "request-driven refresh; 502 on fetch failure",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "write: external fetch -> snapshot json + history.jsonl"
+        }
+      }
+    },
+    "/api/map": {
+      "get": {
+        "operationId": "getMap",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "example": "public, max-age=2",
+                  "type": "string"
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "example": "W/\"<map-sig>\"",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified: If-None-Match equals the weak ETag",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "example": "public, max-age=2",
+                  "type": "string"
+                }
+              },
+              "ETag": {
+                "schema": {
+                  "example": "W/\"<map-sig>\"",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "weak ETag; 304 on if-none-match; full merged map (~642KB)",
+        "x-command-center": {
+          "cache": "public, max-age=2",
+          "etag": "W/<map-sig>",
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/map/lod": {
+      "get": {
+        "operationId": "getMapLod",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "chunk-level aggregation; tenant validated",
+        "x-command-center": {
+          "cache": "30s ttl + warmup",
+          "etag": null,
+          "query": [
+            "tenant"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "all|tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/overview": {
+      "get": {
+        "operationId": "getOverview",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "merged ledger + outcome.jsonl overview per tenant",
+        "x-command-center": {
+          "cache": "supervisor 5s ttl",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/plan": {
+      "get": {
+        "operationId": "getPlan",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/plan",
+        "x-command-center": {
+          "cache": "direct read",
+          "etag": null,
+          "query": [
+            "tenant"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "t1",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/redeem": {
+      "post": {
+        "operationId": "postRedeem",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "stores first 6 chars only; pending status; no external call yet",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "write: redeem-log.jsonl append (masked code)"
+        }
+      }
+    },
+    "/api/redeem/history": {
+      "get": {
+        "operationId": "getRedeemHistory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/redeem/history",
+        "x-command-center": {
+          "cache": "direct read",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/registry/agents": {
+      "get": {
+        "operationId": "getRegistryAgents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "lists agents + key hashes only; no plaintext",
+        "x-command-center": {
+          "cache": "direct read",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      },
+      "post": {
+        "operationId": "postRegistryAgents",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "mode production|simulation; production requires api_key_tail; simulation issues plaintext simkey once (SHA-256 at rest)",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "write: registry.db (SQLite WAL)"
+        }
+      }
+    },
+    "/api/registry/agents/{id}": {
+      "delete": {
+        "operationId": "deleteRegistryAgentsId",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "soft revoke: agent + active keys set revoked_at",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "write: registry.db (SQLite WAL)"
+        }
+      }
+    },
+    "/api/registry/keys": {
+      "post": {
+        "operationId": "postRegistryKeys",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "reissue simkey for simulation non-revoked agent only; plaintext once",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "write: registry.db (SQLite WAL)"
+        }
+      }
+    },
+    "/api/replay": {
+      "get": {
+        "operationId": "getReplay",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "replay null when absent",
+        "x-command-center": {
+          "cache": "direct read",
+          "etag": null,
+          "query": [
+            "tenant"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "t1",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/shop": {
+      "get": {
+        "operationId": "getShop",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "official shop products",
+        "x-command-center": {
+          "cache": "external 20s cache",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/shop/history": {
+      "get": {
+        "operationId": "getShopHistory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/shop/history",
+        "x-command-center": {
+          "cache": "30s ttl",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/shop/history/refresh": {
+      "post": {
+        "operationId": "postShopHistoryRefresh",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "request-driven snapshot; 502 on fetch failure",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "write: external fetch -> shop-history.jsonl append on change"
+        }
+      }
+    },
+    "/api/shop/me": {
+      "get": {
+        "operationId": "getShopMe",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "requires X-Shop-Cookie header; forwarded to official shop",
+        "x-command-center": {
+          "cache": "external",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/shop/order": {
+      "post": {
+        "operationId": "postShopOrder",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "requires X-Shop-Cookie header; CSRF token extracted from cookie and forwarded",
+        "x-command-center": {
+          "cache": "none",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "write: external order via official shop"
+        }
+      }
+    },
+    "/api/shop/orders": {
+      "get": {
+        "operationId": "getShopOrders",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "requires X-Shop-Cookie header; forwarded to official shop",
+        "x-command-center": {
+          "cache": "external",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/stream": {
+      "get": {
+        "operationId": "getStream",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "n",
+            "required": false,
+            "schema": {
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "bounded decision-stream tail (n clamped 1..200); poll JSON, not SSE",
+        "x-command-center": {
+          "cache": "direct tail read",
+          "etag": null,
+          "query": [
+            "tenant",
+            "n"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "t1",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/survey": {
+      "get": {
+        "operationId": "getSurvey",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "states",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "per-tenant resource/obstacle/core-hunt cells",
+        "x-command-center": {
+          "cache": "survey cache 30s",
+          "etag": null,
+          "query": [
+            "tenant",
+            "states"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "all|tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/survey/decision-input": {
+      "get": {
+        "operationId": "getSurveyDecisionInput",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "tenant validated",
+        "x-command-center": {
+          "cache": "30s ttl + warmup",
+          "etag": null,
+          "query": [
+            "tenant"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/survey/enemy-cores": {
+      "get": {
+        "operationId": "getSurveyEnemyCores",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "core_hunts readOnly per tenant + alliance snapshot",
+        "x-command-center": {
+          "cache": "direct db + snapshot",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/survey/mine": {
+      "get": {
+        "operationId": "getSurveyMine",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cell",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "mine cell + resource timeline",
+        "x-command-center": {
+          "cache": "direct survey-db read",
+          "etag": null,
+          "query": [
+            "tenant",
+            "cell"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "t1",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/survey/mine-patterns": {
+      "get": {
+        "operationId": "getSurveyMinePatterns",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "all",
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "tenant validated",
+        "x-command-center": {
+          "cache": "30s ttl + warmup",
+          "etag": null,
+          "query": [
+            "tenant"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "all|tN",
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/tenants": {
+      "get": {
+        "operationId": "getTenants",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "per-tenant live status from supervisor /ready probe; tenant colors",
+        "x-command-center": {
+          "cache": "supervisor 5s ttl",
+          "etag": null,
+          "query": [],
+          "stream_kind": "poll-json",
+          "tenant_param": null,
+          "write_semantics": "read-only"
+        }
+      }
+    },
+    "/api/world": {
+      "get": {
+        "operationId": "getWorld",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "enum": [
+                "t1",
+                "t2",
+                "t3",
+                "t4"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Invalid query parameters or tenant"
+          },
+          "404": {
+            "description": "Route not found"
+          },
+          "500": {
+            "description": "Internal error"
+          }
+        },
+        "summary": "GET /api/world",
+        "x-command-center": {
+          "cache": "direct read",
+          "etag": null,
+          "query": [
+            "tenant"
+          ],
+          "stream_kind": "poll-json",
+          "tenant_param": "t1",
+          "write_semantics": "read-only"
+        }
+      }
+    }
+  },
+  "x-command-center": {
+    "api_route_count": 66,
+    "etag_routes": [
+      "/api/map"
+    ],
+    "static_route_count": 5,
+    "static_routes": [
+      {
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "method": "GET",
+        "path": "/app"
+      },
+      {
+        "method": "GET",
+        "path": "/app/*"
+      },
+      {
+        "method": "GET",
+        "path": "/assets/*"
+      },
+      {
+        "method": "GET",
+        "path": "/style.css"
+      }
+    ],
+    "stream_kind": "poll-json",
+    "write_routes": [
+      {
+        "method": "POST",
+        "path": "/api/alliance/survey/arbitrate"
+      },
+      {
+        "method": "POST",
+        "path": "/api/alliance/survey/arbitrate/clear"
+      },
+      {
+        "method": "POST",
+        "path": "/api/leaderboard/refresh"
+      },
+      {
+        "method": "GET",
+        "path": "/api/commands"
+      },
+      {
+        "method": "POST",
+        "path": "/api/command"
+      },
+      {
+        "method": "POST",
+        "path": "/api/command/goal"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/command"
+      },
+      {
+        "method": "POST",
+        "path": "/api/command/clear"
+      },
+      {
+        "method": "POST",
+        "path": "/api/command/mode"
+      },
+      {
+        "method": "POST",
+        "path": "/api/shop/history/refresh"
+      },
+      {
+        "method": "POST",
+        "path": "/api/shop/order"
+      },
+      {
+        "method": "POST",
+        "path": "/api/redeem"
+      },
+      {
+        "method": "POST",
+        "path": "/api/ingest/agents"
+      },
+      {
+        "method": "POST",
+        "path": "/api/registry/agents"
+      },
+      {
+        "method": "POST",
+        "path": "/api/registry/keys"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/registry/agents/:id"
+      }
+    ]
+  }
+}
