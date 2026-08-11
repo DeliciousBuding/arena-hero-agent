@@ -83,6 +83,21 @@ class DecisionId:
 
 
 @dataclass(frozen=True, slots=True, order=True)
+class CommandId:
+    """Stable opaque identifier for one director command instance."""
+
+    __canonical_name__ = "arena-hero.command-id.v1"
+
+    value: str
+
+    def __post_init__(self) -> None:
+        _validate_identifier("command id", self.value, _OPAQUE_ID)
+
+    def __str__(self) -> str:
+        return self.value
+
+
+@dataclass(frozen=True, slots=True, order=True)
 class StateDigest:
     """Lowercase SHA-256 digest of a canonical state representation."""
 

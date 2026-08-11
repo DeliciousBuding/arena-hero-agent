@@ -1,7 +1,7 @@
 """Application-owned structural interfaces; concrete implementations live in adapters."""
 
 from .clock import Clock
-from .control import CommandBus, SnapshotReader
+from .control import CommandAudit, CommandBus, CommandLedger, SnapshotReader
 from .game import GameClient
 from .leases import (
     DecisionLease,
@@ -18,7 +18,9 @@ from .persistence import DecisionRecorder, EventJournal, TenantStateStore
 
 __all__ = [
     "Clock",
+    "CommandAudit",
     "CommandBus",
+    "CommandLedger",
     "DecisionLease",
     "DecisionLeaseHandle",
     "DecisionRecorder",

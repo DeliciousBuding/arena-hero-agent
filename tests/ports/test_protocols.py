@@ -6,6 +6,7 @@ from typing import cast
 
 from arena_hero import Accepted, AsyncGameEvent, CommandPlan
 
+from arena_hero_agent.alliance.commands import CommandAuditEvent, DirectorCommand
 from arena_hero_agent.domain import (
     DeadlineBudget,
     DecisionId,
@@ -16,7 +17,9 @@ from arena_hero_agent.domain import (
 )
 from arena_hero_agent.ports import (
     Clock,
+    CommandAudit,
     CommandBus,
+    CommandLedger,
     DecisionLease,
     DecisionLeaseHandle,
     DecisionRecorder,
@@ -227,6 +230,37 @@ class FakeCommandBus:
         return self._receive()
 
 
+class FakeCommandLedger:
+    async def publish(self, command: DirectorCommand) -> None:
+        return None
+
+    async def _pending(self) -> AsyncIterator[DirectorCommand]:
+        if False:
+            yield cast(DirectorCommand, object())
+
+    def pending(self, tenant_id: TenantId) -> AsyncIterator[DirectorCommand]:
+        return self._pending()
+
+    async def is_applied(self, tenant_id: TenantId, *, command: DirectorCommand) -> bool:
+        return False
+
+    async def mark_applied(
+        self,
+        tenant_id: TenantId,
+        *,
+        command: DirectorCommand,
+        generation: Generation,
+        applied_at_tick: int,
+        lease: WriterLeaseHandle,
+    ) -> bool:
+        return True
+
+
+class FakeCommandAudit:
+    async def record(self, tenant_id: TenantId, *, event: CommandAuditEvent) -> None:
+        return None
+
+
 class FakeSnapshotReader:
     async def read(self, tenant_id: TenantId) -> str | None:
         return None
@@ -263,6 +297,8 @@ state_store: TenantStateStore[str] = FakeStateStore()
 event_journal: EventJournal[str] = FakeEventJournal()
 decision_recorder: DecisionRecorder = FakeDecisionRecorder()
 command_bus: CommandBus[str] = FakeCommandBus()
+command_ledger: CommandLedger = FakeCommandLedger()
+command_audit: CommandAudit = FakeCommandAudit()
 snapshot_reader: SnapshotReader[str] = FakeSnapshotReader()
 telemetry_sink: TelemetrySink[str] = FakeTelemetrySink()
 health_reporter: HealthReporter = FakeHealthReporter()
@@ -283,6 +319,8 @@ def test_public_protocols_support_runtime_adapter_smoke_checks() -> None:
         (event_journal, EventJournal),
         (decision_recorder, DecisionRecorder),
         (command_bus, CommandBus),
+        (command_ledger, CommandLedger),
+        (command_audit, CommandAudit),
         (snapshot_reader, SnapshotReader),
         (telemetry_sink, TelemetrySink),
         (health_reporter, HealthReporter),

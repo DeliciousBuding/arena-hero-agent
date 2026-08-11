@@ -44,6 +44,7 @@ from .rules import (
 )
 from .state import StateOwnershipError, TenantState, TurnInput
 from .value_objects import (
+    CommandId,
     Coordinate,
     DeadlineBudget,
     DecisionId,
@@ -82,6 +83,7 @@ __all__ = [
     "BeaconStatus",
     "Bounds",
     "CellState",
+    "CommandId",
     "Coordinate",
     "CoreObservation",
     "CoreState",
