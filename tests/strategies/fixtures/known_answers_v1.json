@@ -13,7 +13,9 @@
       "packages/arena-agent/src/domain/plan-validator.ts",
       "packages/arena-agent/src/planning/worker-task-planner.ts",
       "packages/arena-agent/src/algorithms/min-cost-assignment.ts",
-      "packages/arena-agent/src/domain/nav.ts"
+      "packages/arena-agent/src/domain/nav.ts",
+      "packages/arena-agent/src/runtime/human-override.ts",
+      "packages/arena-agent/src/strategies/variant-registry.ts"
     ],
     "captured_on": "2026-08-12",
     "intentional_differences": [
@@ -22,7 +24,12 @@
       "float threat contributions are accumulated in input order like the oracle (IEEE-754 doubles)",
       "P4-12 worker assignment: deterministic Hungarian cost matrix and sticky routing captured from worker-task-planner.ts",
       "P4-12 refillPredictions is passed as an explicit parameter instead of a snapshot field (pipeline not migrated)",
-      "P4-12 claim leases are explicit deterministic state instead of hidden class state"
+      "P4-12 claim leases are explicit deterministic state instead of hidden class state",
+      "P4-13 strategy variants: only oracle variants fully expressible on the Python SafetyPlannerConfig surface are registered; unmigrated ids fail fast on enable",
+      "P4-13 human override: all oracle-expressible fields match; Python additionally exposes an explicit stale flag for audit",
+      "P4-13 human override: pathing reuses the oracle-compared domain first_step with adaptive radius; oracle abandon-factor pruning is not migrated",
+      "P4-13 human override: mine_hold goals are not carried by the Python store (P5-3 goal kinds are mine|goto); oracle mine_hold stays EXPECTED_UNKNOWN",
+      "P4-13 action_from_wire parses strictly per surface (core vs unit); malformed cross-surface shapes are rejected as invalid_action"
     ]
   },
   "threat_maps": [
@@ -6911,6 +6918,1214 @@
           }
         }
       ]
+    }
+  ],
+  "variant_config": [
+    {
+      "name": "population-ceiling-30-v1",
+      "expected": {
+        "populationCeiling": 30
+      }
+    },
+    {
+      "name": "population-ceiling-35-v1",
+      "expected": {
+        "populationCeiling": 35
+      }
+    },
+    {
+      "name": "population-ceiling-40-v1",
+      "expected": {
+        "populationCeiling": 40
+      }
+    },
+    {
+      "name": "empty_list",
+      "ids": [],
+      "expected": {}
+    },
+    {
+      "name": "merge_later_wins",
+      "ids": [
+        "population-ceiling-30-v1",
+        "population-ceiling-35-v1"
+      ],
+      "expected": {
+        "populationCeiling": 35
+      }
+    }
+  ],
+  "human_override": [
+    {
+      "name": "one_shot_harvest_applied",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              5,
+              1
+            ]
+          }
+        ],
+        "resourceCells": {
+          "5,1": [
+            5,
+            1
+          ]
+        }
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [
+          {
+            "id": "c1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "action": {
+              "type": "HARVEST"
+            },
+            "createdAt": "x"
+          }
+        ],
+        "goals": []
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "22222222-2222-2222-2222-222222222222"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {
+          "22222222-2222-2222-2222-222222222222": {
+            "type": "HARVEST"
+          }
+        },
+        "coreAction": null
+      }
+    },
+    {
+      "name": "one_shot_harvest_rejected_semantic",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ],
+        "resourceCells": {
+          "5,1": [
+            5,
+            1
+          ]
+        }
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [
+          {
+            "id": "c1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "action": {
+              "type": "HARVEST"
+            },
+            "createdAt": "x"
+          }
+        ],
+        "goals": []
+      },
+      "expected": {
+        "active": false,
+        "applied": [],
+        "rejected": [
+          {
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "reason": "Worker is not standing on a visible resource cell"
+          }
+        ],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {},
+        "coreAction": null
+      }
+    },
+    {
+      "name": "mine_far_move_avoids_obstacle",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ],
+        "resourceCells": {
+          "5,1": [
+            5,
+            1
+          ]
+        },
+        "obstacleCells": [
+          "2,1"
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [],
+        "goals": [
+          {
+            "id": "g1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "kind": "mine",
+            "target": [
+              5,
+              1
+            ],
+            "createdAt": "x"
+          }
+        ]
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "22222222-2222-2222-2222-222222222222"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {
+          "22222222-2222-2222-2222-222222222222": {
+            "type": "MOVE",
+            "direction": "DOWN"
+          }
+        },
+        "coreAction": null
+      }
+    },
+    {
+      "name": "mine_at_target_harvest",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              5,
+              1
+            ]
+          }
+        ],
+        "resourceCells": {
+          "5,1": [
+            5,
+            1
+          ]
+        }
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [],
+        "goals": [
+          {
+            "id": "g1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "kind": "mine",
+            "target": [
+              5,
+              1
+            ],
+            "createdAt": "x"
+          }
+        ]
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "22222222-2222-2222-2222-222222222222"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {
+          "22222222-2222-2222-2222-222222222222": {
+            "type": "HARVEST"
+          }
+        },
+        "coreAction": null
+      }
+    },
+    {
+      "name": "mine_full_cargo_deposit",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "cargo": 1
+          }
+        ],
+        "corePosition": [
+          0,
+          0
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [],
+        "goals": [
+          {
+            "id": "g1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "kind": "mine",
+            "target": [
+              5,
+              1
+            ],
+            "createdAt": "x"
+          }
+        ]
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "22222222-2222-2222-2222-222222222222"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {
+          "22222222-2222-2222-2222-222222222222": {
+            "type": "DEPOSIT"
+          }
+        },
+        "coreAction": null
+      }
+    },
+    {
+      "name": "mine_full_cargo_move_home",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              5,
+              1
+            ],
+            "cargo": 1
+          }
+        ],
+        "corePosition": [
+          0,
+          0
+        ],
+        "resourceCells": {
+          "5,1": [
+            5,
+            1
+          ]
+        }
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [],
+        "goals": [
+          {
+            "id": "g1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "kind": "mine",
+            "target": [
+              5,
+              1
+            ],
+            "createdAt": "x"
+          }
+        ]
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "22222222-2222-2222-2222-222222222222"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {
+          "22222222-2222-2222-2222-222222222222": {
+            "type": "MOVE",
+            "direction": "LEFT"
+          }
+        },
+        "coreAction": null
+      }
+    },
+    {
+      "name": "mine_exhausted_satisfied",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ],
+        "resourceCells": {
+          "9,9": [
+            9,
+            9
+          ]
+        }
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [],
+        "goals": [
+          {
+            "id": "g1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "kind": "mine",
+            "target": [
+              5,
+              1
+            ],
+            "createdAt": "x"
+          }
+        ]
+      },
+      "expected": {
+        "active": false,
+        "applied": [],
+        "rejected": [],
+        "satisfied": [
+          "22222222-2222-2222-2222-222222222222"
+        ],
+        "updatedAt": "x",
+        "unitActions": {},
+        "coreAction": null
+      }
+    },
+    {
+      "name": "goto_moves",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [],
+        "goals": [
+          {
+            "id": "g1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "kind": "goto",
+            "target": [
+              5,
+              1
+            ],
+            "createdAt": "x"
+          }
+        ]
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "22222222-2222-2222-2222-222222222222"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {
+          "22222222-2222-2222-2222-222222222222": {
+            "type": "MOVE",
+            "direction": "RIGHT"
+          }
+        },
+        "coreAction": null
+      }
+    },
+    {
+      "name": "goto_arrived_satisfied",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              5,
+              1
+            ]
+          }
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [],
+        "goals": [
+          {
+            "id": "g1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "kind": "goto",
+            "target": [
+              5,
+              1
+            ],
+            "createdAt": "x"
+          }
+        ]
+      },
+      "expected": {
+        "active": false,
+        "applied": [],
+        "rejected": [],
+        "satisfied": [
+          "22222222-2222-2222-2222-222222222222"
+        ],
+        "updatedAt": "x",
+        "unitActions": {},
+        "coreAction": null
+      }
+    },
+    {
+      "name": "unknown_unit_rejected",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [
+          {
+            "id": "c1",
+            "unitId": "ghost-unit",
+            "action": {
+              "type": "MOVE",
+              "direction": "UP"
+            },
+            "createdAt": "x"
+          }
+        ],
+        "goals": []
+      },
+      "expected": {
+        "active": false,
+        "applied": [],
+        "rejected": [
+          {
+            "unitId": "ghost-unit",
+            "reason": "unknown_unit"
+          }
+        ],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {},
+        "coreAction": null
+      }
+    },
+    {
+      "name": "capability_rejected",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [
+          {
+            "id": "c1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "action": {
+              "type": "SHOOT",
+              "targetId": null,
+              "expectedCell": [
+                3,
+                3
+              ]
+            },
+            "createdAt": "x"
+          }
+        ],
+        "goals": []
+      },
+      "expected": {
+        "active": false,
+        "applied": [],
+        "rejected": [
+          {
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "reason": "action_requires_ranger"
+          }
+        ],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {},
+        "coreAction": null
+      }
+    },
+    {
+      "name": "one_shot_over_goal",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ],
+        "resourceCells": {
+          "5,1": [
+            5,
+            1
+          ]
+        }
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [
+          {
+            "id": "c1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "action": {
+              "type": "WAIT"
+            },
+            "createdAt": "x"
+          }
+        ],
+        "goals": [
+          {
+            "id": "g1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "kind": "mine",
+            "target": [
+              5,
+              1
+            ],
+            "createdAt": "x"
+          }
+        ]
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "22222222-2222-2222-2222-222222222222"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {
+          "22222222-2222-2222-2222-222222222222": {
+            "type": "WAIT"
+          }
+        },
+        "coreAction": null
+      }
+    },
+    {
+      "name": "stale_override_ignored",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "2026-08-11T20:30:16.064Z",
+        "commands": [],
+        "goals": [
+          {
+            "id": "g-stale",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "kind": "goto",
+            "target": [
+              50,
+              50
+            ],
+            "createdAt": "2026-08-11T20:30:16.064Z"
+          }
+        ]
+      },
+      "expected": {
+        "active": false,
+        "applied": [],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "2026-08-11T20:30:16.064Z",
+        "unitActions": {},
+        "coreAction": null
+      }
+    },
+    {
+      "name": "stale_invalid_updated_at_not_stale",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [],
+        "goals": [
+          {
+            "id": "g1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "kind": "goto",
+            "target": [
+              5,
+              1
+            ],
+            "createdAt": "x"
+          }
+        ]
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "22222222-2222-2222-2222-222222222222"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {
+          "22222222-2222-2222-2222-222222222222": {
+            "type": "MOVE",
+            "direction": "RIGHT"
+          }
+        },
+        "coreAction": null
+      }
+    },
+    {
+      "name": "mode_disabled_no_override",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "disabled",
+        "updatedAt": "x",
+        "commands": [
+          {
+            "id": "c1",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "action": {
+              "type": "HARVEST"
+            },
+            "createdAt": "x"
+          }
+        ],
+        "goals": []
+      },
+      "expected": {
+        "active": false,
+        "applied": [],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": null,
+        "unitActions": {},
+        "coreAction": null
+      }
+    },
+    {
+      "name": "core_start_move_applied",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ],
+        "corePosition": [
+          0,
+          0
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [
+          {
+            "id": "c1",
+            "unitId": "core-1",
+            "action": {
+              "type": "START_MOVE",
+              "direction": "RIGHT"
+            },
+            "createdAt": "x"
+          }
+        ],
+        "goals": []
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "core-1"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {},
+        "coreAction": {
+          "type": "START_MOVE",
+          "direction": "RIGHT"
+        }
+      }
+    },
+    {
+      "name": "core_cancel_move_applied",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ],
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreState": "moving"
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [
+          {
+            "id": "c1",
+            "unitId": "core-1",
+            "action": {
+              "type": "CANCEL_MOVE"
+            },
+            "createdAt": "x"
+          }
+        ],
+        "goals": []
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "core-1"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {},
+        "coreAction": {
+          "type": "CANCEL_MOVE"
+        }
+      }
+    },
+    {
+      "name": "core_spawn_applied",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ],
+        "corePosition": [
+          0,
+          0
+        ],
+        "resources": 50,
+        "resourceSpace": 50,
+        "population": 1
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [
+          {
+            "id": "c1",
+            "unitId": "core-1",
+            "action": {
+              "type": "SPAWN",
+              "unitType": "VANGUARD"
+            },
+            "createdAt": "x"
+          }
+        ],
+        "goals": []
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "core-1"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {},
+        "coreAction": {
+          "type": "SPAWN",
+          "unitType": "VANGUARD"
+        }
+      }
+    },
+    {
+      "name": "core_spawn_rejected",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ],
+        "corePosition": [
+          0,
+          0
+        ],
+        "resources": 3,
+        "resourceSpace": 97,
+        "population": 1
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [
+          {
+            "id": "c1",
+            "unitId": "core-1",
+            "action": {
+              "type": "SPAWN",
+              "unitType": "VANGUARD"
+            },
+            "createdAt": "x"
+          }
+        ],
+        "goals": []
+      },
+      "expected": {
+        "active": false,
+        "applied": [],
+        "rejected": [
+          {
+            "unitId": "core-1",
+            "reason": "spawn VANGUARD costs 10"
+          }
+        ],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {},
+        "coreAction": null
+      }
+    },
+    {
+      "name": "core_start_move_moving_rejected",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ],
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreState": "moving"
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [
+          {
+            "id": "c1",
+            "unitId": "core-1",
+            "action": {
+              "type": "START_MOVE",
+              "direction": "UP"
+            },
+            "createdAt": "x"
+          }
+        ],
+        "goals": []
+      },
+      "expected": {
+        "active": false,
+        "applied": [],
+        "rejected": [
+          {
+            "unitId": "core-1",
+            "reason": "Core is already moving"
+          }
+        ],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {},
+        "coreAction": null
+      }
+    },
+    {
+      "name": "far_goto_interpolates",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              1,
+              1
+            ]
+          }
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [],
+        "goals": [
+          {
+            "id": "g-far",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "kind": "goto",
+            "target": [
+              199,
+              199
+            ],
+            "createdAt": "x"
+          }
+        ]
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "22222222-2222-2222-2222-222222222222"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {
+          "22222222-2222-2222-2222-222222222222": {
+            "type": "MOVE",
+            "direction": "RIGHT"
+          }
+        },
+        "coreAction": null
+      }
+    },
+    {
+      "name": "far_goto_axis_right",
+      "snapshot": {
+        "units": [
+          {
+            "id": "22222222-2222-2222-2222-222222222222",
+            "role": "WORKER",
+            "position": [
+              10,
+              10
+            ]
+          }
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [],
+        "goals": [
+          {
+            "id": "g-far2",
+            "unitId": "22222222-2222-2222-2222-222222222222",
+            "kind": "goto",
+            "target": [
+              200,
+              10
+            ],
+            "createdAt": "x"
+          }
+        ]
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "22222222-2222-2222-2222-222222222222"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {
+          "22222222-2222-2222-2222-222222222222": {
+            "type": "MOVE",
+            "direction": "RIGHT"
+          }
+        },
+        "coreAction": null
+      }
+    },
+    {
+      "name": "ranger_shoot_applied",
+      "snapshot": {
+        "units": [
+          {
+            "id": "33333333-3333-3333-3333-333333333333",
+            "role": "RANGER",
+            "position": [
+              0,
+              0
+            ]
+          }
+        ]
+      },
+      "store": {
+        "version": 1,
+        "mode": "override",
+        "updatedAt": "x",
+        "commands": [
+          {
+            "id": "c1",
+            "unitId": "33333333-3333-3333-3333-333333333333",
+            "action": {
+              "type": "SHOOT",
+              "targetId": null,
+              "expectedCell": [
+                3,
+                0
+              ]
+            },
+            "createdAt": "x"
+          }
+        ],
+        "goals": []
+      },
+      "expected": {
+        "active": true,
+        "applied": [
+          "33333333-3333-3333-3333-333333333333"
+        ],
+        "rejected": [],
+        "satisfied": [],
+        "updatedAt": "x",
+        "unitActions": {
+          "33333333-3333-3333-3333-333333333333": {
+            "type": "SHOOT",
+            "targetId": null,
+            "expectedCell": [
+              3,
+              0
+            ]
+          }
+        },
+        "coreAction": null
+      }
     }
   ]
 }

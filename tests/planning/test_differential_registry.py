@@ -45,6 +45,8 @@ MATCH_SECTIONS = frozenset(
         "progress_decay",
         "sticky_bonus",
         "worker_assignments",
+        "variant_config",
+        "human_override",
     }
 )
 
@@ -58,6 +60,7 @@ ALLOWED_DIFFERENCES = frozenset(
         "beacon_sentinel",
         "worker_assignment_refill_predictions_parameter",
         "worker_assignment_claims_explicit_state",
+        "human_override.stale_override_ignored",
     }
 )
 
@@ -74,6 +77,9 @@ EXPECTED_UNKNOWN = frozenset(
         "refill_prediction_pipeline",
         "macro_policy",
         "worker_liveness_blockade",
+        "mine_hold_goals",
+        "variant_config_unmigrated_ids",
+        "human_override_path_abandon_pruning",
     }
 )
 
@@ -100,6 +106,8 @@ def test_oracle_metadata_is_pinned() -> None:
         "packages/arena-agent/src/planning/worker-task-planner.ts",
         "packages/arena-agent/src/algorithms/min-cost-assignment.ts",
         "packages/arena-agent/src/domain/nav.ts",
+        "packages/arena-agent/src/runtime/human-override.ts",
+        "packages/arena-agent/src/strategies/variant-registry.ts",
     ):
         assert source in metadata["source_files"]
 
