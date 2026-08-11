@@ -9,4 +9,6 @@
 - 最大风险：子进程 kill 在 Windows 的锁释放语义（TerminateProcess 后 OS 释放文件锁，需实测）；SQLite 截断可能被 CREATE TABLE 自愈而非 fail-closed（需实测后选注入形态）；`ty check` 对测试文件严格类型；共享 docs/schema/registry 不可写。
 
 ## 日志
+- 2026-08-12 任务 1 完成：`tests/fault_injection/` 参数化骨架 + P4-15 lease SIGKILL + P4-18 store 故障。子进程真杀（`sys.executable -c` 起真实进程 → `Popen.kill()`，Windows=TerminateProcess/POSIX=SIGKILL；不 mock 被测对象）。lease：SIGKILL 后 acquire 被拒、错 fence 被拒、过期后精确 fence 接管（fence+1），参数化 renewals 0/1/2；store：半写 tmp 不提升（3 种残留）、损坏 5 种 payload fail-closed 且文件原样保留、无 lease/过期 lease/错 epoch/错租户写全拒、SIGKILL 写循环后 plan 恒有效。红→绿（SIGKILL）：临时禁用 kill（子进程存活持 OS 锁）→ `assert replacement is not None` 失败（"crashed lease never expired or takeover was blocked"，15.75s 红）→ 还原 kill → 5 passed 绿。全量 fault 套件 15 passed；ruff/format/ty 全过。决定：磁盘注入选 failpoint/文件损坏而非只读目录——Windows 只读属性不拦已有文件写入且 admin 绕过，不可靠；SQLite 截断/尾垃圾会自愈（实测 self-heal），故损坏注入用整文件垃圾字节（open 即 DatabaseError→RecorderError）。
 - 2026-08-12 任务 0 完成：`uv sync --locked --all-groups`；`pytest -q` 1217 passed（skipped 0）；`uv run --python 3.11 python -m pytest -q` 1217 passed；`ruff format --check .` / `ruff check .` / `ty check` / `git diff --check` 全过。基线核对无误，开始动工。
+
