@@ -5,7 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
-from arena_hero import MoveAction, ShootAction, SpawnAction
+from arena_hero import CommandPlan, MoveAction, ShootAction, SpawnAction
 
 import arena_hero_agent.adapters.sdk.plans as plans_module
 from arena_hero_agent.adapters.sdk import (
@@ -269,3 +269,35 @@ def test_payload_is_deterministic_across_intent_order() -> None:
 def test_command_plan_payload_rejects_non_plan() -> None:
     with pytest.raises(SdkContractViolationError, match="CommandPlan"):
         command_plan_payload(object())
+
+
+class _NoModelDumpAction:
+    """An SDK-shaped action lacking Pydantic v2's ``model_dump`` (future drift)."""
+
+    type = "WAIT"
+
+    def model_dump(self, *args: object, **kwargs: object) -> object:
+        raise AttributeError("model_dump is only available on Pydantic v2 models")
+
+
+def test_command_plan_payload_rejects_core_action_without_model_dump() -> None:
+    plan = CommandPlan.model_construct(
+        tick=1,
+        unit_actions={},
+        core_action=_NoModelDumpAction(),
+    )
+    with pytest.raises(SdkContractViolationError, match="unknown core action object"):
+        command_plan_payload(plan)
+
+
+def test_rejects_non_canonical_unit_uuid_before_lookup() -> None:
+    decision = _decision(
+        unit_intents=(
+            UnitIntent(
+                unit_id=EntityId("AAAAAAAA-0000-0000-0000-000000000001"),
+                action=UnitAction.WAIT,
+            ),
+        ),
+    )
+    with pytest.raises(SdkContractViolationError, match="canonical SDK UUID"):
+        build_command_plan(decision, _observation())

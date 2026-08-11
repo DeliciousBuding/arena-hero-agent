@@ -179,6 +179,7 @@ def build_command_plan(decision: Decision, observation: TurnObservation) -> Any:
     ):
         if type(intent) is not UnitIntent:
             raise _violation("decision contains an unknown unit intent object")
+        unit_id = _uuid(intent.unit_id.value, "unit id")
         unit = known_units.get(intent.unit_id.value)
         if unit is None:
             raise _violation(
@@ -190,7 +191,6 @@ def build_command_plan(decision: Decision, observation: TurnObservation) -> Any:
             )
         if intent.target_id is not None and intent.target_id.value not in known_entities:
             raise _violation(f"shoot intent references unknown target {intent.target_id.value!r}")
-        unit_id = _uuid(intent.unit_id.value, "unit id")
         if unit_id in unit_actions:
             raise _violation(f"duplicate unit intent {intent.unit_id.value!r}")
         unit_actions[unit_id] = _unit_action(intent, sdk=sdk)
@@ -232,9 +232,12 @@ def command_plan_payload(plan: object) -> dict[str, object]:
         unit_actions.append(
             {"unit_id": str(unit_id), "action": action.model_dump(mode="json", exclude_none=True)}
         )
+    core_action_value = plan_value.core_action
+    if core_action_value is not None and not isinstance(core_action_value, BaseModel):
+        raise _violation("CommandPlan contains an unknown core action object")
     core = (
         None
-        if plan_value.core_action is None
-        else plan_value.core_action.model_dump(mode="json", exclude_none=True)
+        if core_action_value is None
+        else core_action_value.model_dump(mode="json", exclude_none=True)
     )
     return {"tick": plan_value.tick, "unit_actions": unit_actions, "core_action": core}
