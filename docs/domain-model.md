@@ -32,6 +32,24 @@ Decision, writer, and migration acquisition are separate protocols:
 The common `LeaseHandle` only defines lifecycle operations. Purpose-specific handle protocols carry
 the additional identifiers required by their operation.
 
+## Tenant state ownership
+
+`TenantState` is the single authoritative semantic identity for one tenant partition. It composes
+the immutable `WorldProjection` (world), `TenantId` (partition), and the decision journal identity
+(`decision_count` plus `last_decision_id`). Its `state_digest` is the canonical SHA-256 identity
+used by compare-and-set storage; generation and fencing tokens are durable-envelope concerns owned
+by the writer lease and are intentionally not part of the digest.
+
+State advances are pure, fail-closed reducers:
+
+- `observe(world)` folds in a newer world projection. A tick regression or a conflicting
+  observation for an already-seen tick is rejected; an identical projection is a no-op.
+- `record_decision(decision_id)` commits one decision. Re-committing the current last decision is
+  rejected so the lease/arbiter can treat it as a duplicate signal.
+
+`TenantState` is the `StateT` consumed by the `TenantStateStore` compare-and-set port; the P4-9
+lease/arbiter layer builds on this seam.
+
 ## Runtime protocol checks
 
 Public ports use `typing.runtime_checkable`. This supports inexpensive adapter smoke checks and

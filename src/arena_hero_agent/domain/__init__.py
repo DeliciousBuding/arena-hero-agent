@@ -32,6 +32,7 @@ from .rules import (
     parse_rules_version,
     transition_phase,
 )
+from .state import TenantState
 from .value_objects import (
     Coordinate,
     DeadlineBudget,
@@ -91,6 +92,7 @@ __all__ = [
     "SearchLimits",
     "StateDigest",
     "TenantId",
+    "TenantState",
     "TerrainObservation",
     "TerrainState",
     "UnitObservation",
