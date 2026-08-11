@@ -245,6 +245,17 @@ class _FakeStateStore:
     ) -> bool:
         return next_generation.supersedes(expected_generation)
 
+    async def restore(
+        self,
+        tenant_id: TenantId,
+        *,
+        generation: Generation,
+        state_digest: StateDigest,
+        state: TenantState,
+        lease: WriterLeaseHandle,
+    ) -> bool:
+        return lease.generation == generation
+
 
 def test_tenant_state_satisfies_cas_store_state_type() -> None:
     """P4-9 seam: TenantState is a valid StateT for the CAS tenant store."""
