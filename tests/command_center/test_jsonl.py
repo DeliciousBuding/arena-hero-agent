@@ -156,22 +156,21 @@ def test_latest_run_dir_missing_calibration_returns_none(tmp_path: Path) -> None
     assert latest_run_dir(tmp_path, "t1") is None
 
 
-def test_latest_run_dir_memoizes_within_ttl() -> None:
+def test_latest_run_dir_memoizes_within_ttl(tmp_path: Path) -> None:
     clock = _FakeClock()
     cache = TtlCache[str | None](RUN_CACHE_TTL_MS, clock=clock)
-    tmp_path = Path(os.path.join(os.environ.get("TEMP", "/tmp"), "cc-test-memo"))
     _make_run_layout(tmp_path, "t1", {"run-a": ["1.json"]})
-    try:
-        assert latest_run_dir(tmp_path, "t1", cache=cache) == "run-a"
-        # New run appears but the memo still returns the cached value inside TTL.
-        _make_run_layout(tmp_path, "t1", {"run-b": ["1.json"]})
-        assert latest_run_dir(tmp_path, "t1", cache=cache) == "run-a"
-        clock.now = (RUN_CACHE_TTL_MS / 1000.0) + 0.001
-        assert latest_run_dir(tmp_path, "t1", cache=cache) == "run-b"
-    finally:
-        import shutil
-
-        shutil.rmtree(tmp_path, ignore_errors=True)
+    assert latest_run_dir(tmp_path, "t1", cache=cache) == "run-a"
+    # New run appears but the memo still returns the cached value inside TTL.
+    _make_run_layout(tmp_path, "t1", {"run-b": ["1.json"]})
+    # latest_run_dir orders runs by directory mtime; near-simultaneous creation
+    # can tie on coarse filesystem clocks, so make run-b deterministically newer.
+    run_b = tmp_path / "runtime" / "t1" / "calibration" / "run-b"
+    newer = os.stat(run_b).st_mtime + 60
+    os.utime(run_b, (newer, newer))
+    assert latest_run_dir(tmp_path, "t1", cache=cache) == "run-a"
+    clock.now = (RUN_CACHE_TTL_MS / 1000.0) + 0.001
+    assert latest_run_dir(tmp_path, "t1", cache=cache) == "run-b"
 
 
 def test_list_cases_sorted_json_only(tmp_path: Path) -> None:
