@@ -1,1 +1,83 @@
-"""Mission, worker-task, tactical decomposition, and assignment planning."""
+"""Deterministic planning: snapshots, worker tasks, missions, and plan validation."""
+
+from .mission import (
+    DEFAULT_MISSION_CONFIG,
+    MissionConfig,
+    is_collectable,
+    refill_bonus_of,
+    surveyor_ids,
+    target_confidence,
+)
+from .plan import (
+    CoreAction,
+    CoreActionType,
+    Plan,
+    PlanIntent,
+    UnitAction,
+    UnitActionType,
+)
+from .plan_validator import (
+    CORE_MAX_HP,
+    CORE_SHIELD_CAP,
+    CORE_SHIELD_CAP_WITH_BEACON,
+    UNIT_MAX_HP,
+    ValidationCode,
+    ValidationIssue,
+    ValidationResult,
+    validate_plan,
+)
+from .planning_snapshot import (
+    THREAT_RADIUS,
+    BeaconInfo,
+    EnemyUnit,
+    PlanningSnapshot,
+    PlanningUnit,
+    ResourceCellInfo,
+    build_threat_map,
+    extract_planning_snapshot,
+    threat_contribution,
+)
+from .task import (
+    Task,
+    TaskType,
+    can_deposit,
+    can_return_for_heal,
+    forced_task_for,
+)
+
+__all__ = [
+    "BeaconInfo",
+    "CORE_MAX_HP",
+    "CORE_SHIELD_CAP",
+    "CORE_SHIELD_CAP_WITH_BEACON",
+    "CoreAction",
+    "CoreActionType",
+    "DEFAULT_MISSION_CONFIG",
+    "EnemyUnit",
+    "MissionConfig",
+    "Plan",
+    "PlanIntent",
+    "PlanningSnapshot",
+    "PlanningUnit",
+    "ResourceCellInfo",
+    "Task",
+    "TaskType",
+    "THREAT_RADIUS",
+    "UNIT_MAX_HP",
+    "UnitAction",
+    "UnitActionType",
+    "ValidationCode",
+    "ValidationIssue",
+    "ValidationResult",
+    "build_threat_map",
+    "can_deposit",
+    "can_return_for_heal",
+    "extract_planning_snapshot",
+    "forced_task_for",
+    "is_collectable",
+    "refill_bonus_of",
+    "surveyor_ids",
+    "target_confidence",
+    "threat_contribution",
+    "validate_plan",
+]
