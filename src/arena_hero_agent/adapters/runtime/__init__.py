@@ -5,9 +5,12 @@ from .leases import (
     MemoryLeaseCoordinator,
     MemoryWriterLeaseHandle,
 )
+from .state import MemoryDecisionJournal, MemoryTenantStateStore
 
 __all__ = [
+    "MemoryDecisionJournal",
     "MemoryDecisionLeaseHandle",
     "MemoryLeaseCoordinator",
+    "MemoryTenantStateStore",
     "MemoryWriterLeaseHandle",
 ]

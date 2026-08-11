@@ -50,6 +50,30 @@ async def test_different_generation_cannot_bypass_active_writer() -> None:
     assert current.disposition is LeaseDisposition.ACTIVE
 
 
+async def test_different_generation_cannot_bypass_active_decision_holder() -> None:
+    clock = ManualClock()
+    leases = MemoryLeaseCoordinator(clock, lease_duration_ns=100)
+    tenant = TenantId("sample")
+    budget = DeadlineBudget(1)
+
+    current = await leases.acquire_decision(
+        tenant,
+        Generation(4),
+        DecisionId("decision:current"),
+        budget,
+    )
+    contender = await leases.acquire_decision(
+        tenant,
+        Generation(5),
+        DecisionId("decision:next"),
+        budget,
+    )
+
+    assert current is not None
+    assert contender is None
+    assert current.disposition is LeaseDisposition.ACTIVE
+
+
 async def test_stale_replacement_requires_expiry_and_exact_fence_evidence() -> None:
     clock = ManualClock()
     leases = MemoryLeaseCoordinator(clock, lease_duration_ns=100)

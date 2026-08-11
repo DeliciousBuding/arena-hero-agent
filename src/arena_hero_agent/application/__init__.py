@@ -1,5 +1,18 @@
 """Application turn DTOs, tick loop orchestration, and orchestration interfaces."""
 
+from .decision import (
+    CommittedDecision,
+    DecisionArbiter,
+    DecisionArbitrationError,
+    DecisionContext,
+    DecisionJournalEntry,
+    DecisionLeaseUnavailable,
+    DecisionTicket,
+    DuplicateDecisionError,
+    StaleDecisionContextError,
+    StateCommitConflict,
+    StateRecoveryError,
+)
 from .recorder import TickRecorder
 from .runtime import (
     ComponentHealth,
@@ -46,6 +59,17 @@ from .turns import (
 __all__ = [
     "Backoff",
     "ComponentHealth",
+    "CommittedDecision",
+    "DecisionArbiter",
+    "DecisionArbitrationError",
+    "DecisionContext",
+    "DecisionJournalEntry",
+    "DecisionLeaseUnavailable",
+    "DecisionTicket",
+    "DuplicateDecisionError",
+    "StaleDecisionContextError",
+    "StateCommitConflict",
+    "StateRecoveryError",
     "CoreAction",
     "CoreIntent",
     "DeadlineOutcome",

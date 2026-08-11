@@ -169,6 +169,17 @@ class FakeStateStore:
     ) -> bool:
         return next_generation.supersedes(expected_generation)
 
+    async def restore(
+        self,
+        tenant_id: TenantId,
+        *,
+        generation: Generation,
+        state_digest: StateDigest,
+        state: str,
+        lease: WriterLeaseHandle,
+    ) -> bool:
+        return lease.generation == generation
+
 
 class FakeEventJournal:
     async def append(

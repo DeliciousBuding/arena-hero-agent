@@ -37,6 +37,18 @@ class TenantStateStore(Protocol[StateT]):
         """Persist only when generation and writer fence are still current."""
         ...
 
+    async def restore(
+        self,
+        tenant_id: TenantId,
+        *,
+        generation: Generation,
+        state_digest: StateDigest,
+        state: StateT,
+        lease: WriterLeaseHandle,
+    ) -> bool:
+        """Restore a missing or older snapshot from validated journal evidence."""
+        ...
+
 
 @runtime_checkable
 class EventJournal(Protocol[EventT]):
