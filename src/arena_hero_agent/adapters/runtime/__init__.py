@@ -1,5 +1,6 @@
 """Offline runtime adapters."""
 
+from .command_bus import FileCommandBus
 from .leases import (
     MemoryDecisionLeaseHandle,
     MemoryLeaseCoordinator,
@@ -13,6 +14,7 @@ from .process_leases import (
 from .state import MemoryDecisionJournal, MemoryTenantStateStore
 
 __all__ = [
+    "FileCommandBus",
     "FileWriterLeaseCoordinator",
     "FileWriterLeaseHandle",
     "MemoryDecisionJournal",
