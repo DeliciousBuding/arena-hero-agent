@@ -258,6 +258,28 @@ async def test_audit_records_and_reads_back_oldest_first(tmp_path: Path) -> None
         )
 
 
+async def test_audit_failure_never_blocks_command_processing(tmp_path: Path) -> None:
+    bus = FileCommandBus(tmp_path)
+    # Replace the audit target with a directory so the append fails closed at
+    # the writer level; the audit must stay fail-open (TypeScript parity).
+    audit_path = tmp_path / "command-bus" / TENANT.value / "audit.jsonl"
+    audit_path.mkdir(parents=True)
+
+    cmd = command("cmd:a")
+    await bus.publish(cmd)
+    assert not await bus.is_applied(TENANT, command=cmd)
+    events = bus.read_audit(TENANT)
+    assert events == []
+
+    coordinator = FileWriterLeaseCoordinator(tmp_path, lease_duration_ns=60_000_000_000)
+    lease = await coordinator.acquire_writer(TENANT, GENERATION, BUDGET)
+    assert lease is not None
+    assert await bus.mark_applied(
+        TENANT, command=cmd, generation=GENERATION, applied_at_tick=21, lease=lease
+    )
+    await lease.release()
+
+
 async def test_torn_tail_is_skipped_and_malformed_line_fails_closed(tmp_path: Path) -> None:
     bus = FileCommandBus(tmp_path)
     cmd = command("cmd:a")

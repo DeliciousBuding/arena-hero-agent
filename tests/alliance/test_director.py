@@ -59,6 +59,18 @@ async def test_issue_publishes_and_audits_accepted(tmp_path: Path) -> None:
     assert audit[0].tick == cmd.issued_at_tick
 
 
+async def test_issue_never_writes_tenant_command_state(tmp_path: Path) -> None:
+    d = director(tmp_path)
+    cmd = command()
+    assert await d.issue(cmd) is CommandDisposition.ACCEPTED
+
+    bus = FileCommandBus(tmp_path)
+    # The director only appended to the ledger and audit; it must not create
+    # any applied markers (that write belongs to the tenant behind its lease).
+    assert not await bus.is_applied(TENANT, command=cmd)
+    assert not (tmp_path / "command-bus" / TENANT.value / "applied.json").exists()
+
+
 async def test_issue_rejects_unsupported_version_without_publishing(tmp_path: Path) -> None:
     d = director(tmp_path)
     cmd = command(schema_version=2)

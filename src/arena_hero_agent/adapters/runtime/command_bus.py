@@ -149,9 +149,14 @@ def _write_applied(path: Path, record: _AppliedRecord) -> None:
 
 
 def _read_audit_lines(path: Path) -> list[str]:
-    if not path.exists():
+    if not path.exists() or not path.is_file():
         return []
-    text = path.read_text(encoding="utf-8")
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        # The audit trail is best-effort; an unreadable or broken trail reads
+        # as empty instead of blocking command processing or observability.
+        return []
     return [line for line in text.splitlines() if line.strip()]
 
 
