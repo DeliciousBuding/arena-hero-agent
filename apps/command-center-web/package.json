@@ -1,0 +1,42 @@
+{
+  "name": "@arena/command-center-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Arena 指挥面板 React 前端（Vite + React + TS，Bun/Node 工具链）",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --base=/app/",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test:regression": "node scripts/cc-regression.ts",
+    "test:unit": "node --test \"test/*.test.ts\""
+  },
+  "dependencies": {
+    "@radix-ui/react-collapsible": "^1.1.20",
+    "@radix-ui/react-separator": "^1.1.15",
+    "@radix-ui/react-slot": "^1.3.3",
+    "@radix-ui/react-tabs": "^1.1.21",
+    "@radix-ui/react-toggle-group": "^1.1.19",
+    "@radix-ui/react-tooltip": "^1.2.16",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.31.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "playwright-core": "^1.57.0",
+    "tailwindcss": "^4.3.3",
+    "tw-animate-css": "^1.4.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1"
+  }
+}

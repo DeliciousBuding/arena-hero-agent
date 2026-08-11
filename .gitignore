@@ -10,3 +10,7 @@ build/
 .coverage
 data/
 .worktrees/
+
+# Wave 13 command-center-web (允许追加的 node_modules/dist 忽略行)
+node_modules/
+
