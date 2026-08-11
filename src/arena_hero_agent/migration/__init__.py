@@ -1,5 +1,17 @@
 """Core migration state machines, assist logic, and restart-safe transitions."""
 
+from .enactment import (
+    DEFAULT_HEARTBEAT_TTL_SECONDS,
+    acquire_conductor_fence,
+    conductor_epoch_matches,
+    core_generation_matches,
+    fence_authorizes_plan,
+    fence_holds_tenant,
+    fence_is_monotonic,
+    lease_is_fresh,
+    may_start_move,
+    take_over_conductor_fence,
+)
 from .plan import (
     PLAN_SCHEMA,
     MigrationAssist,
@@ -29,6 +41,7 @@ from .state_machine import (
 )
 
 __all__ = [
+    "DEFAULT_HEARTBEAT_TTL_SECONDS",
     "MigrationAssist",
     "MigrationAuditResult",
     "MigrationClearRequest",
@@ -50,6 +63,15 @@ __all__ = [
     "MigrationState",
     "MigrationTarget",
     "PLAN_SCHEMA",
+    "acquire_conductor_fence",
+    "conductor_epoch_matches",
+    "core_generation_matches",
+    "fence_authorizes_plan",
+    "fence_holds_tenant",
+    "fence_is_monotonic",
+    "lease_is_fresh",
+    "may_start_move",
+    "take_over_conductor_fence",
     "parse_migration_plan",
     "transition",
 ]
