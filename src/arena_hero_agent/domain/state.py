@@ -7,8 +7,12 @@ boundaries. ``TenantState`` is the value type stored through the
 
 Ownership rules:
 
-- ``tenant_id`` identifies the partition that owns the state; it never changes
-  across reducer transitions.
+- ``tenant_id`` is the owner of the state partition; it never changes across
+  reducer transitions.
+- Every external state advance must be authorized by an actor whose
+  ``TenantId`` matches the state owner. ``require_owner`` and ``reduce_turn``
+  fail closed on cross-tenant or non-owner writes; ``observe`` and
+  ``record_decision`` enforce the same rule when an actor is declared.
 - ``world`` is tenant-runtime-owned observed state. Reducers replace it with a
   newer projection and never mutate the existing one.
 - ``decision_count`` and ``last_decision_id`` form the decision journal identity
@@ -28,6 +32,8 @@ Reducers are pure, fail-closed state advances:
   projection is a no-op.
 - ``record_decision`` commits one decision. Re-committing the current last
   decision is rejected so the P4-9 arbiter can treat it as a duplicate signal.
+- ``reduce_turn`` applies one round input (``TurnInput``) plus a decision in a
+  single pure step and requires an explicit owning actor.
 """
 
 from __future__ import annotations
@@ -40,6 +46,39 @@ from .value_objects import DecisionId, StateDigest, TenantId, _require_int
 from .world import WorldProjection
 
 _MAX_SAFE_INTEGER = 2**53 - 1
+
+
+class StateOwnershipError(ValueError):
+    """Raised when a non-owner attempts to authorize or advance tenant state."""
+
+
+@dataclass(frozen=True, slots=True)
+class TurnInput:
+    """Deterministic input for one decision round (one turn).
+
+    Mirrors the arena.agent.io.v1 ``DecideMessage`` semantics without depending
+    on the SDK: a round identity (``tick``) plus the world observation for that
+    round (``projection``). The tick must equal the projection tick so a caller
+    cannot declare a different round than the observed world.
+    """
+
+    __canonical_name__ = "arena-hero.turn-input.v1"
+
+    tick: int
+    projection: WorldProjection
+
+    def __post_init__(self) -> None:
+        tick = _require_int("turn tick", self.tick)
+        if tick < 0:
+            raise ValueError("turn tick cannot be negative")
+        if tick > _MAX_SAFE_INTEGER:
+            raise ValueError("turn tick exceeds the cross-language safe-integer range")
+        if not isinstance(self.projection, WorldProjection):
+            raise TypeError("projection must be a WorldProjection")
+        if self.projection.tick != tick:
+            raise ValueError(
+                f"turn tick {tick} does not match projection tick {self.projection.tick}"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,19 +106,49 @@ class TenantState:
             raise TypeError("last_decision_id must be a DecisionId or None")
 
     @property
+    def owner(self) -> TenantId:
+        """Return the tenant partition that owns this state."""
+
+        return self.tenant_id
+
+    @property
     def state_digest(self) -> StateDigest:
         """Return the canonical semantic identity for this tenant state."""
 
         return StateDigest.from_state(self)
 
-    def observe(self, world: WorldProjection) -> Self:
+    def require_owner(self, actor: TenantId) -> Self:
+        """Fail closed unless the actor owns this tenant state.
+
+        Returns the same state when authorized so callers can chain the guard
+        with a reducer step; a non-owner actor raises ``StateOwnershipError``.
+        """
+
+        if not isinstance(actor, TenantId):
+            raise TypeError("actor must be a TenantId")
+        if actor != self.tenant_id:
+            raise StateOwnershipError(
+                f"actor {actor.value} does not own state for tenant {self.tenant_id.value}"
+            )
+        return self
+
+    def observe(
+        self,
+        world: WorldProjection,
+        *,
+        actor: TenantId | None = None,
+    ) -> Self:
         """Fold a newer world projection into the state without mutating it.
 
         The tenant partition and decision journal are preserved. The projection
         must use the current rules version and must not regress or contradict an
-        observation already seen for its tick.
+        observation already seen for its tick. When ``actor`` is declared it
+        must own the state; otherwise the advance is treated as owner-authorized
+        by construction.
         """
 
+        if actor is not None:
+            self.require_owner(actor)
         if not isinstance(world, WorldProjection):
             raise TypeError("world must be a WorldProjection")
         assert_current_rules_version(world.rules_version)
@@ -98,13 +167,21 @@ class TenantState:
             last_decision_id=self.last_decision_id,
         )
 
-    def record_decision(self, decision_id: DecisionId) -> Self:
+    def record_decision(
+        self,
+        decision_id: DecisionId,
+        *,
+        actor: TenantId | None = None,
+    ) -> Self:
         """Commit one decision into the journal identity.
 
         Re-committing the current last decision is rejected; the arbiter treats
         it as a duplicate signal rather than silently extending the journal.
+        When ``actor`` is declared it must own the state.
         """
 
+        if actor is not None:
+            self.require_owner(actor)
         if not isinstance(decision_id, DecisionId):
             raise TypeError("decision_id must be a DecisionId")
         if decision_id == self.last_decision_id:
@@ -115,3 +192,26 @@ class TenantState:
             decision_count=self.decision_count + 1,
             last_decision_id=decision_id,
         )
+
+    def reduce_turn(
+        self,
+        turn: TurnInput,
+        decision: DecisionId,
+        *,
+        actor: TenantId,
+    ) -> Self:
+        """Apply one round input plus a decision as a single pure state advance.
+
+        The owning actor is mandatory and fails closed on cross-tenant or
+        non-owner writes. The round input must carry the current rules version
+        and a projection that neither regresses nor conflicts with the state;
+        the decision must not duplicate the committed journal tail.
+        """
+
+        if not isinstance(turn, TurnInput):
+            raise TypeError("turn must be a TurnInput")
+        if not isinstance(decision, DecisionId):
+            raise TypeError("decision must be a DecisionId")
+        self.require_owner(actor)
+        observed = self.observe(turn.projection, actor=actor)
+        return observed.record_decision(decision, actor=actor)

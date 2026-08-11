@@ -19,13 +19,16 @@ from arena_hero_agent.domain import (
     ResourceObservation,
     RulesVersion,
     StateDigest,
+    StateOwnershipError,
     TenantId,
     TenantState,
     TerrainObservation,
     TerrainState,
+    TurnInput,
     UnitObservation,
     UnitRole,
     WorldProjection,
+    canonical_sha256,
 )
 from arena_hero_agent.ports import TenantStateStore, WriterLeaseHandle
 
@@ -247,3 +250,120 @@ def test_tenant_state_satisfies_cas_store_state_type() -> None:
     """P4-9 seam: TenantState is a valid StateT for the CAS tenant store."""
     store: TenantStateStore[TenantState] = _FakeStateStore()
     assert isinstance(store, TenantStateStore)
+
+
+def test_turn_input_validates_round_identity() -> None:
+    turn = TurnInput(tick=43, projection=_world(tick=43))
+    assert turn.tick == 43
+    assert turn.projection == _world(tick=43)
+    with pytest.raises(ValueError, match="does not match projection tick"):
+        TurnInput(tick=44, projection=_world(tick=43))
+    with pytest.raises(TypeError, match="turn tick must be an integer"):
+        TurnInput(tick=cast(int, "43"), projection=_world(tick=43))  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="projection must be a WorldProjection"):
+        TurnInput(tick=43, projection=cast(WorldProjection, {}))  # type: ignore[arg-type]
+
+
+def test_state_owner_identity_and_require_owner_gate() -> None:
+    state = _initial()
+    assert state.owner is TENANT
+
+    assert state.require_owner(TENANT) is state
+    with pytest.raises(StateOwnershipError, match="does not own state"):
+        state.require_owner(TenantId("other"))
+    with pytest.raises(TypeError, match="actor must be a TenantId"):
+        state.require_owner(cast(TenantId, "sample"))  # type: ignore[arg-type]
+
+
+def test_advances_fail_closed_for_non_owner_actors() -> None:
+    state = _initial()
+    other = TenantId("other")
+    turn = TurnInput(tick=43, projection=_world(tick=43))
+
+    with pytest.raises(StateOwnershipError, match="does not own state"):
+        state.observe(_world(tick=43), actor=other)
+    with pytest.raises(StateOwnershipError, match="does not own state"):
+        state.record_decision(DECISION, actor=other)
+    with pytest.raises(StateOwnershipError, match="does not own state"):
+        state.reduce_turn(turn, DECISION, actor=other)
+
+
+def test_reduce_turn_applies_round_and_decision_in_one_step() -> None:
+    initial = _initial()
+    turn = TurnInput(tick=43, projection=_world(tick=43))
+    reduced = initial.reduce_turn(turn, DECISION, actor=TENANT)
+
+    composed = initial.observe(_world(tick=43)).record_decision(DECISION)
+    assert reduced == composed
+    assert reduced.tenant_id is initial.tenant_id
+    assert reduced.world.tick == 43
+    assert reduced.decision_count == 1
+    assert reduced.last_decision_id == DECISION
+    assert initial.world.tick == 42
+    assert initial.decision_count == 0
+
+
+def test_reduce_turn_is_deterministic_for_same_input() -> None:
+    initial = _initial()
+    turn = TurnInput(tick=43, projection=_world(tick=43))
+    first = initial.reduce_turn(turn, DECISION, actor=TENANT)
+    second = initial.reduce_turn(turn, DECISION, actor=TENANT)
+
+    assert first == second
+    assert first.state_digest == second.state_digest
+    assert first.state_digest.value == second.state_digest.value
+
+
+def test_reduce_turn_fails_closed_on_invalid_inputs() -> None:
+    initial = _initial()
+    turn = TurnInput(tick=43, projection=_world(tick=43))
+
+    with pytest.raises(ValueError, match="regresses below"):
+        initial.reduce_turn(
+            TurnInput(tick=41, projection=_world(tick=41)),
+            DECISION,
+            actor=TENANT,
+        )
+    with pytest.raises(ValueError, match="conflicting world observation"):
+        initial.reduce_turn(
+            TurnInput(tick=42, projection=_world(tick=42, unit_health=9)),
+            DECISION,
+            actor=TENANT,
+        )
+    committed = initial.reduce_turn(turn, DECISION, actor=TENANT)
+    with pytest.raises(ValueError, match="duplicate decision commit"):
+        committed.reduce_turn(turn, DECISION, actor=TENANT)
+    with pytest.raises(TypeError, match="turn must be a TurnInput"):
+        initial.reduce_turn(cast(TurnInput, _world(tick=43)), DECISION, actor=TENANT)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="decision must be a DecisionId"):
+        initial.reduce_turn(turn, cast(DecisionId, "decision:other"), actor=TENANT)  # type: ignore[arg-type]
+
+
+def test_state_sequence_digest_is_deterministic_and_field_sensitive() -> None:
+    initial = _initial()
+    advanced = initial.observe(_world(tick=43))
+    committed = advanced.record_decision(DECISION)
+    sequence = (initial, advanced, committed)
+
+    assert canonical_sha256(sequence) == canonical_sha256(sequence)
+    assert canonical_sha256(sequence) != canonical_sha256((initial, advanced))
+    assert canonical_sha256(sequence) != canonical_sha256((initial, committed, advanced))
+
+    different_owner = TenantState(tenant_id=TenantId("other"), world=_world())
+    different_count = TenantState(tenant_id=TENANT, world=_world(), decision_count=1)
+    different_last = TenantState(
+        tenant_id=TENANT,
+        world=_world(),
+        last_decision_id=DECISION,
+    )
+    different_world = TenantState(tenant_id=TENANT, world=_world(unit_health=3))
+    for changed in (different_owner, different_count, different_last, different_world):
+        assert canonical_sha256((initial, changed)) != canonical_sha256((initial, initial))
+
+
+def test_state_sequence_digest_ignores_nonsemantic_ordering() -> None:
+    initial = _initial()
+    equivalent = TenantState(tenant_id=TENANT, world=_reordered_world())
+
+    assert equivalent == initial
+    assert canonical_sha256((initial, equivalent)) == canonical_sha256((initial, initial))

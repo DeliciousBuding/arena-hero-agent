@@ -32,7 +32,7 @@ from .rules import (
     parse_rules_version,
     transition_phase,
 )
-from .state import TenantState
+from .state import StateOwnershipError, TenantState, TurnInput
 from .value_objects import (
     Coordinate,
     DeadlineBudget,
@@ -91,10 +91,12 @@ __all__ = [
     "SearchLimitExceeded",
     "SearchLimits",
     "StateDigest",
+    "StateOwnershipError",
     "TenantId",
     "TenantState",
     "TerrainObservation",
     "TerrainState",
+    "TurnInput",
     "UnitObservation",
     "UnitRole",
     "UnknownTraversalPolicy",

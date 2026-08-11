@@ -1,0 +1,345 @@
+{
+  "decision": "decision:known-answer-1",
+  "digests": {
+    "after_decision": "e81184f65733d3751d2ed8876f0f054f9b925c47fc6b53d140d4e191818b8f23",
+    "after_observe": "da77015b67a9390ee3a537d582080148257f820a7b9ba1aa8475f6356bc29aaf",
+    "initial": "02ab1a943103c0ece99007eb10bdc90576a5fda13818e3acfb3ac4d08d7065d6",
+    "sequence": "b35459696509cebf3b8f7ab175ccc2aaa95fc85694f8bb24bdc99377cd3f08fd"
+  },
+  "expected": {
+    "decision_count": 1,
+    "last_decision_id": {
+      "value": "decision:known-answer-1"
+    },
+    "tenant_id": {
+      "value": "sample"
+    },
+    "world": {
+      "beacon": {
+        "carrier_id": null,
+        "position": [
+          8,
+          8
+        ],
+        "status": "ground"
+      },
+      "core": {
+        "destination": null,
+        "health": 5,
+        "id": "core-a",
+        "owner": "player",
+        "position": [
+          0,
+          0
+        ],
+        "shield": 4,
+        "state": "normal"
+      },
+      "entities": [
+        {
+          "health": 3,
+          "id": "enemy-a",
+          "kind": "unit",
+          "owner": "opponent",
+          "position": [
+            4,
+            1
+          ],
+          "unit_role": "vanguard"
+        },
+        {
+          "health": 3,
+          "id": "enemy-b",
+          "kind": "unit",
+          "owner": "opponent",
+          "position": [
+            5,
+            1
+          ],
+          "unit_role": "vanguard"
+        }
+      ],
+      "resources": [
+        {
+          "position": [
+            -1,
+            2
+          ],
+          "remaining": 4
+        },
+        {
+          "position": [
+            3,
+            0
+          ],
+          "remaining": null
+        }
+      ],
+      "rules_version": "v0.14",
+      "terrain": [
+        {
+          "position": [
+            0,
+            0
+          ],
+          "state": "open"
+        },
+        {
+          "position": [
+            1,
+            0
+          ],
+          "state": "blocked"
+        }
+      ],
+      "tick": 43,
+      "units": [
+        {
+          "cargo": 1,
+          "health": 2,
+          "id": "unit-a",
+          "position": [
+            1,
+            0
+          ],
+          "role": "worker"
+        },
+        {
+          "cargo": 1,
+          "health": 2,
+          "id": "unit-b",
+          "position": [
+            2,
+            0
+          ],
+          "role": "worker"
+        }
+      ]
+    }
+  },
+  "initial": {
+    "decision_count": 0,
+    "last_decision_id": null,
+    "tenant_id": {
+      "value": "sample"
+    },
+    "world": {
+      "beacon": {
+        "carrier_id": null,
+        "position": [
+          8,
+          8
+        ],
+        "status": "ground"
+      },
+      "core": {
+        "destination": null,
+        "health": 5,
+        "id": "core-a",
+        "owner": "player",
+        "position": [
+          0,
+          0
+        ],
+        "shield": 4,
+        "state": "normal"
+      },
+      "entities": [
+        {
+          "health": 3,
+          "id": "enemy-a",
+          "kind": "unit",
+          "owner": "opponent",
+          "position": [
+            4,
+            1
+          ],
+          "unit_role": "vanguard"
+        },
+        {
+          "health": 3,
+          "id": "enemy-b",
+          "kind": "unit",
+          "owner": "opponent",
+          "position": [
+            5,
+            1
+          ],
+          "unit_role": "vanguard"
+        }
+      ],
+      "resources": [
+        {
+          "position": [
+            -1,
+            2
+          ],
+          "remaining": 4
+        },
+        {
+          "position": [
+            3,
+            0
+          ],
+          "remaining": null
+        }
+      ],
+      "rules_version": "v0.14",
+      "terrain": [
+        {
+          "position": [
+            0,
+            0
+          ],
+          "state": "open"
+        },
+        {
+          "position": [
+            1,
+            0
+          ],
+          "state": "blocked"
+        }
+      ],
+      "tick": 42,
+      "units": [
+        {
+          "cargo": 1,
+          "health": 2,
+          "id": "unit-a",
+          "position": [
+            1,
+            0
+          ],
+          "role": "worker"
+        },
+        {
+          "cargo": 1,
+          "health": 2,
+          "id": "unit-b",
+          "position": [
+            2,
+            0
+          ],
+          "role": "worker"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "captured_on": "2026-08-12",
+    "intentional_differences": [
+      "turn input mirrors arena.agent.io.v1 decide semantics without depending on the SDK",
+      "reducer folds the world projection before committing the decision",
+      "ownership is enforced per state partition; non-owner writes fail closed"
+    ],
+    "oracle": "python domain P4-8 reducer known-answer corpus",
+    "version": 1
+  },
+  "tenant": "sample",
+  "turn": {
+    "projection": {
+      "beacon": {
+        "carrier_id": null,
+        "position": [
+          8,
+          8
+        ],
+        "status": "ground"
+      },
+      "core": {
+        "destination": null,
+        "health": 5,
+        "id": "core-a",
+        "owner": "player",
+        "position": [
+          0,
+          0
+        ],
+        "shield": 4,
+        "state": "normal"
+      },
+      "entities": [
+        {
+          "health": 3,
+          "id": "enemy-a",
+          "kind": "unit",
+          "owner": "opponent",
+          "position": [
+            4,
+            1
+          ],
+          "unit_role": "vanguard"
+        },
+        {
+          "health": 3,
+          "id": "enemy-b",
+          "kind": "unit",
+          "owner": "opponent",
+          "position": [
+            5,
+            1
+          ],
+          "unit_role": "vanguard"
+        }
+      ],
+      "resources": [
+        {
+          "position": [
+            -1,
+            2
+          ],
+          "remaining": 4
+        },
+        {
+          "position": [
+            3,
+            0
+          ],
+          "remaining": null
+        }
+      ],
+      "rules_version": "v0.14",
+      "terrain": [
+        {
+          "position": [
+            0,
+            0
+          ],
+          "state": "open"
+        },
+        {
+          "position": [
+            1,
+            0
+          ],
+          "state": "blocked"
+        }
+      ],
+      "tick": 43,
+      "units": [
+        {
+          "cargo": 1,
+          "health": 2,
+          "id": "unit-a",
+          "position": [
+            1,
+            0
+          ],
+          "role": "worker"
+        },
+        {
+          "cargo": 1,
+          "health": 2,
+          "id": "unit-b",
+          "position": [
+            2,
+            0
+          ],
+          "role": "worker"
+        }
+      ]
+    },
+    "tick": 43
+  }
+}
