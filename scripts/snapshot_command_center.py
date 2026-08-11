@@ -54,14 +54,34 @@ def find_ts_repo() -> Path:
     )
 
 
-TS_REPO = find_ts_repo()
+_TS_REPO: Path | None = None
+
+
+def get_ts_repo() -> Path:
+    """Resolve the legacy TS checkout lazily (route/fixture checks only).
+
+    Resolution happens on first use so importing this module stays valid in
+    checkouts without the TS repo (for example CI); callers that genuinely
+    need the TS sources surface the FileNotFoundError with a clear message.
+    """
+    global _TS_REPO
+    if _TS_REPO is None:
+        _TS_REPO = find_ts_repo()
+    return _TS_REPO
 
 
 def sha256_file(path: Path) -> str:
+    """Return the canonical SHA-256 of a text fixture (LF-normalized).
+
+    Repositories normalize text files to LF (see .gitattributes), but Windows
+    checkouts materialize CRLF working copies. Hashing the LF-normalized bytes
+    keeps the manifest reproducible across platforms and checkouts; every
+    referenced fixture is a UTF-8 JSON text file.
+    """
     digest = hashlib.sha256()
     with path.open("rb") as fh:
         for chunk in iter(lambda: fh.read(1 << 20), b""):
-            digest.update(chunk)
+            digest.update(chunk.replace(b"\r\n", b"\n"))
     return digest.hexdigest().upper()
 
 
@@ -90,7 +110,7 @@ def manifest_route_set(manifest: dict) -> set[tuple[str, str]]:
 
 def repo_root_for(repo: str) -> Path:
     if repo == "arena-hero-agent-ts":
-        return TS_REPO
+        return get_ts_repo()
     if repo == "arena-hero-agent":
         return AGENT_REPO
     raise ValueError(f"unknown fixture repo: {repo}")
@@ -98,7 +118,7 @@ def repo_root_for(repo: str) -> Path:
 
 def check_routes(manifest: dict) -> list[str]:
     problems: list[str] = []
-    expected = parse_ts_routes(TS_REPO / TS_SERVER_REL)
+    expected = parse_ts_routes(get_ts_repo() / TS_SERVER_REL)
     actual = manifest_route_set(manifest)
     missing = sorted(expected - actual)
     extra = sorted(actual - expected)

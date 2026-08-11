@@ -20,8 +20,8 @@ from scripts.snapshot_command_center import (
     AGENT_REPO,
     DOCS_DIR,
     MANIFEST_PATH,
-    TS_REPO,
     compute_manifest_hash,
+    find_ts_repo,
     load_manifest,
     parse_ts_routes,
     refresh_fixture_hashes,
@@ -29,6 +29,15 @@ from scripts.snapshot_command_center import (
     render_fixtures_md,
     sha256_file,
 )
+
+
+def _ts_repo_or_none():
+    """Return the legacy TS checkout when available, else None (tests skip)."""
+    try:
+        return find_ts_repo()
+    except FileNotFoundError:
+        return None
+
 
 MANIFEST = load_manifest()
 ROUTES = MANIFEST["routes"]
@@ -51,14 +60,23 @@ def test_manifest_regenerates_identical_hash() -> None:
 
 
 def test_manifest_hash_is_deterministic_across_refresh() -> None:
-    """A refresh (recompute hashes) must not change the committed manifest."""
+    """A refresh (recompute hashes) must not change the committed manifest.
+
+    Recomputing fixture hashes reads the referenced sources, including the
+    legacy TS checkout; skip when that checkout is not available.
+    """
+    if _ts_repo_or_none() is None:
+        pytest.skip("arena-hero-agent-ts checkout not available in this environment")
     regenerated = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     refresh_fixture_hashes(regenerated)
     assert compute_manifest_hash(regenerated) == MANIFEST["manifest_hash"]
 
 
 def test_route_inventory_matches_ts_server() -> None:
-    server_routes = parse_ts_routes(TS_REPO / "packages/command-center/server.ts")
+    ts_repo = _ts_repo_or_none()
+    if ts_repo is None:
+        pytest.skip("arena-hero-agent-ts checkout not available in this environment")
+    server_routes = parse_ts_routes(ts_repo / "packages/command-center/server.ts")
     manifest_routes = {(r["method"], r["path"]) for r in ROUTES} | {
         (r["method"], r["path"]) for r in STATIC_ROUTES
     }
@@ -94,7 +112,13 @@ def test_static_route_entry_schema(route: dict) -> None:
 
 @pytest.mark.parametrize("fixture", FIXTURES, ids=lambda f: f"{f['repo']}:{f['path']}")
 def test_fixture_hash_matches_source(fixture: dict) -> None:
-    root = TS_REPO if fixture["repo"] == "arena-hero-agent-ts" else AGENT_REPO
+    if fixture["repo"] == "arena-hero-agent-ts":
+        ts_repo = _ts_repo_or_none()
+        if ts_repo is None:
+            pytest.skip("arena-hero-agent-ts checkout not available in this environment")
+        root = ts_repo
+    else:
+        root = AGENT_REPO
     assert sha256_file(root / fixture["path"]) == fixture["sha256"]
 
 
