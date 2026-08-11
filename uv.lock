@@ -26,8 +26,8 @@ wheels = [
 
 [[package]]
 name = "arena-hero"
-version = "0.3.0a1"
-source = { git = "https://github.com/DeliciousBuding/arena-hero-sdk-py.git?tag=v0.3.0a1#08e32be53eb5ab88ae843297b1242a79187480a0" }
+version = "0.3.0a2"
+source = { git = "https://github.com/DeliciousBuding/arena-hero-sdk-py.git?tag=v0.3.0a2#9decc0dc780d302fe70606d3de334ef57e04d022" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
@@ -52,7 +52,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "arena-hero", git = "https://github.com/DeliciousBuding/arena-hero-sdk-py.git?tag=v0.3.0a1" }]
+requires-dist = [{ name = "arena-hero", git = "https://github.com/DeliciousBuding/arena-hero-sdk-py.git?tag=v0.3.0a2" }]
 
 [package.metadata.requires-dev]
 dev = [
