@@ -1,0 +1,3637 @@
+{
+  "metadata": {
+    "oracle_commit": "8cf5cbbcccf396a8feee94404af44969c5388e15",
+    "source_files": [
+      "packages/arena-agent/src/planning/planning-snapshot.ts",
+      "packages/arena-agent/src/planning/task.ts",
+      "packages/arena-agent/src/planning/deterministic-planner.ts",
+      "packages/arena-agent/src/planning/mission-planner.ts",
+      "packages/arena-agent/src/strategies/safety-planner.ts",
+      "packages/arena-agent/src/strategies/safety-planner-config.ts",
+      "packages/arena-agent/src/strategies/safety-planner-helpers.ts",
+      "packages/arena-agent/src/strategies/tactical-squads.ts",
+      "packages/arena-agent/src/domain/plan-validator.ts"
+    ],
+    "captured_on": "2026-08-12",
+    "intentional_differences": [
+      "python cell keys and coordinates are strict typed values instead of JS Number permissiveness",
+      "python plan validation rejects unknown action shapes instead of silently skipping",
+      "float threat contributions are accumulated in input order like the oracle (IEEE-754 doubles)"
+    ]
+  },
+  "threat_maps": [
+    {
+      "name": "single_ranger_at_origin",
+      "enemies": [
+        {
+          "id": "e1",
+          "kind": "UNIT",
+          "position": [
+            0,
+            0
+          ],
+          "hp": 1,
+          "unitType": "RANGER"
+        }
+      ],
+      "expected": {
+        "-3,0": 0.25,
+        "-2,-1": 0.25,
+        "-2,0": 0.3333333333333333,
+        "-2,1": 0.25,
+        "-1,-2": 0.25,
+        "-1,-1": 0.3333333333333333,
+        "-1,0": 0.5,
+        "-1,1": 0.3333333333333333,
+        "-1,2": 0.25,
+        "0,-3": 0.25,
+        "0,-2": 0.3333333333333333,
+        "0,-1": 0.5,
+        "0,0": 1,
+        "0,1": 0.5,
+        "0,2": 0.3333333333333333,
+        "0,3": 0.25,
+        "1,-2": 0.25,
+        "1,-1": 0.3333333333333333,
+        "1,0": 0.5,
+        "1,1": 0.3333333333333333,
+        "1,2": 0.25,
+        "2,-1": 0.25,
+        "2,0": 0.3333333333333333,
+        "2,1": 0.25,
+        "3,0": 0.25
+      }
+    },
+    {
+      "name": "two_enemies_accumulate",
+      "enemies": [
+        {
+          "id": "e1",
+          "kind": "UNIT",
+          "position": [
+            0,
+            0
+          ],
+          "hp": 1,
+          "unitType": "RANGER"
+        },
+        {
+          "id": "e2",
+          "kind": "UNIT",
+          "position": [
+            1,
+            0
+          ],
+          "hp": 1,
+          "unitType": "RANGER"
+        }
+      ],
+      "expected": {
+        "-3,0": 0.25,
+        "-2,-1": 0.25,
+        "-2,0": 0.5833333333333333,
+        "-2,1": 0.25,
+        "-1,-2": 0.25,
+        "-1,-1": 0.5833333333333333,
+        "-1,0": 0.8333333333333333,
+        "-1,1": 0.5833333333333333,
+        "-1,2": 0.25,
+        "0,-3": 0.25,
+        "0,-2": 0.5833333333333333,
+        "0,-1": 0.8333333333333333,
+        "0,0": 1.5,
+        "0,1": 0.8333333333333333,
+        "0,2": 0.5833333333333333,
+        "0,3": 0.25,
+        "1,-2": 0.5833333333333333,
+        "1,-1": 0.8333333333333333,
+        "1,0": 1.5,
+        "1,1": 0.8333333333333333,
+        "1,2": 0.5833333333333333,
+        "2,-1": 0.5833333333333333,
+        "2,0": 0.8333333333333333,
+        "2,1": 0.5833333333333333,
+        "3,0": 0.5833333333333333,
+        "1,-3": 0.25,
+        "1,3": 0.25,
+        "2,-2": 0.25,
+        "2,2": 0.25,
+        "3,-1": 0.25,
+        "3,1": 0.25,
+        "4,0": 0.25
+      }
+    },
+    {
+      "name": "distant_enemy_within_radius_3",
+      "enemies": [
+        {
+          "id": "e1",
+          "kind": "UNIT",
+          "position": [
+            0,
+            0
+          ],
+          "hp": 1,
+          "unitType": "RANGER"
+        },
+        {
+          "id": "e2",
+          "kind": "UNIT",
+          "position": [
+            3,
+            3
+          ],
+          "hp": 1,
+          "unitType": "RANGER"
+        }
+      ],
+      "expected": {
+        "-3,0": 0.25,
+        "-2,-1": 0.25,
+        "-2,0": 0.3333333333333333,
+        "-2,1": 0.25,
+        "-1,-2": 0.25,
+        "-1,-1": 0.3333333333333333,
+        "-1,0": 0.5,
+        "-1,1": 0.3333333333333333,
+        "-1,2": 0.25,
+        "0,-3": 0.25,
+        "0,-2": 0.3333333333333333,
+        "0,-1": 0.5,
+        "0,0": 1,
+        "0,1": 0.5,
+        "0,2": 0.3333333333333333,
+        "0,3": 0.5,
+        "1,-2": 0.25,
+        "1,-1": 0.3333333333333333,
+        "1,0": 0.5,
+        "1,1": 0.3333333333333333,
+        "1,2": 0.5,
+        "2,-1": 0.25,
+        "2,0": 0.3333333333333333,
+        "2,1": 0.5,
+        "3,0": 0.5,
+        "1,3": 0.3333333333333333,
+        "1,4": 0.25,
+        "2,2": 0.3333333333333333,
+        "2,3": 0.5,
+        "2,4": 0.3333333333333333,
+        "2,5": 0.25,
+        "3,1": 0.3333333333333333,
+        "3,2": 0.5,
+        "3,3": 1,
+        "3,4": 0.5,
+        "3,5": 0.3333333333333333,
+        "3,6": 0.25,
+        "4,1": 0.25,
+        "4,2": 0.3333333333333333,
+        "4,3": 0.5,
+        "4,4": 0.3333333333333333,
+        "4,5": 0.25,
+        "5,2": 0.25,
+        "5,3": 0.3333333333333333,
+        "5,4": 0.25,
+        "6,3": 0.25
+      }
+    },
+    {
+      "name": "empty",
+      "enemies": [],
+      "expected": {}
+    }
+  ],
+  "forced_tasks": [
+    {
+      "name": "cargo_worker_near_core",
+      "expected": {
+        "w1": {
+          "type": "DEPOSIT",
+          "target": [
+            0,
+            0
+          ],
+          "targetCellKey": null
+        }
+      }
+    },
+    {
+      "name": "worker_on_visible_resource",
+      "expected": {
+        "w1": {
+          "type": "HARVEST_CURRENT",
+          "target": [
+            2,
+            2
+          ],
+          "targetCellKey": "2,2"
+        }
+      }
+    },
+    {
+      "name": "low_hp_worker_away_from_core",
+      "expected": {
+        "w1": {
+          "type": "RETURN_FOR_HEAL",
+          "target": [
+            0,
+            0
+          ],
+          "targetCellKey": null
+        }
+      }
+    },
+    {
+      "name": "low_hp_worker_on_core",
+      "expected": {
+        "w1": {
+          "type": "PICKUP_BEACON",
+          "target": [
+            0,
+            0
+          ],
+          "targetCellKey": "0,0"
+        }
+      }
+    },
+    {
+      "name": "beacon_on_worker_cell",
+      "expected": {
+        "w1": {
+          "type": "PICKUP_BEACON",
+          "target": [
+            3,
+            3
+          ],
+          "targetCellKey": "3,3"
+        }
+      }
+    },
+    {
+      "name": "beacon_carried_elsewhere",
+      "expected": {
+        "w1": null
+      }
+    },
+    {
+      "name": "idle_worker",
+      "expected": {
+        "w1": null
+      }
+    },
+    {
+      "name": "cargo_worker_resource_full",
+      "expected": {
+        "w1": {
+          "type": "DEPOSIT",
+          "target": [
+            0,
+            0
+          ],
+          "targetCellKey": null
+        }
+      }
+    },
+    {
+      "name": "cargo_worker_no_core",
+      "expected": {
+        "w1": null
+      }
+    },
+    {
+      "name": "worker_on_invisible_resource",
+      "expected": {
+        "w1": {
+          "type": "HARVEST_CURRENT",
+          "target": [
+            2,
+            2
+          ],
+          "targetCellKey": "2,2"
+        }
+      }
+    },
+    {
+      "name": "mixed_units",
+      "expected": {
+        "w1": {
+          "type": "DEPOSIT",
+          "target": [
+            0,
+            0
+          ],
+          "targetCellKey": null
+        },
+        "v1": null
+      }
+    }
+  ],
+  "worker_dense_directions": [
+    {
+      "index": 0,
+      "expected": 14
+    },
+    {
+      "index": 1,
+      "expected": 4
+    },
+    {
+      "index": 2,
+      "expected": 10
+    },
+    {
+      "index": 3,
+      "expected": 0
+    },
+    {
+      "index": 4,
+      "expected": 6
+    },
+    {
+      "index": 5,
+      "expected": 12
+    },
+    {
+      "index": 6,
+      "expected": 2
+    },
+    {
+      "index": 7,
+      "expected": 8
+    },
+    {
+      "index": 8,
+      "expected": 15
+    },
+    {
+      "index": 9,
+      "expected": 5
+    },
+    {
+      "index": 10,
+      "expected": 11
+    },
+    {
+      "index": 11,
+      "expected": 1
+    },
+    {
+      "index": 12,
+      "expected": 7
+    },
+    {
+      "index": 13,
+      "expected": 13
+    },
+    {
+      "index": 14,
+      "expected": 3
+    },
+    {
+      "index": 15,
+      "expected": 9
+    }
+  ],
+  "threat_weighted_directions": [
+    {
+      "index": 0,
+      "sector": null,
+      "expected": 7
+    },
+    {
+      "index": 1,
+      "sector": null,
+      "expected": 2
+    },
+    {
+      "index": 2,
+      "sector": null,
+      "expected": 5
+    },
+    {
+      "index": 3,
+      "sector": null,
+      "expected": 0
+    },
+    {
+      "index": 4,
+      "sector": null,
+      "expected": 3
+    },
+    {
+      "index": 5,
+      "sector": null,
+      "expected": 6
+    },
+    {
+      "index": 6,
+      "sector": null,
+      "expected": 1
+    },
+    {
+      "index": 7,
+      "sector": null,
+      "expected": 4
+    },
+    {
+      "index": 0,
+      "sector": 0,
+      "expected": 0
+    },
+    {
+      "index": 1,
+      "sector": 0,
+      "expected": 1
+    },
+    {
+      "index": 2,
+      "sector": 0,
+      "expected": 7
+    },
+    {
+      "index": 3,
+      "sector": 0,
+      "expected": 2
+    },
+    {
+      "index": 4,
+      "sector": 0,
+      "expected": 3
+    },
+    {
+      "index": 5,
+      "sector": 0,
+      "expected": 6
+    },
+    {
+      "index": 6,
+      "sector": 0,
+      "expected": 1
+    },
+    {
+      "index": 7,
+      "sector": 0,
+      "expected": 4
+    },
+    {
+      "index": 0,
+      "sector": 1,
+      "expected": 1
+    },
+    {
+      "index": 1,
+      "sector": 1,
+      "expected": 2
+    },
+    {
+      "index": 2,
+      "sector": 1,
+      "expected": 0
+    },
+    {
+      "index": 3,
+      "sector": 1,
+      "expected": 3
+    },
+    {
+      "index": 4,
+      "sector": 1,
+      "expected": 3
+    },
+    {
+      "index": 5,
+      "sector": 1,
+      "expected": 6
+    },
+    {
+      "index": 6,
+      "sector": 1,
+      "expected": 1
+    },
+    {
+      "index": 7,
+      "sector": 1,
+      "expected": 4
+    },
+    {
+      "index": 0,
+      "sector": 2,
+      "expected": 2
+    },
+    {
+      "index": 1,
+      "sector": 2,
+      "expected": 3
+    },
+    {
+      "index": 2,
+      "sector": 2,
+      "expected": 1
+    },
+    {
+      "index": 3,
+      "sector": 2,
+      "expected": 4
+    },
+    {
+      "index": 4,
+      "sector": 2,
+      "expected": 3
+    },
+    {
+      "index": 5,
+      "sector": 2,
+      "expected": 6
+    },
+    {
+      "index": 6,
+      "sector": 2,
+      "expected": 1
+    },
+    {
+      "index": 7,
+      "sector": 2,
+      "expected": 4
+    },
+    {
+      "index": 0,
+      "sector": 3,
+      "expected": 3
+    },
+    {
+      "index": 1,
+      "sector": 3,
+      "expected": 4
+    },
+    {
+      "index": 2,
+      "sector": 3,
+      "expected": 2
+    },
+    {
+      "index": 3,
+      "sector": 3,
+      "expected": 5
+    },
+    {
+      "index": 4,
+      "sector": 3,
+      "expected": 3
+    },
+    {
+      "index": 5,
+      "sector": 3,
+      "expected": 6
+    },
+    {
+      "index": 6,
+      "sector": 3,
+      "expected": 1
+    },
+    {
+      "index": 7,
+      "sector": 3,
+      "expected": 4
+    },
+    {
+      "index": 0,
+      "sector": 5,
+      "expected": 5
+    },
+    {
+      "index": 1,
+      "sector": 5,
+      "expected": 6
+    },
+    {
+      "index": 2,
+      "sector": 5,
+      "expected": 4
+    },
+    {
+      "index": 3,
+      "sector": 5,
+      "expected": 7
+    },
+    {
+      "index": 4,
+      "sector": 5,
+      "expected": 3
+    },
+    {
+      "index": 5,
+      "sector": 5,
+      "expected": 6
+    },
+    {
+      "index": 6,
+      "sector": 5,
+      "expected": 1
+    },
+    {
+      "index": 7,
+      "sector": 5,
+      "expected": 4
+    },
+    {
+      "index": 0,
+      "sector": 7,
+      "expected": 7
+    },
+    {
+      "index": 1,
+      "sector": 7,
+      "expected": 0
+    },
+    {
+      "index": 2,
+      "sector": 7,
+      "expected": 6
+    },
+    {
+      "index": 3,
+      "sector": 7,
+      "expected": 1
+    },
+    {
+      "index": 4,
+      "sector": 7,
+      "expected": 3
+    },
+    {
+      "index": 5,
+      "sector": 7,
+      "expected": 6
+    },
+    {
+      "index": 6,
+      "sector": 7,
+      "expected": 1
+    },
+    {
+      "index": 7,
+      "sector": 7,
+      "expected": 4
+    }
+  ],
+  "tier_of_damage_rank": [
+    {
+      "rank": 1,
+      "expected": "ELITE_AGGRESSOR"
+    },
+    {
+      "rank": 10,
+      "expected": "ELITE_AGGRESSOR"
+    },
+    {
+      "rank": 11,
+      "expected": "AGGRESSOR"
+    },
+    {
+      "rank": 30,
+      "expected": "AGGRESSOR"
+    },
+    {
+      "rank": 31,
+      "expected": "STANDARD"
+    },
+    {
+      "rank": 0,
+      "expected": "AGGRESSOR"
+    },
+    {
+      "rank": 100,
+      "expected": "STANDARD"
+    },
+    {
+      "rank": -1,
+      "expected": "AGGRESSOR"
+    }
+  ],
+  "spawn_choice": [
+    {
+      "name": "below_worker_target",
+      "workers": 5,
+      "vanguards": 2,
+      "rangers": 1,
+      "workerTarget": 8,
+      "vanguardRatio": null,
+      "nextSpawn": "WORKER",
+      "nextMilitary": "RANGER"
+    },
+    {
+      "name": "at_worker_target",
+      "workers": 8,
+      "vanguards": 2,
+      "rangers": 1,
+      "workerTarget": 8,
+      "vanguardRatio": null,
+      "nextSpawn": "RANGER",
+      "nextMilitary": "RANGER"
+    },
+    {
+      "name": "above_worker_target_balanced_military",
+      "workers": 10,
+      "vanguards": 2,
+      "rangers": 2,
+      "workerTarget": 8,
+      "vanguardRatio": null,
+      "nextSpawn": "VANGUARD",
+      "nextMilitary": "VANGUARD"
+    },
+    {
+      "name": "above_worker_target_more_vanguards",
+      "workers": 10,
+      "vanguards": 3,
+      "rangers": 2,
+      "workerTarget": 8,
+      "vanguardRatio": null,
+      "nextSpawn": "RANGER",
+      "nextMilitary": "RANGER"
+    },
+    {
+      "name": "above_worker_target_ratio_1",
+      "workers": 10,
+      "vanguards": 2,
+      "rangers": 2,
+      "workerTarget": 8,
+      "vanguardRatio": 1,
+      "nextSpawn": "VANGUARD",
+      "nextMilitary": "VANGUARD"
+    },
+    {
+      "name": "above_worker_target_ratio_0",
+      "workers": 10,
+      "vanguards": 2,
+      "rangers": 2,
+      "workerTarget": 8,
+      "vanguardRatio": 0,
+      "nextSpawn": "RANGER",
+      "nextMilitary": "RANGER"
+    },
+    {
+      "name": "above_worker_target_ratio_0_5",
+      "workers": 10,
+      "vanguards": 2,
+      "rangers": 2,
+      "workerTarget": 8,
+      "vanguardRatio": 0.5,
+      "nextSpawn": "VANGUARD",
+      "nextMilitary": "VANGUARD"
+    },
+    {
+      "name": "zero_military_ratio_1",
+      "workers": 10,
+      "vanguards": 0,
+      "rangers": 0,
+      "workerTarget": 8,
+      "vanguardRatio": 1,
+      "nextSpawn": "VANGUARD",
+      "nextMilitary": "VANGUARD"
+    }
+  ],
+  "defense_posts": [
+    {
+      "name": "no_enemies",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [],
+      "obstacles": [],
+      "unitType": "VANGUARD",
+      "index": 0,
+      "expected": null
+    },
+    {
+      "name": "single_enemy_north",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "eN",
+          "kind": "UNIT",
+          "position": [
+            0,
+            -5
+          ],
+          "unitType": "VANGUARD"
+        }
+      ],
+      "obstacles": [],
+      "unitType": "VANGUARD",
+      "index": 0,
+      "expected": [
+        0,
+        -3
+      ]
+    },
+    {
+      "name": "single_enemy_north_ranger",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "eN",
+          "kind": "UNIT",
+          "position": [
+            0,
+            -5
+          ],
+          "unitType": "VANGUARD"
+        }
+      ],
+      "obstacles": [],
+      "unitType": "RANGER",
+      "index": 0,
+      "expected": [
+        0,
+        -2
+      ]
+    },
+    {
+      "name": "two_enemies_north_east",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "eN",
+          "kind": "UNIT",
+          "position": [
+            0,
+            -5
+          ],
+          "unitType": "VANGUARD"
+        },
+        {
+          "id": "eE",
+          "kind": "UNIT",
+          "position": [
+            5,
+            0
+          ],
+          "unitType": "RANGER"
+        }
+      ],
+      "obstacles": [],
+      "unitType": "VANGUARD",
+      "index": 0,
+      "expected": [
+        0,
+        -3
+      ]
+    },
+    {
+      "name": "two_enemies_north_east_index_1",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "eN",
+          "kind": "UNIT",
+          "position": [
+            0,
+            -5
+          ],
+          "unitType": "VANGUARD"
+        },
+        {
+          "id": "eE",
+          "kind": "UNIT",
+          "position": [
+            5,
+            0
+          ],
+          "unitType": "RANGER"
+        }
+      ],
+      "obstacles": [],
+      "unitType": "VANGUARD",
+      "index": 1,
+      "expected": [
+        3,
+        0
+      ]
+    },
+    {
+      "name": "four_axes_rotation",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "eN",
+          "kind": "UNIT",
+          "position": [
+            0,
+            -5
+          ],
+          "unitType": "VANGUARD"
+        },
+        {
+          "id": "eE",
+          "kind": "UNIT",
+          "position": [
+            5,
+            0
+          ],
+          "unitType": "RANGER"
+        },
+        {
+          "id": "eS",
+          "kind": "UNIT",
+          "position": [
+            0,
+            4
+          ],
+          "unitType": "VANGUARD"
+        },
+        {
+          "id": "eW",
+          "kind": "UNIT",
+          "position": [
+            -3,
+            0
+          ],
+          "unitType": "RANGER"
+        }
+      ],
+      "obstacles": [],
+      "unitType": "VANGUARD",
+      "index": 2,
+      "expected": [
+        0,
+        -3
+      ]
+    },
+    {
+      "name": "axis_blocked_contracts_inward",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "eE",
+          "kind": "UNIT",
+          "position": [
+            5,
+            0
+          ],
+          "unitType": "RANGER"
+        }
+      ],
+      "obstacles": [
+        [
+          2,
+          0
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "unitType": "VANGUARD",
+      "index": 0,
+      "expected": [
+        3,
+        0
+      ]
+    },
+    {
+      "name": "axis_blocked_all_falls_back_null",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "eE",
+          "kind": "UNIT",
+          "position": [
+            5,
+            0
+          ],
+          "unitType": "RANGER"
+        }
+      ],
+      "obstacles": [
+        [
+          1,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ]
+      ],
+      "unitType": "VANGUARD",
+      "index": 0,
+      "expected": null
+    },
+    {
+      "name": "enemy_core_excluded",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "enemyCore",
+          "kind": "CORE",
+          "position": [
+            3,
+            3
+          ],
+          "unitType": "RANGER"
+        }
+      ],
+      "obstacles": [],
+      "unitType": "VANGUARD",
+      "index": 0,
+      "expected": null
+    },
+    {
+      "name": "enemy_occupies_candidate",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "eE",
+          "kind": "UNIT",
+          "position": [
+            5,
+            0
+          ],
+          "unitType": "RANGER"
+        }
+      ],
+      "obstacles": [],
+      "unitType": "VANGUARD",
+      "index": 0,
+      "expected": [
+        3,
+        0
+      ]
+    }
+  ],
+  "home_cells": [
+    {
+      "name": "open_all",
+      "core": [
+        0,
+        0
+      ],
+      "index": 0,
+      "expected": [
+        0,
+        -1
+      ]
+    },
+    {
+      "name": "north_blocked",
+      "core": [
+        0,
+        0
+      ],
+      "index": 0,
+      "obstacles": [
+        [
+          0,
+          -1
+        ]
+      ],
+      "expected": [
+        1,
+        0
+      ]
+    },
+    {
+      "name": "three_blocked",
+      "core": [
+        0,
+        0
+      ],
+      "index": 0,
+      "obstacles": [
+        [
+          0,
+          -1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "expected": [
+        -1,
+        0
+      ]
+    },
+    {
+      "name": "all_blocked",
+      "core": [
+        0,
+        0
+      ],
+      "index": 0,
+      "obstacles": [
+        [
+          0,
+          -1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          -1,
+          0
+        ]
+      ],
+      "expected": null
+    },
+    {
+      "name": "rotated_index_2",
+      "core": [
+        0,
+        0
+      ],
+      "index": 2,
+      "expected": [
+        0,
+        1
+      ]
+    }
+  ],
+  "guard_home_cells": [
+    {
+      "name": "default_index_0",
+      "core": [
+        0,
+        0
+      ],
+      "index": 0,
+      "expected": [
+        -2,
+        -2
+      ]
+    },
+    {
+      "name": "default_index_3",
+      "core": [
+        0,
+        0
+      ],
+      "index": 3,
+      "expected": [
+        2,
+        2
+      ]
+    },
+    {
+      "name": "ring_2_corners_blocked",
+      "core": [
+        0,
+        0
+      ],
+      "index": 0,
+      "obstacles": [
+        [
+          -2,
+          -2
+        ],
+        [
+          2,
+          -2
+        ],
+        [
+          -2,
+          2
+        ]
+      ],
+      "expected": [
+        2,
+        2
+      ]
+    },
+    {
+      "name": "all_ring_blocked_falls_back_home",
+      "core": [
+        0,
+        0
+      ],
+      "index": 0,
+      "obstacles": [
+        [
+          -2,
+          -2
+        ],
+        [
+          2,
+          -2
+        ],
+        [
+          -2,
+          2
+        ],
+        [
+          2,
+          2
+        ],
+        [
+          -2,
+          0
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          0,
+          -2
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "expected": [
+        -3,
+        -3
+      ]
+    },
+    {
+      "name": "corner_spacing_index_0",
+      "core": [
+        0,
+        0
+      ],
+      "index": 0,
+      "expected": [
+        3,
+        3
+      ]
+    },
+    {
+      "name": "corner_spacing_index_1",
+      "core": [
+        0,
+        0
+      ],
+      "index": 1,
+      "expected": [
+        -3,
+        3
+      ]
+    },
+    {
+      "name": "corner_spacing_avoid",
+      "core": [
+        0,
+        0
+      ],
+      "index": 0,
+      "avoid": [
+        [
+          3,
+          3
+        ]
+      ],
+      "expected": [
+        -3,
+        3
+      ]
+    }
+  ],
+  "yield_anchors": [
+    {
+      "name": "empty",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "occupancy": {},
+      "enemies": [],
+      "expected": [
+        0,
+        -1
+      ]
+    },
+    {
+      "name": "north_occupied_prefers_empty",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "occupancy": {
+        "0,-1": 1
+      },
+      "enemies": [],
+      "expected": [
+        1,
+        0
+      ]
+    },
+    {
+      "name": "all_occupied_prefers_single",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "occupancy": {
+        "0,-1": 2,
+        "1,0": 2,
+        "0,1": 2,
+        "-1,0": 2
+      },
+      "enemies": [],
+      "expected": null
+    },
+    {
+      "name": "some_blocked",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [
+        [
+          0,
+          -1
+        ]
+      ],
+      "occupancy": {},
+      "enemies": [],
+      "expected": [
+        1,
+        0
+      ]
+    },
+    {
+      "name": "all_blocked_null",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [
+        [
+          0,
+          -1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          -1,
+          0
+        ]
+      ],
+      "occupancy": {},
+      "enemies": [],
+      "expected": null
+    },
+    {
+      "name": "with_enemies_flees",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "occupancy": {},
+      "enemies": [
+        {
+          "id": "e1",
+          "kind": "UNIT",
+          "position": [
+            0,
+            -2
+          ],
+          "unitType": "RANGER"
+        }
+      ],
+      "expected": [
+        1,
+        0
+      ]
+    },
+    {
+      "name": "with_enemies_tie_keeps_order",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "occupancy": {},
+      "enemies": [
+        {
+          "id": "e1",
+          "kind": "UNIT",
+          "position": [
+            5,
+            5
+          ],
+          "unitType": "RANGER"
+        }
+      ],
+      "expected": [
+        0,
+        -1
+      ]
+    }
+  ],
+  "occupancy_counts": [
+    {
+      "name": "core_and_units",
+      "expected": {
+        "0,0": 2,
+        "1,0": 1
+      }
+    },
+    {
+      "name": "stacked_two_units",
+      "expected": {
+        "0,0": 3
+      }
+    }
+  ],
+  "nearest_enemies": [
+    {
+      "name": "tie_break_by_id",
+      "enemies": [
+        {
+          "id": "b",
+          "kind": "UNIT",
+          "position": [
+            2,
+            0
+          ],
+          "hp": 1,
+          "unitType": "RANGER"
+        },
+        {
+          "id": "a",
+          "kind": "UNIT",
+          "position": [
+            2,
+            0
+          ],
+          "hp": 1,
+          "unitType": "RANGER"
+        }
+      ],
+      "position": [
+        0,
+        0
+      ],
+      "expected": {
+        "id": "a",
+        "position": [
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "name": "closest_wins",
+      "enemies": [
+        {
+          "id": "far",
+          "kind": "UNIT",
+          "position": [
+            9,
+            9
+          ],
+          "hp": 1,
+          "unitType": "RANGER"
+        },
+        {
+          "id": "near",
+          "kind": "UNIT",
+          "position": [
+            1,
+            0
+          ],
+          "hp": 1,
+          "unitType": "RANGER"
+        }
+      ],
+      "position": [
+        0,
+        0
+      ],
+      "expected": {
+        "id": "near",
+        "position": [
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "name": "none",
+      "enemies": [],
+      "position": [
+        0,
+        0
+      ],
+      "expected": null
+    }
+  ],
+  "retreat_directions": [
+    {
+      "name": "no_enemies_distance",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [],
+      "obstacles": [],
+      "beacon": [
+        5,
+        5
+      ],
+      "scoring": "distance",
+      "expected": "UP"
+    },
+    {
+      "name": "single_enemy_east_distance",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "r",
+          "kind": "UNIT",
+          "position": [
+            2,
+            0
+          ],
+          "unitType": "RANGER",
+          "hp": 1
+        }
+      ],
+      "obstacles": [],
+      "beacon": [
+        5,
+        5
+      ],
+      "scoring": "distance",
+      "expected": "UP"
+    },
+    {
+      "name": "enemy_north_distance",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "v",
+          "kind": "UNIT",
+          "position": [
+            0,
+            1
+          ],
+          "unitType": "VANGUARD",
+          "hp": 1
+        }
+      ],
+      "obstacles": [],
+      "beacon": [
+        5,
+        5
+      ],
+      "scoring": "distance",
+      "expected": "UP"
+    },
+    {
+      "name": "blocked_retreat_path",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "r",
+          "kind": "UNIT",
+          "position": [
+            2,
+            0
+          ],
+          "unitType": "RANGER",
+          "hp": 1
+        }
+      ],
+      "obstacles": [
+        [
+          -1,
+          0
+        ],
+        [
+          0,
+          -1
+        ]
+      ],
+      "beacon": [
+        5,
+        5
+      ],
+      "scoring": "distance",
+      "expected": "DOWN"
+    },
+    {
+      "name": "all_directions_blocked",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "r",
+          "kind": "UNIT",
+          "position": [
+            2,
+            0
+          ],
+          "unitType": "RANGER",
+          "hp": 1
+        }
+      ],
+      "obstacles": [
+        [
+          -1,
+          0
+        ],
+        [
+          0,
+          -1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "beacon": [
+        5,
+        5
+      ],
+      "scoring": "distance",
+      "expected": null
+    },
+    {
+      "name": "multi_scoring_two_enemies",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "r",
+          "kind": "UNIT",
+          "position": [
+            2,
+            0
+          ],
+          "unitType": "RANGER",
+          "hp": 1
+        },
+        {
+          "id": "v",
+          "kind": "UNIT",
+          "position": [
+            0,
+            1
+          ],
+          "unitType": "VANGUARD",
+          "hp": 1
+        }
+      ],
+      "obstacles": [],
+      "beacon": [
+        5,
+        5
+      ],
+      "scoring": "multi",
+      "expected": "UP"
+    },
+    {
+      "name": "multi_scoring_three_enemies",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "r",
+          "kind": "UNIT",
+          "position": [
+            2,
+            0
+          ],
+          "unitType": "RANGER",
+          "hp": 1
+        },
+        {
+          "id": "v",
+          "kind": "UNIT",
+          "position": [
+            0,
+            1
+          ],
+          "unitType": "VANGUARD",
+          "hp": 1
+        },
+        {
+          "id": "w",
+          "kind": "UNIT",
+          "position": [
+            -1,
+            0
+          ],
+          "unitType": "WORKER",
+          "hp": 1
+        }
+      ],
+      "obstacles": [],
+      "beacon": [
+        5,
+        5
+      ],
+      "scoring": "multi",
+      "expected": "UP"
+    },
+    {
+      "name": "multi_scoring_blocked",
+      "core": [
+        0,
+        0
+      ],
+      "enemies": [
+        {
+          "id": "r",
+          "kind": "UNIT",
+          "position": [
+            2,
+            0
+          ],
+          "unitType": "RANGER",
+          "hp": 1
+        },
+        {
+          "id": "v",
+          "kind": "UNIT",
+          "position": [
+            0,
+            1
+          ],
+          "unitType": "VANGUARD",
+          "hp": 1
+        }
+      ],
+      "obstacles": [
+        [
+          0,
+          -1
+        ]
+      ],
+      "beacon": [
+        5,
+        5
+      ],
+      "scoring": "multi",
+      "expected": "LEFT"
+    }
+  ],
+  "shot_priorities": {
+    "aggressive": [
+      "w1",
+      "r1",
+      "v1",
+      "c1"
+    ],
+    "defensive": [
+      "w1",
+      "r1",
+      "v1",
+      "c1"
+    ],
+    "defensive_from": [
+      0,
+      0
+    ]
+  },
+  "can_shoot": [
+    {
+      "name": "same_cell",
+      "from": [
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "expected": false
+    },
+    {
+      "name": "adjacent_orthogonal",
+      "from": [
+        0,
+        0
+      ],
+      "target": [
+        1,
+        0
+      ],
+      "obstacles": [],
+      "expected": true
+    },
+    {
+      "name": "range_3_line",
+      "from": [
+        0,
+        0
+      ],
+      "target": [
+        0,
+        3
+      ],
+      "obstacles": [],
+      "expected": true
+    },
+    {
+      "name": "range_4_out",
+      "from": [
+        0,
+        0
+      ],
+      "target": [
+        0,
+        4
+      ],
+      "obstacles": [],
+      "expected": false
+    },
+    {
+      "name": "diagonal",
+      "from": [
+        0,
+        0
+      ],
+      "target": [
+        2,
+        2
+      ],
+      "obstacles": [],
+      "expected": true
+    },
+    {
+      "name": "off_line",
+      "from": [
+        0,
+        0
+      ],
+      "target": [
+        2,
+        1
+      ],
+      "obstacles": [],
+      "expected": false
+    },
+    {
+      "name": "blocked_line",
+      "from": [
+        0,
+        0
+      ],
+      "target": [
+        0,
+        3
+      ],
+      "obstacles": [
+        [
+          0,
+          1
+        ]
+      ],
+      "expected": false
+    }
+  ],
+  "predicted_enemy_cells": [
+    {
+      "name": "east_dominant_x",
+      "actor": [
+        0,
+        0
+      ],
+      "enemy": [
+        3,
+        1
+      ],
+      "expected": [
+        2,
+        1
+      ]
+    },
+    {
+      "name": "west",
+      "actor": [
+        0,
+        0
+      ],
+      "enemy": [
+        -3,
+        -1
+      ],
+      "expected": [
+        -2,
+        -1
+      ]
+    },
+    {
+      "name": "south_dominant_y",
+      "actor": [
+        0,
+        0
+      ],
+      "enemy": [
+        1,
+        4
+      ],
+      "expected": [
+        1,
+        3
+      ]
+    },
+    {
+      "name": "north",
+      "actor": [
+        0,
+        0
+      ],
+      "enemy": [
+        -1,
+        -2
+      ],
+      "expected": [
+        -1,
+        -1
+      ]
+    },
+    {
+      "name": "diagonal_picks_x",
+      "actor": [
+        0,
+        0
+      ],
+      "enemy": [
+        2,
+        2
+      ],
+      "expected": [
+        1,
+        2
+      ]
+    },
+    {
+      "name": "same_cell_null",
+      "actor": [
+        0,
+        0
+      ],
+      "enemy": [
+        0,
+        0
+      ],
+      "expected": null
+    }
+  ],
+  "kite_cells": [
+    {
+      "name": "simple_kite_east",
+      "from": [
+        0,
+        0
+      ],
+      "threat": [
+        1,
+        0
+      ],
+      "obstacles": [],
+      "occupancy": {},
+      "enemies": [
+        {
+          "id": "v1",
+          "kind": "UNIT",
+          "position": [
+            1,
+            0
+          ],
+          "unitType": "VANGUARD"
+        }
+      ],
+      "expected": [
+        -1,
+        0
+      ]
+    },
+    {
+      "name": "kite_blocked",
+      "from": [
+        0,
+        0
+      ],
+      "threat": [
+        1,
+        0
+      ],
+      "obstacles": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          -1,
+          1
+        ],
+        [
+          -1,
+          0
+        ],
+        [
+          -1,
+          -1
+        ],
+        [
+          0,
+          -1
+        ]
+      ],
+      "occupancy": {},
+      "enemies": [
+        {
+          "id": "v1",
+          "kind": "UNIT",
+          "position": [
+            1,
+            0
+          ],
+          "unitType": "VANGUARD"
+        }
+      ],
+      "expected": null
+    },
+    {
+      "name": "kite_occupancy_full",
+      "from": [
+        0,
+        0
+      ],
+      "threat": [
+        1,
+        0
+      ],
+      "obstacles": [],
+      "occupancy": {
+        "2,0": 2
+      },
+      "enemies": [
+        {
+          "id": "v1",
+          "kind": "UNIT",
+          "position": [
+            1,
+            0
+          ],
+          "unitType": "VANGUARD"
+        }
+      ],
+      "expected": [
+        -1,
+        0
+      ]
+    },
+    {
+      "name": "kite_threat_distance_4_null",
+      "from": [
+        0,
+        0
+      ],
+      "threat": [
+        4,
+        0
+      ],
+      "obstacles": [],
+      "occupancy": {},
+      "enemies": [
+        {
+          "id": "v2",
+          "kind": "UNIT",
+          "position": [
+            4,
+            0
+          ],
+          "unitType": "VANGUARD"
+        }
+      ],
+      "expected": [
+        1,
+        0
+      ]
+    },
+    {
+      "name": "kite_multi_enemy",
+      "from": [
+        0,
+        0
+      ],
+      "threat": [
+        1,
+        0
+      ],
+      "obstacles": [],
+      "occupancy": {},
+      "enemies": [
+        {
+          "id": "v1",
+          "kind": "UNIT",
+          "position": [
+            1,
+            0
+          ],
+          "unitType": "VANGUARD"
+        },
+        {
+          "id": "r1",
+          "kind": "UNIT",
+          "position": [
+            2,
+            2
+          ],
+          "unitType": "RANGER"
+        }
+      ],
+      "expected": [
+        -1,
+        0
+      ]
+    }
+  ],
+  "core_shelters": [
+    {
+      "name": "no_shelter",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "resourceCells": [],
+      "expected": null
+    },
+    {
+      "name": "pocket_east",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [
+        [
+          1,
+          -1
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "resourceCells": [],
+      "expected": {
+        "target": [
+          1,
+          0
+        ],
+        "entrance": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "name": "pocket_blocked_entrance",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [
+        [
+          1,
+          -1
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          0,
+          0
+        ]
+      ],
+      "resourceCells": [],
+      "expected": null
+    },
+    {
+      "name": "nearest_wins",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [
+        [
+          1,
+          -1
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          -2,
+          -1
+        ],
+        [
+          -3,
+          0
+        ],
+        [
+          -2,
+          1
+        ]
+      ],
+      "resourceCells": [],
+      "expected": {
+        "target": [
+          1,
+          0
+        ],
+        "entrance": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "name": "resource_cells_excluded",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [
+        [
+          1,
+          -1
+        ],
+        [
+          2,
+          0
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "resourceCells": [
+        [
+          1,
+          0
+        ]
+      ],
+      "expected": null
+    }
+  ],
+  "is_core_shelter": [
+    {
+      "name": "open_four",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "expected": null
+    },
+    {
+      "name": "pocket",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [
+        [
+          0,
+          -1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "expected": [
+        -1,
+        0
+      ]
+    },
+    {
+      "name": "dead_cell",
+      "core": [
+        0,
+        0
+      ],
+      "obstacles": [
+        [
+          0,
+          -1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          -1,
+          0
+        ]
+      ],
+      "expected": null
+    }
+  ],
+  "rally_slots": [
+    {
+      "name": "slot_0",
+      "squadIndex": 0,
+      "expected": 0
+    },
+    {
+      "name": "slot_1",
+      "squadIndex": 1,
+      "expected": 1
+    },
+    {
+      "name": "slot_8_wraps",
+      "squadIndex": 8,
+      "expected": 0
+    },
+    {
+      "name": "negative_wraps",
+      "squadIndex": -1,
+      "expected": 7
+    }
+  ],
+  "rally_points_at_slot": [
+    {
+      "name": "default",
+      "target": [
+        10,
+        10
+      ],
+      "home": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "resourceCells": [],
+      "slot": 0,
+      "expected": [
+        5,
+        5
+      ]
+    },
+    {
+      "name": "slot_2",
+      "target": [
+        10,
+        10
+      ],
+      "home": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "resourceCells": [],
+      "slot": 2,
+      "expected": [
+        10,
+        5
+      ]
+    },
+    {
+      "name": "blocked_first",
+      "target": [
+        10,
+        10
+      ],
+      "home": [
+        0,
+        0
+      ],
+      "obstacles": [
+        [
+          15,
+          10
+        ]
+      ],
+      "resourceCells": [],
+      "slot": 0,
+      "expected": [
+        5,
+        5
+      ]
+    },
+    {
+      "name": "resource_skipped",
+      "target": [
+        10,
+        10
+      ],
+      "home": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "resourceCells": [
+        [
+          15,
+          10
+        ]
+      ],
+      "slot": 0,
+      "expected": [
+        5,
+        5
+      ]
+    }
+  ],
+  "rally_member_slots": [
+    {
+      "name": "squad0_member0",
+      "squadIndex": 0,
+      "memberIndex": 0,
+      "expected": 0
+    },
+    {
+      "name": "squad0_member2",
+      "squadIndex": 0,
+      "memberIndex": 2,
+      "expected": 2
+    },
+    {
+      "name": "squad2_member1",
+      "squadIndex": 2,
+      "memberIndex": 1,
+      "expected": 7
+    },
+    {
+      "name": "squad8_wraps",
+      "squadIndex": 8,
+      "memberIndex": 0,
+      "expected": 0
+    }
+  ],
+  "rally_points_at_member_slot": [
+    {
+      "name": "default_0",
+      "target": [
+        10,
+        10
+      ],
+      "home": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "resourceCells": [],
+      "slot": 0,
+      "expected": [
+        5,
+        5
+      ]
+    },
+    {
+      "name": "slot_4",
+      "target": [
+        10,
+        10
+      ],
+      "home": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "resourceCells": [],
+      "slot": 4,
+      "expected": [
+        5,
+        15
+      ]
+    },
+    {
+      "name": "slot_24_wraps",
+      "target": [
+        10,
+        10
+      ],
+      "home": [
+        0,
+        0
+      ],
+      "obstacles": [],
+      "resourceCells": [],
+      "slot": 24,
+      "expected": [
+        2,
+        2
+      ]
+    }
+  ],
+  "tactical_squads": [
+    {
+      "name": "empty",
+      "tenantId": "local",
+      "opts": {},
+      "expected": {
+        "squads": [],
+        "squadByUnit": {}
+      }
+    },
+    {
+      "name": "one_vanguard",
+      "tenantId": "local",
+      "opts": {},
+      "expected": {
+        "squads": [
+          {
+            "id": "local:home:0",
+            "role": "HOME_DEFENSE",
+            "index": 0,
+            "vanguardIds": [
+              "v1"
+            ],
+            "rangerIds": []
+          }
+        ],
+        "squadByUnit": {
+          "v1": "local:home:0"
+        }
+      }
+    },
+    {
+      "name": "home_2v1r",
+      "tenantId": "local",
+      "opts": {},
+      "expected": {
+        "squads": [
+          {
+            "id": "local:home:0",
+            "role": "HOME_DEFENSE",
+            "index": 0,
+            "vanguardIds": [
+              "v1",
+              "v2"
+            ],
+            "rangerIds": [
+              "r1"
+            ]
+          }
+        ],
+        "squadByUnit": {
+          "v1": "local:home:0",
+          "v2": "local:home:0",
+          "r1": "local:home:0"
+        }
+      }
+    },
+    {
+      "name": "two_squads",
+      "tenantId": "local",
+      "opts": {},
+      "expected": {
+        "squads": [
+          {
+            "id": "local:home:0",
+            "role": "HOME_DEFENSE",
+            "index": 0,
+            "vanguardIds": [
+              "v1",
+              "v2"
+            ],
+            "rangerIds": [
+              "r1"
+            ]
+          },
+          {
+            "id": "local:strike:0",
+            "role": "STRIKE",
+            "index": 1,
+            "vanguardIds": [
+              "v3",
+              "v4"
+            ],
+            "rangerIds": [
+              "r2"
+            ]
+          }
+        ],
+        "squadByUnit": {
+          "v1": "local:home:0",
+          "v2": "local:home:0",
+          "r1": "local:home:0",
+          "v3": "local:strike:0",
+          "v4": "local:strike:0",
+          "r2": "local:strike:0"
+        }
+      }
+    },
+    {
+      "name": "sticky_previous",
+      "tenantId": "local",
+      "opts": {},
+      "expected": {
+        "squads": [
+          {
+            "id": "local:home:0",
+            "role": "HOME_DEFENSE",
+            "index": 0,
+            "vanguardIds": [
+              "v1",
+              "v3"
+            ],
+            "rangerIds": [
+              "r2"
+            ]
+          },
+          {
+            "id": "local:strike:0",
+            "role": "STRIKE",
+            "index": 1,
+            "vanguardIds": [
+              "v2"
+            ],
+            "rangerIds": [
+              "r1"
+            ]
+          }
+        ],
+        "squadByUnit": {
+          "v1": "local:home:0",
+          "v3": "local:home:0",
+          "r2": "local:home:0",
+          "v2": "local:strike:0",
+          "r1": "local:strike:0"
+        }
+      }
+    },
+    {
+      "name": "home_anchor_selection",
+      "tenantId": "local",
+      "opts": {
+        "homeAnchor": [
+          0,
+          0
+        ]
+      },
+      "expected": {
+        "squads": [
+          {
+            "id": "local:home:0",
+            "role": "HOME_DEFENSE",
+            "index": 0,
+            "vanguardIds": [
+              "v1",
+              "v2"
+            ],
+            "rangerIds": [
+              "r1"
+            ]
+          }
+        ],
+        "squadByUnit": {
+          "v1": "local:home:0",
+          "v2": "local:home:0",
+          "r1": "local:home:0"
+        }
+      }
+    },
+    {
+      "name": "mobile_remainder",
+      "tenantId": "local",
+      "opts": {},
+      "expected": {
+        "squads": [
+          {
+            "id": "local:home:0",
+            "role": "HOME_DEFENSE",
+            "index": 0,
+            "vanguardIds": [
+              "v1",
+              "v2"
+            ],
+            "rangerIds": [
+              "r1"
+            ]
+          },
+          {
+            "id": "local:strike:0",
+            "role": "STRIKE",
+            "index": 1,
+            "vanguardIds": [
+              "v3",
+              "v4"
+            ],
+            "rangerIds": [
+              "r2"
+            ]
+          },
+          {
+            "id": "local:strike:1",
+            "role": "STRIKE",
+            "index": 2,
+            "vanguardIds": [
+              "v5",
+              "v6"
+            ],
+            "rangerIds": [
+              "r3"
+            ]
+          }
+        ],
+        "squadByUnit": {
+          "v1": "local:home:0",
+          "v2": "local:home:0",
+          "r1": "local:home:0",
+          "v3": "local:strike:0",
+          "v4": "local:strike:0",
+          "r2": "local:strike:0",
+          "v5": "local:strike:1",
+          "v6": "local:strike:1",
+          "r3": "local:strike:1"
+        }
+      }
+    }
+  ],
+  "plan_validation": [
+    {
+      "name": "valid_plan",
+      "expected": {
+        "valid": true,
+        "repaired": false,
+        "unitActions": {
+          "r1": {
+            "type": "SHOOT",
+            "targetId": "enemy1",
+            "expectedCell": [
+              5,
+              1
+            ]
+          },
+          "v1": {
+            "type": "MOVE",
+            "direction": "UP"
+          },
+          "w1": {
+            "type": "HARVEST"
+          }
+        },
+        "coreAction": {
+          "type": "SPAWN",
+          "unitType": "WORKER"
+        },
+        "intents": {
+          "v1": "move",
+          "w1": "harvest"
+        },
+        "issues": []
+      }
+    },
+    {
+      "name": "tick_mismatch",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "tick_mismatch",
+            "actorId": "plan",
+            "message": "plan tick 2 does not match state tick 1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "unknown_unit",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "unknown_unit",
+            "actorId": "ghost",
+            "message": "unit is not currently controlled"
+          }
+        ]
+      }
+    },
+    {
+      "name": "blocked_move",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "blocked_move",
+            "actorId": "v1",
+            "message": "destination is a known obstacle"
+          }
+        ]
+      }
+    },
+    {
+      "name": "wrong_capability_sweep_on_worker",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "wrong_capability",
+            "actorId": "w1",
+            "message": "only Vanguards can sweep"
+          }
+        ]
+      }
+    },
+    {
+      "name": "invalid_harvest_off_resource",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "wrong_capability",
+            "actorId": "v1",
+            "message": "only Workers can harvest"
+          }
+        ]
+      }
+    },
+    {
+      "name": "invalid_deposit_empty_cargo",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "invalid_deposit",
+            "actorId": "w1",
+            "message": "deposit requires cargo, Core capacity, and an active Core"
+          }
+        ]
+      }
+    },
+    {
+      "name": "invalid_deposit_not_on_core",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "invalid_deposit",
+            "actorId": "w1",
+            "message": "deposit requires cargo, Core capacity, and an active Core"
+          }
+        ]
+      }
+    },
+    {
+      "name": "invalid_heal_full_hp",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "invalid_heal",
+            "actorId": "w1",
+            "message": "unit healing requires a stationary Core on the same cell"
+          }
+        ]
+      }
+    },
+    {
+      "name": "invalid_heal_off_core",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "invalid_heal",
+            "actorId": "v1",
+            "message": "unit healing requires a stationary Core on the same cell"
+          }
+        ]
+      }
+    },
+    {
+      "name": "invalid_shot_out_of_range",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "invalid_shot",
+            "actorId": "r1",
+            "message": "target cell is out of line-of-sight range"
+          }
+        ]
+      }
+    },
+    {
+      "name": "invalid_shot_target_not_visible",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "invalid_shot",
+            "actorId": "r1",
+            "message": "target is not visible at expected_cell"
+          }
+        ]
+      }
+    },
+    {
+      "name": "invalid_beacon_carried",
+      "expected": {
+        "valid": true,
+        "repaired": false,
+        "unitActions": {
+          "w1": {
+            "type": "PICKUP_BEACON"
+          }
+        },
+        "coreAction": null,
+        "intents": {},
+        "issues": []
+      }
+    },
+    {
+      "name": "missing_core",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "missing_core",
+            "actorId": "core",
+            "message": "no controlled Core is available"
+          }
+        ]
+      }
+    },
+    {
+      "name": "core_spawn_insufficient_resources",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "insufficient_resources",
+            "actorId": "core",
+            "message": "spawn RANGER costs 12"
+          }
+        ]
+      }
+    },
+    {
+      "name": "core_spawn_affordable_dynamic_price",
+      "expected": {
+        "valid": true,
+        "repaired": false,
+        "unitActions": {},
+        "coreAction": {
+          "type": "SPAWN",
+          "unitType": "WORKER"
+        },
+        "intents": {},
+        "issues": []
+      }
+    },
+    {
+      "name": "core_repair_shield_insufficient",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "core_unavailable",
+            "actorId": "core",
+            "message": "shield repair requires a stationary damaged Core"
+          }
+        ]
+      }
+    },
+    {
+      "name": "core_repair_shield_max",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "core_unavailable",
+            "actorId": "core",
+            "message": "shield repair requires a stationary damaged Core"
+          }
+        ]
+      }
+    },
+    {
+      "name": "core_start_move_moving",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "core_unavailable",
+            "actorId": "core",
+            "message": "Core is already moving"
+          }
+        ]
+      }
+    },
+    {
+      "name": "core_cancel_move_normal",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "core_unavailable",
+            "actorId": "core",
+            "message": "Core is not moving"
+          }
+        ]
+      }
+    },
+    {
+      "name": "core_drop_beacon_not_carried",
+      "expected": {
+        "valid": false,
+        "repaired": true,
+        "unitActions": {},
+        "coreAction": null,
+        "intents": {},
+        "issues": [
+          {
+            "code": "invalid_beacon",
+            "actorId": "core",
+            "message": "Core is not carrying the Beacon"
+          }
+        ]
+      }
+    },
+    {
+      "name": "intents_dropped_for_invalid_actions",
+      "expected": {
+        "valid": true,
+        "repaired": false,
+        "unitActions": {
+          "w1": {
+            "type": "MOVE",
+            "direction": "DOWN"
+          }
+        },
+        "coreAction": null,
+        "intents": {
+          "w1": "move-intent"
+        },
+        "issues": []
+      }
+    }
+  ],
+  "step_toward": [
+    {
+      "from": [
+        0,
+        0
+      ],
+      "target": [
+        5,
+        0
+      ],
+      "expected": "RIGHT"
+    },
+    {
+      "from": [
+        0,
+        0
+      ],
+      "target": [
+        0,
+        5
+      ],
+      "expected": "DOWN"
+    },
+    {
+      "from": [
+        0,
+        0
+      ],
+      "target": [
+        -3,
+        -4
+      ],
+      "expected": "LEFT"
+    },
+    {
+      "from": [
+        0,
+        0
+      ],
+      "target": [
+        0,
+        0
+      ],
+      "expected": "UP"
+    }
+  ],
+  "mission_value": {
+    "target_confidence": [
+      {
+        "name": "visible_bonus",
+        "cell": {
+          "visible": true,
+          "lastSeenTick": 10,
+          "seeded": false
+        },
+        "tick": 20,
+        "config": {
+          "visibleBonus": 2,
+          "seedAgeDecay": 0.5
+        },
+        "expected": 2
+      },
+      {
+        "name": "seeded_decay",
+        "cell": {
+          "visible": false,
+          "lastSeenTick": 10,
+          "seeded": true
+        },
+        "tick": 20,
+        "config": {
+          "visibleBonus": 2,
+          "seedAgeDecay": 0.5
+        },
+        "expected": -5
+      },
+      {
+        "name": "seeded_no_last_seen",
+        "cell": {
+          "seeded": true
+        },
+        "tick": 20,
+        "config": {
+          "visibleBonus": 2,
+          "seedAgeDecay": 0.5
+        },
+        "expected": 0
+      },
+      {
+        "name": "defaults_zero",
+        "cell": {},
+        "tick": 20,
+        "config": {
+          "visibleBonus": 0,
+          "seedAgeDecay": 0
+        },
+        "expected": 0
+      }
+    ],
+    "is_collectable": [
+      {
+        "name": "within_distance",
+        "score": 5,
+        "worker": {
+          "id": "w1",
+          "unitType": "WORKER",
+          "position": [
+            0,
+            0
+          ],
+          "hp": 2,
+          "cargo": 0
+        },
+        "cell": [
+          3,
+          4
+        ],
+        "config": {
+          "collectionValueFloor": 4,
+          "maxCollectionDistance": 10,
+          "deadMineOverdueTicks": 5
+        },
+        "expected": true
+      },
+      {
+        "name": "below_floor",
+        "score": 3,
+        "worker": {
+          "id": "w1",
+          "unitType": "WORKER",
+          "position": [
+            0,
+            0
+          ],
+          "hp": 2,
+          "cargo": 0
+        },
+        "cell": [
+          3,
+          4
+        ],
+        "config": {
+          "collectionValueFloor": 4,
+          "maxCollectionDistance": 10,
+          "deadMineOverdueTicks": 5
+        },
+        "expected": false
+      },
+      {
+        "name": "beyond_distance",
+        "score": 5,
+        "worker": {
+          "id": "w1",
+          "unitType": "WORKER",
+          "position": [
+            0,
+            0
+          ],
+          "hp": 2,
+          "cargo": 0
+        },
+        "cell": [
+          9,
+          9
+        ],
+        "config": {
+          "collectionValueFloor": 4,
+          "maxCollectionDistance": 10,
+          "deadMineOverdueTicks": 5
+        },
+        "expected": false
+      },
+      {
+        "name": "visible_skips_floor",
+        "score": 0,
+        "worker": {
+          "id": "w1",
+          "unitType": "WORKER",
+          "position": [
+            0,
+            0
+          ],
+          "hp": 2,
+          "cargo": 0
+        },
+        "cell": [
+          1,
+          0
+        ],
+        "config": {
+          "collectionValueFloor": 4,
+          "maxCollectionDistance": 10,
+          "deadMineOverdueTicks": 5
+        },
+        "visible": true,
+        "expected": true
+      },
+      {
+        "name": "dead_mine_excluded",
+        "score": 5,
+        "worker": {
+          "id": "w1",
+          "unitType": "WORKER",
+          "position": [
+            0,
+            0
+          ],
+          "hp": 2,
+          "cargo": 0
+        },
+        "cell": [
+          3,
+          4
+        ],
+        "config": {
+          "collectionValueFloor": 0,
+          "maxCollectionDistance": 10,
+          "deadMineOverdueTicks": 5
+        },
+        "refill": {
+          "3,4": -9
+        },
+        "expected": false
+      },
+      {
+        "name": "visible_skips_dead_mine",
+        "score": 5,
+        "worker": {
+          "id": "w1",
+          "unitType": "WORKER",
+          "position": [
+            0,
+            0
+          ],
+          "hp": 2,
+          "cargo": 0
+        },
+        "cell": [
+          3,
+          4
+        ],
+        "config": {
+          "collectionValueFloor": 0,
+          "maxCollectionDistance": 10,
+          "deadMineOverdueTicks": 5
+        },
+        "refill": {
+          "3,4": -9
+        },
+        "visible": true,
+        "expected": true
+      }
+    ],
+    "refill_bonus": [
+      {
+        "name": "due_soon",
+        "key": "3,4",
+        "refill": {
+          "3,4": 2
+        },
+        "config": {
+          "refillLookahead": 5,
+          "deadMineOverdueTicks": 5,
+          "refillBonus": 4
+        },
+        "expected": 4
+      },
+      {
+        "name": "beyond_lookahead",
+        "key": "3,4",
+        "refill": {
+          "3,4": 9
+        },
+        "config": {
+          "refillLookahead": 5,
+          "deadMineOverdueTicks": 5,
+          "refillBonus": 4
+        },
+        "expected": 0
+      },
+      {
+        "name": "dead_mine_no_bonus",
+        "key": "3,4",
+        "refill": {
+          "3,4": -9
+        },
+        "config": {
+          "refillLookahead": 5,
+          "deadMineOverdueTicks": 5,
+          "refillBonus": 4
+        },
+        "expected": 0
+      },
+      {
+        "name": "missing_no_bonus",
+        "key": "3,4",
+        "refill": {},
+        "config": {
+          "refillLookahead": 5,
+          "deadMineOverdueTicks": 5,
+          "refillBonus": 4
+        },
+        "expected": 0
+      }
+    ],
+    "surveyor_ids": [
+      {
+        "name": "cap_selection",
+        "unassigned": [
+          {
+            "id": "w2",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w3",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "config": {
+          "surveyWorkerCap": 2,
+          "surveyWorkerFloor": 0
+        },
+        "burst": false,
+        "expected": [
+          "w1",
+          "w2"
+        ]
+      },
+      {
+        "name": "burst_floor",
+        "unassigned": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w2",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "config": {
+          "surveyWorkerCap": 1,
+          "surveyWorkerFloor": 3
+        },
+        "burst": true,
+        "expected": [
+          "w1",
+          "w2"
+        ]
+      },
+      {
+        "name": "disabled",
+        "unassigned": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "config": {
+          "surveyWorkerCap": 0,
+          "surveyWorkerFloor": 0
+        },
+        "burst": false,
+        "expected": []
+      }
+    ]
+  }
+}
