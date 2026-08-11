@@ -52,8 +52,10 @@ from .tactical_squads import (
     reconcile_tactical_squads,
 )
 from .variant_registry import (
+    VARIANT_PRODUCTION,
     VARIANT_SAFETY_CONFIG,
     apply_variant_overrides,
+    is_production_variant,
     is_safety_variant,
     resolve_safety_variant_config,
     resolve_variants_config,
@@ -77,7 +79,9 @@ __all__ = [
     "ThreatProfile",
     "ThreatTier",
     "AggressionLevel",
+    "VARIANT_PRODUCTION",
     "VARIANT_SAFETY_CONFIG",
+    "is_production_variant",
     "VisibleEnemy",
     "aggressive_shot_priority",
     "can_shoot",

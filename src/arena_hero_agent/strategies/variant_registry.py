@@ -10,6 +10,12 @@ Python ``SafetyPlannerConfig`` surface. Every other oracle variant controls
 ``SafetyPlanner`` switches that are not migrated (EXPECTED_UNKNOWN in the
 behavior-difference registry); enabling one in a Python config fails fast
 instead of silently running with weakened behavior.
+
+P4-14 adds a runtime eligibility marker on top of the registry: each registered
+variant id carries a ``production`` declaration. The default is conservative —
+an unmarked variant is NOT a production candidate and is rejected by the
+bounded runtime selector (``learning/runtime/selector.py``); research variants
+belong to ``arena-hero-lab``, not the live runtime.
 """
 
 from __future__ import annotations
@@ -30,6 +36,12 @@ VARIANT_SAFETY_CONFIG: Final[Mapping[str, Mapping[str, object]]] = {
     "population-ceiling-40-v1": {"population_ceiling": 40},
 }
 
+# Runtime eligibility marker (P4-14): variant ids allowed in the bounded
+# runtime candidate selection. Default is fail-closed — an unmarked variant is
+# not a production candidate. Currently empty: every registered variant is a
+# research/experimental candidate that the runtime selector must reject.
+VARIANT_PRODUCTION: Final[frozenset[str]] = frozenset()
+
 _KNOWN_FIELDS: Final[frozenset[str]] = frozenset(
     field.name for field in fields(SafetyPlannerConfig)
 )
@@ -41,6 +53,19 @@ def is_safety_variant(id: str) -> bool:
     if not isinstance(id, str):
         raise TypeError("variant id must be a string")
     return id in VARIANT_SAFETY_CONFIG
+
+
+def is_production_variant(id: str) -> bool:
+    """Return whether a registered variant id is a production candidate.
+
+    Unmarked ids (including unknown ids) are not production candidates
+    (fail-closed, P4-14). Unknown ids return False instead of raising so the
+    runtime selector can treat them as research variants.
+    """
+
+    if not isinstance(id, str):
+        raise TypeError("variant id must be a string")
+    return id in VARIANT_PRODUCTION
 
 
 def resolve_safety_variant_config(id: str) -> Mapping[str, object]:
