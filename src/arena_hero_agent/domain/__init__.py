@@ -1,6 +1,16 @@
 """Pure domain models, invariants, and canonical value objects; no I/O."""
 
 from .canonical import canonical_json_bytes, canonical_sha256, canonicalize
+from .economy import (
+    BASE_UNIT_COSTS,
+    EconomyDecisionInput,
+    EconomyState,
+    EconomyTurnInput,
+    UnitPrices,
+    core_resource_capacity,
+    replay_economy,
+    unit_price,
+)
 from .navigation import (
     TS_COMPATIBLE_SEARCH_LIMITS,
     Bounds,
@@ -63,6 +73,7 @@ from .world import (
 )
 
 __all__ = [
+    "BASE_UNIT_COSTS",
     "CURRENT_RULES_VERSION",
     "DEFAULT_PHASE_CONFIG",
     "SUPPORTED_RULES_VERSIONS",
@@ -80,6 +91,9 @@ __all__ = [
     "EntityId",
     "EntityKind",
     "EntityObservation",
+    "EconomyDecisionInput",
+    "EconomyState",
+    "EconomyTurnInput",
     "FencingToken",
     "GamePhase",
     "Generation",
@@ -98,6 +112,7 @@ __all__ = [
     "TerrainState",
     "TurnInput",
     "UnitObservation",
+    "UnitPrices",
     "UnitRole",
     "UnknownTraversalPolicy",
     "UnreachableError",
@@ -109,6 +124,7 @@ __all__ = [
     "cell_key",
     "chebyshev",
     "codepoint_order_key",
+    "core_resource_capacity",
     "direction_to_adjacent",
     "explore_radius_for_ring",
     "first_step",
@@ -117,7 +133,9 @@ __all__ = [
     "parse_cell_key",
     "parse_rules_version",
     "reachable_cells",
+    "replay_economy",
     "shortest_path",
     "transition_phase",
+    "unit_price",
     "vision_line_blocked",
 ]
