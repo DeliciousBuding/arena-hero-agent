@@ -119,7 +119,7 @@ assert 'arena_hero' not in sys.modules
 def test_load_bindings_uses_pinned_public_surface() -> None:
     bindings = load_sdk_bindings()
 
-    assert bindings.version == "0.3.0a3"
+    assert bindings.version == "0.3.0a4"
     assert bindings.async_client_type.__name__ == "AsyncArenaHeroClient"
     assert {event_type.__name__ for event_type in bindings.event_types} == {
         "Tick",
