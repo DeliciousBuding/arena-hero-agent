@@ -1,0 +1,1319 @@
+{
+  "fixtures": [
+    {
+      "path": "packages/arena-hero-ts/contracts/fixtures/raw-ws/state-39961.json",
+      "purpose": "golden replay for WS parse chain (W1)",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "6CAFF671C915C7048936DD90FD364A9F3F39C63A7DC07C5139FC35ACC44EBCC7",
+      "source": "burn-in raw-state dump; sanitized (owner_username replaced with fixture_user)",
+      "tenant_isolation": "tenant-agnostic replay fixture; no production runtime data"
+    },
+    {
+      "path": "packages/arena-hero-ts/contracts/generated/accepted.schema.json",
+      "purpose": "wire contract: accepted envelope",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "646B32C52BD33002E0E42ADA5CBD1FD073621E795883F60AF0EB2EB17B46AA37",
+      "source": "generated wire schema (TypeBox source)",
+      "tenant_isolation": "protocol-level; no tenant attribution"
+    },
+    {
+      "path": "packages/arena-hero-ts/contracts/generated/command-plan.schema.json",
+      "purpose": "wire contract: command plan",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "2C46209C09471E232A203187B33E034C2D746A3BBE7083CC8B448342C0F0F3D5",
+      "source": "generated wire schema (TypeBox source)",
+      "tenant_isolation": "protocol-level; no tenant attribution"
+    },
+    {
+      "path": "packages/arena-hero-ts/contracts/generated/player-state.schema.json",
+      "purpose": "wire contract: player state",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "01B7040869A38FB6F40CE127F23A21171A3E846EBB6FD57A2AF26E6C65D0A706",
+      "source": "generated wire schema (TypeBox source)",
+      "tenant_isolation": "protocol-level; no tenant attribution"
+    },
+    {
+      "path": "packages/arena-hero-ts/contracts/generated/received.schema.json",
+      "purpose": "wire contract: received plan envelope",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "C0EDB80FE803BEE205FBC1F006A9C4C91B77452B6CE34EAF955259BCA0FC747D",
+      "source": "generated wire schema (TypeBox source)",
+      "tenant_isolation": "protocol-level; no tenant attribution"
+    },
+    {
+      "path": "packages/arena-hero-ts/contracts/generated/stream-envelope.schema.json",
+      "purpose": "wire contract: WS stream envelope (tick/state/received)",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "A3B6A578CD4C1C3A738D236E9281235E60BB43E125058DF7250884C99ECAEF24",
+      "source": "generated wire schema (TypeBox source)",
+      "tenant_isolation": "protocol-level; no tenant attribution"
+    },
+    {
+      "path": "packages/arena-hero-ts/contracts/generated/world-object.schema.json",
+      "purpose": "wire contract: world object discriminated union",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "14C8D28EA155E510E7F4CD1FE2444A90F8F4DA6F39DD04D1F670A8CE48379F5E",
+      "source": "generated wire schema (TypeBox source)",
+      "tenant_isolation": "protocol-level; no tenant attribution"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/synthetic-match-opponent-plan.json",
+      "purpose": "agent decision/plan tests",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "8A85C8D2F1EF402A69CA642B5812E956B5174358B1010820AB0ABE4E67991FDA",
+      "source": "synthetic opponent plan fixture",
+      "tenant_isolation": "no tenant attribution; simulator namespace"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/shared-data/schema/dataset-manifest-v1.schema.json",
+      "purpose": "dataset manifest schema",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "CC0224F9388DF9C3A73148A041DAE0F9BD7AC4F833A6BB1E57147E78819852D8",
+      "source": "shared data schema (versioned)",
+      "tenant_isolation": "schema contract; no tenant data"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/shared-data/schema/dataset-registry-entry-v1.schema.json",
+      "purpose": "dataset registry entry schema",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "7700817B305B818249F73937862DF3CFC33240C2012AB3B0B7476824A5819BC7",
+      "source": "shared data schema (versioned)",
+      "tenant_isolation": "schema contract; no tenant data"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/shared-data/schema/ml-sample-v1.schema.json",
+      "purpose": "ml sample schema",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "C7217E1A847A0A9C1434795CF03FB662DB1E63D8A5C8B0DFBFAF764D9DE30DED",
+      "source": "shared data schema (versioned)",
+      "tenant_isolation": "schema contract; no tenant data"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/shared-data/schema/sim-calibration-case-v1.schema.json",
+      "purpose": "sim calibration case schema",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "180595999F9E330E8E1E4C6C44B245A384DFCA594BD490C67DA0F5594F3593BC",
+      "source": "shared data schema (versioned)",
+      "tenant_isolation": "schema contract; no tenant data"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/shared-data/schema/sim-record-v1.schema.json",
+      "purpose": "sim record schema",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "540279AAD60FF4DACFCD2675BD43B0F0E3E462ACEA7D3C40A8AAEE247DF4DED8",
+      "source": "shared data schema (versioned)",
+      "tenant_isolation": "schema contract; no tenant data"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/shared-data/schema/fixtures/dataset-manifest-v1.valid.json",
+      "purpose": "schema validation fixture",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "549811AB692D579724F6FA6702240E1782503FF4034662D898B643E76CFB5469",
+      "source": "schema fixture (valid sample)",
+      "tenant_isolation": "synthetic; no tenant data"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/shared-data/schema/fixtures/dataset-registry-entry-v1.valid.json",
+      "purpose": "schema validation fixture",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "E230CB062BC07265A0625FFD65A47EC651BD1B10EA2C8F57A9ECAFB3D3B7AFC2",
+      "source": "schema fixture (valid sample)",
+      "tenant_isolation": "synthetic; no tenant data"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/shared-data/schema/fixtures/ml-sample-v1.sample-status.json",
+      "purpose": "schema validation fixture",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "373513B0C0506120544C02BF8096738306101B42494FAEEE79D041C1AA7EB66B",
+      "source": "schema fixture (sample status)",
+      "tenant_isolation": "synthetic; no tenant data"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/shared-data/schema/fixtures/ml-sample-v1.valid.json",
+      "purpose": "schema validation fixture",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "95F550F2015B0EF0F5CAA51116CB4BF0D17A9F3273DB09E4583EBE195D1F8748",
+      "source": "schema fixture (valid sample)",
+      "tenant_isolation": "synthetic; no tenant data"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/shared-data/schema/fixtures/sim-calibration-case-v1.v0.14.valid.json",
+      "purpose": "schema validation fixture",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "4E83814B0509AB28EA4AEF443CB0BB22D4958A260983B571CD15CA57E2F49F0E",
+      "source": "schema fixture (valid sample, v0.14 rules)",
+      "tenant_isolation": "synthetic; no tenant data"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/shared-data/schema/fixtures/sim-calibration-case-v1.valid.json",
+      "purpose": "schema validation fixture",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "5BDD63FAAA1D11F2235217089D26C4C098589ECDE795DB649A5C234FAE723169",
+      "source": "schema fixture (valid sample)",
+      "tenant_isolation": "synthetic; no tenant data"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/shared-data/schema/fixtures/sim-record-v1.valid.json",
+      "purpose": "schema validation fixture",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "5666647B9D7D95243506A7CF56A6474358F6FA7C7A01EDF5D715CB89AB243A93",
+      "source": "schema fixture (valid sample)",
+      "tenant_isolation": "synthetic; no tenant data"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/sim/scenario-basic.json",
+      "purpose": "simulator scenario",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "B31BF1F76CAE57A37950A02AF7FCD30E8CEC0E40576699D12411A99FF9494849",
+      "source": "sim scenario fixture",
+      "tenant_isolation": "no tenant attribution; simulator namespace"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/sim/scenario-basic-v0.14.json",
+      "purpose": "simulator scenario",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "3CC949B8795264A6B39D0BA38C46DA37A959ABFBBFE64F66C6390BF83F4B173D",
+      "source": "sim scenario fixture (v0.14 rules)",
+      "tenant_isolation": "no tenant attribution; simulator namespace"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/sim/scenario-clear-path.json",
+      "purpose": "simulator scenario",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "5292877D72E797D532C8D3E16EA48BDD659B297052DFCA0504F0E9D274014C1F",
+      "source": "sim scenario fixture",
+      "tenant_isolation": "no tenant attribution; simulator namespace"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/sim/scenario-ffa-3p-v0.14.json",
+      "purpose": "simulator scenario",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "7E25A1AEC2CB25C9F97EC1405CBE5B6AC8E28AF895F7BE577C3E3C8DC01905B7",
+      "source": "sim scenario fixture (v0.14 rules, 3 players)",
+      "tenant_isolation": "no tenant attribution; simulator namespace"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/sim/scenario-focus-exile.json",
+      "purpose": "simulator scenario",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "B31BF1F76CAE57A37950A02AF7FCD30E8CEC0E40576699D12411A99FF9494849",
+      "source": "sim scenario fixture",
+      "tenant_isolation": "no tenant attribution; simulator namespace"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/sim/calibration-wait-match.json",
+      "purpose": "calibration matching",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "237A0A6EEAE6DACEA6A6E49BCCDC630E51C367048C77DBE5F3519E0279BE37BE",
+      "source": "calibration wait-match fixture",
+      "tenant_isolation": "no tenant attribution; simulator namespace"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/sim/calibration-dataset-match/case.json",
+      "purpose": "calibration dataset matching",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "708677135513DD2D1228FF811FDC74C566812680E00F52E6C6321704067B8DE3",
+      "source": "calibration dataset match fixture",
+      "tenant_isolation": "no tenant attribution; simulator namespace"
+    },
+    {
+      "path": "packages/arena-agent/test/fixtures/sim/calibration-dataset-match/manifest.json",
+      "purpose": "calibration dataset matching",
+      "repo": "arena-hero-agent-ts",
+      "sha256": "715C6BCA20188630B7CB4D9F065173052A25C32771D88B96A155600DE3A4A88C",
+      "source": "calibration dataset match fixture",
+      "tenant_isolation": "no tenant attribution; simulator namespace"
+    },
+    {
+      "path": "tests/domain/fixtures/tenant_state_reducer_known_answers_v1.json",
+      "purpose": "known-answer golden for tenant state reducer v1",
+      "repo": "arena-hero-agent",
+      "sha256": "4263700F184666773B910CF5D30B2338375C0109C5BA4AE5A2EF46D660F92A90",
+      "source": "migrated golden data (TS behavior pinned to Python)",
+      "tenant_isolation": "tenant-agnostic; per-tenant runtime data excluded"
+    },
+    {
+      "path": "tests/domain/fixtures/tenant_state_reducer_known_answers_v2.json",
+      "purpose": "known-answer golden for tenant state reducer v2",
+      "repo": "arena-hero-agent",
+      "sha256": "06DC246BA73F8B5E897623DF30D60B69858760144FFCE4F71BB54C74033793CD",
+      "source": "migrated golden data (TS behavior pinned to Python)",
+      "tenant_isolation": "tenant-agnostic; per-tenant runtime data excluded"
+    },
+    {
+      "path": "tests/domain/fixtures/ts_world_nav_known_answers.json",
+      "purpose": "known-answer golden for world navigation",
+      "repo": "arena-hero-agent",
+      "sha256": "D60F136CE280F8E4045D92F40BDC061938A47FA2FFC5E3E78B9188D315F23D3F",
+      "source": "migrated golden data (TS navigation pinned to Python)",
+      "tenant_isolation": "tenant-agnostic; per-tenant runtime data excluded"
+    },
+    {
+      "path": "tests/adapters/sdk/fixtures/turn_to_plan_known_answers_v1.json",
+      "purpose": "known-answer golden for turn-to-plan adapter",
+      "repo": "arena-hero-agent",
+      "sha256": "836A0D7D51C1855AD326D316CA65B61A889FC48751AE993B2ADB167704064EC5",
+      "source": "migrated golden data (turn-to-plan pinned)",
+      "tenant_isolation": "tenant-agnostic; per-tenant runtime data excluded"
+    },
+    {
+      "path": "tests/cli/fixtures/replay_turns_v1.json",
+      "purpose": "known-answer golden for replay",
+      "repo": "arena-hero-agent",
+      "sha256": "BA4A7E5D38514497C70D248BAFD261025CB4C8087E1503F07403F2BCF40837B7",
+      "source": "migrated golden data (replay turn sequence)",
+      "tenant_isolation": "tenant-agnostic; per-tenant runtime data excluded"
+    }
+  ],
+  "manifest_hash": "6fbeeca241c189db4819d956b91629f758ef63d6bdf44386abf504eb0eeb1970",
+  "manifest_version": 1,
+  "routes": [
+    {
+      "cache": "supervisor 5s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "per-tenant live status from supervisor /ready probe; tenant colors",
+      "path": "/api/tenants",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "supervisor 5s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "merged ledger + outcome.jsonl overview per tenant",
+      "path": "/api/overview",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "public, max-age=2",
+      "etag": "W/<map-sig>",
+      "method": "GET",
+      "notes": "weak ETag; 304 on if-none-match; full merged map (~642KB)",
+      "path": "/api/map",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl + warmup",
+      "etag": null,
+      "method": "GET",
+      "notes": "chunk-level aggregation; tenant validated",
+      "path": "/api/map/lod",
+      "query": [
+        "tenant"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "all|tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "direct tail read",
+      "etag": null,
+      "method": "GET",
+      "notes": "bounded decision-stream tail (n clamped 1..200); poll JSON, not SSE",
+      "path": "/api/stream",
+      "query": [
+        "tenant",
+        "n"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "t1",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "direct read",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/world",
+      "query": [
+        "tenant"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "t1",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "direct read",
+      "etag": null,
+      "method": "GET",
+      "notes": "replay null when absent",
+      "path": "/api/replay",
+      "query": [
+        "tenant"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "t1",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "direct read",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/plan",
+      "query": [
+        "tenant"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "t1",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "survey cache 30s",
+      "etag": null,
+      "method": "GET",
+      "notes": "survey + lifecycle + current world subset",
+      "path": "/api/exploration",
+      "query": [
+        "tenant"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "t1",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "survey cache 30s",
+      "etag": null,
+      "method": "GET",
+      "notes": "per-tenant resource/obstacle/core-hunt cells",
+      "path": "/api/survey",
+      "query": [
+        "tenant",
+        "states"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "all|tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "direct survey-db read",
+      "etag": null,
+      "method": "GET",
+      "notes": "mine cell + resource timeline",
+      "path": "/api/survey/mine",
+      "query": [
+        "tenant",
+        "cell"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "t1",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "direct db + snapshot",
+      "etag": null,
+      "method": "GET",
+      "notes": "core_hunts readOnly per tenant + alliance snapshot",
+      "path": "/api/survey/enemy-cores",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl + warmup",
+      "etag": null,
+      "method": "GET",
+      "notes": "tenant validated",
+      "path": "/api/survey/decision-input",
+      "query": [
+        "tenant"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl + warmup",
+      "etag": null,
+      "method": "GET",
+      "notes": "tenant validated",
+      "path": "/api/survey/mine-patterns",
+      "query": [
+        "tenant"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "all|tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "45s ttl + warmup",
+      "etag": null,
+      "method": "GET",
+      "notes": "limit clamped 1..200; alliance deeds merged when all",
+      "path": "/api/deeds",
+      "query": [
+        "tenant",
+        "limit"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "all|tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "window 500..50000; filter keys part of cache key",
+      "path": "/api/deeds/journal",
+      "query": [
+        "tenant",
+        "window",
+        "category",
+        "minStar"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "all|tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s aggregate",
+      "etag": null,
+      "method": "GET",
+      "notes": "view=consensus lightweight mode",
+      "path": "/api/alliance/survey",
+      "query": [
+        "view"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "direct read",
+      "etag": null,
+      "method": "GET",
+      "notes": "lists arbitration.jsonl",
+      "path": "/api/alliance/survey/arbitrations",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "validates cell + winnerTenant in t1..t4; invalidates survey cache after write",
+      "path": "/api/alliance/survey/arbitrate",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "write: append arbitration.jsonl"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "cell required; invalidates survey cache after write",
+      "path": "/api/alliance/survey/arbitrate/clear",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "write: remove arbitration entry"
+    },
+    {
+      "cache": "30s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/alliance/cluster",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/alliance/snapshot",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/alliance/advice",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s (snapshot ttl)",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/alliance/defense",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "supervisor 5s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "fail-open when supervisor unreachable; mode ASSIST_ONLY, actionOwnership none",
+      "path": "/api/alliance/director",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl + warmup",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/alliance/exploration",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "direct read",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/events",
+      "query": [
+        "tenant",
+        "n"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "t1",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "lazy refresh check",
+      "etag": null,
+      "method": "GET",
+      "notes": "stale >10min triggers background fetch (not awaited); 404 when snapshot missing",
+      "path": "/api/leaderboard",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "request-driven refresh; 502 on fetch failure",
+      "path": "/api/leaderboard/refresh",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "write: external fetch -> snapshot json + history.jsonl"
+    },
+    {
+      "cache": "30s lazy cache",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/intel",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "15s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "may trigger background survey:sync when lag >60 ticks (debounced 60s, lock-guarded)",
+      "path": "/api/health/pipeline",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "window 100..50000; tenant validated",
+      "path": "/api/intel/heat",
+      "query": [
+        "tenant",
+        "window"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "all|tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "direct + reconcile",
+      "etag": null,
+      "method": "GET",
+      "notes": "tenant required; reconciles satisfied/applied/unknown_unit and cancels stuck goals",
+      "path": "/api/commands",
+      "query": [
+        "tenant"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "tN",
+      "write_semantics": "read + reconcile (may write-back cleanup)"
+    },
+    {
+      "cache": "30s ttl + warmup",
+      "etag": null,
+      "method": "GET",
+      "notes": "window 200..20000",
+      "path": "/api/audit/decisions",
+      "query": [
+        "tenant",
+        "window"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "all|tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "tenant all rejected; window 100..2000, steps 2..12",
+      "path": "/api/audit/decisions/trend",
+      "query": [
+        "tenant",
+        "window",
+        "steps"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "5s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "window 200..20000",
+      "path": "/api/audit/workers",
+      "query": [
+        "tenant",
+        "window"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "all|tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl + warmup",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/audit/lifecycle",
+      "query": [
+        "tenant"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "all|tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl + warmup",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/alliance/mining",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/audit/alignment",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s lazy ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "source in human|command|arbitration|supervisor; limit 1..500",
+      "path": "/api/audit/trail",
+      "query": [
+        "tenant",
+        "source",
+        "limit"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "all|tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/alliance/survey/mining",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/audit/mining-effectiveness",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "composition of cached sub-audits",
+      "path": "/api/audit/overview",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "tenant all rejected; window 500..4000, steps 2..10",
+      "path": "/api/audit/mines/trend",
+      "query": [
+        "tenant",
+        "window",
+        "steps"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl + warmup",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/audit/mines",
+      "query": [
+        "tenant"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "all|tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "30s ttl + warmup",
+      "etag": null,
+      "method": "GET",
+      "notes": "window 200..20000",
+      "path": "/api/audit/human/conflicts",
+      "query": [
+        "tenant",
+        "window"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "all|tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "direct read",
+      "etag": null,
+      "method": "GET",
+      "notes": "human-command-audit.jsonl tail",
+      "path": "/api/audit/human",
+      "query": [
+        "tenant",
+        "limit"
+      ],
+      "stream_kind": "poll-json",
+      "tenant_param": "tN",
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "validates tenant, unitId, action.type in VALID_ACTION_TYPES (14); core-moving guard -> 409; replace per-unit; audit append",
+      "path": "/api/command",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": "tN",
+      "write_semantics": "write: human-commands/<tenant>.json (atomic)"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "validates kind mine|goto; dedupe window 30s; audit append",
+      "path": "/api/command/goal",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": "tN",
+      "write_semantics": "write: human-commands/<tenant>.json (atomic)"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "DELETE",
+      "notes": "scope all|action|goal; audit append",
+      "path": "/api/command",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": "tN",
+      "write_semantics": "write: human-commands/<tenant>.json (atomic)"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "clears commands+goals; audit append",
+      "path": "/api/command/clear",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": "tN",
+      "write_semantics": "write: human-commands/<tenant>.json (atomic)"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "mode override|disabled; audit append",
+      "path": "/api/command/mode",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": "tN",
+      "write_semantics": "write: human-commands/<tenant>.json (atomic)"
+    },
+    {
+      "cache": "30s ttl",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/shop/history",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "request-driven snapshot; 502 on fetch failure",
+      "path": "/api/shop/history/refresh",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "write: external fetch -> shop-history.jsonl append on change"
+    },
+    {
+      "cache": "external 20s cache",
+      "etag": null,
+      "method": "GET",
+      "notes": "official shop products",
+      "path": "/api/shop",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "external",
+      "etag": null,
+      "method": "GET",
+      "notes": "requires X-Shop-Cookie header; forwarded to official shop",
+      "path": "/api/shop/me",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "external",
+      "etag": null,
+      "method": "GET",
+      "notes": "requires X-Shop-Cookie header; forwarded to official shop",
+      "path": "/api/shop/orders",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "requires X-Shop-Cookie header; CSRF token extracted from cookie and forwarded",
+      "path": "/api/shop/order",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "write: external order via official shop"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "stores first 6 chars only; pending status; no external call yet",
+      "path": "/api/redeem",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "write: redeem-log.jsonl append (masked code)"
+    },
+    {
+      "cache": "direct read",
+      "etag": null,
+      "method": "GET",
+      "notes": "",
+      "path": "/api/redeem/history",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "tenant allowlist t1..t4 + sim-* namespace; event kind allowlist register|connection|tick_summary|disconnected; per-event isolation; idempotent upsert",
+      "path": "/api/ingest/agents",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "write: survey/<tenant>.db (agents + mapping tables)"
+    },
+    {
+      "cache": "direct read",
+      "etag": null,
+      "method": "GET",
+      "notes": "ledger + supervisor + world merge",
+      "path": "/api/agents",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "mode production|simulation; production requires api_key_tail; simulation issues plaintext simkey once (SHA-256 at rest)",
+      "path": "/api/registry/agents",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "write: registry.db (SQLite WAL)"
+    },
+    {
+      "cache": "direct read",
+      "etag": null,
+      "method": "GET",
+      "notes": "lists agents + key hashes only; no plaintext",
+      "path": "/api/registry/agents",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "POST",
+      "notes": "reissue simkey for simulation non-revoked agent only; plaintext once",
+      "path": "/api/registry/keys",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "write: registry.db (SQLite WAL)"
+    },
+    {
+      "cache": "none",
+      "etag": null,
+      "method": "DELETE",
+      "notes": "soft revoke: agent + active keys set revoked_at",
+      "path": "/api/registry/agents/:id",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "write: registry.db (SQLite WAL)"
+    }
+  ],
+  "schema": "arena-hero-agent/command-center-snapshot/v1",
+  "scope": {
+    "agent_baseline_commit": "0cd1580",
+    "agent_baseline_note": "w8/p5-2 branch baseline (main@0cd1580)",
+    "extracted_from": [
+      "arena-hero-agent-ts/packages/command-center/server.ts",
+      "arena-hero-agent-ts/packages/command-center/lib/*.ts",
+      "arena-hero-agent-ts/packages/command-center/README.md",
+      "arena-hero-agent-ts/packages/arena-hero-ts/contracts/**"
+    ],
+    "extraction_date": "2026-08-12",
+    "name": "legacy TS Command Center endpoint/fixture/write-permission snapshot",
+    "packages": [
+      "arena-hero-agent-ts/packages/command-center",
+      "arena-hero-agent-ts/packages/arena-hero-ts"
+    ],
+    "sanitized": {
+      "no_credentials": true,
+      "no_model_names": true,
+      "no_private_paths": true,
+      "no_session_text": true,
+      "no_ts_source_copy": true
+    },
+    "ts_commit_note": "arena-hero-agent-ts HEAD at extraction; command-center package not dirty at extraction",
+    "ts_commit_sha": "8cf5cbbcccf396a8feee94404af44969c5388e15"
+  },
+  "static_routes": [
+    {
+      "cache": "static",
+      "etag": null,
+      "method": "GET",
+      "notes": "redirect to /app/",
+      "path": "/",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "static",
+      "etag": null,
+      "method": "GET",
+      "notes": "web/dist/index.html",
+      "path": "/app",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "static",
+      "etag": null,
+      "method": "GET",
+      "notes": "web/dist assets",
+      "path": "/app/*",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "static",
+      "etag": null,
+      "method": "GET",
+      "notes": "public assets",
+      "path": "/assets/*",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    },
+    {
+      "cache": "static",
+      "etag": null,
+      "method": "GET",
+      "notes": "public/style.css",
+      "path": "/style.css",
+      "query": [],
+      "stream_kind": "poll-json",
+      "tenant_param": null,
+      "write_semantics": "read-only"
+    }
+  ],
+  "write_api_baseline": {
+    "authentication": {
+      "note": "no auth middleware on any route; loopback trust model; P5-9 target",
+      "present": false
+    },
+    "credential_hygiene": [
+      "registry stores SHA-256 key hashes; plaintext simkey returned exactly once",
+      "production agents register only api_key_tail (never the full key)",
+      "shop cookie accepted via X-Shop-Cookie header, never persisted server-side",
+      "redeem log stores first 6 chars of the code only",
+      "any list/query response excludes plaintext keys"
+    ],
+    "csrf": {
+      "command_center_routes": false,
+      "note": "no CSRF tokens on Command Center write routes (loopback trust); official shop proxy extracts arena_shop_csrf from the forwarded cookie and sends X-CSRF-Token to the shop"
+    },
+    "default_deny": {
+      "note": "no blanket default-deny middleware; per-route allowlist validation only; P5-9 target",
+      "present": false,
+      "validation_allowlists": [
+        "tenant in t1..t4 (validTenant)",
+        "action.type in VALID_ACTION_TYPES (14 values)",
+        "goal kind in mine|goto",
+        "command mode in override|disabled",
+        "ingest event kind in register|connection|tick_summary|disconnected",
+        "ingest tenant in t1..t4 or sim-* namespace",
+        "registry mode in production|simulation",
+        "audit source in human|command|arbitration|supervisor",
+        "not-found -> 404; invalid input -> 400"
+      ]
+    },
+    "gap_targets_p59": [
+      "add default-deny middleware + explicit authorization for every write route",
+      "add CSRF/replay protection for Command Center write routes",
+      "add rate limiting on write routes",
+      "add idempotency keys on non-deduped write routes",
+      "keep loopback-only binding or introduce authenticated remote access"
+    ],
+    "loopback_only": {
+      "bind": "127.0.0.1",
+      "default_port": 8787,
+      "note": "server binds loopback only; no remote exposure by default",
+      "port_env": "COMMAND_CENTER_PORT",
+      "present": true
+    },
+    "replay": {
+      "mechanisms": [
+        "goal writes deduped within 30s window (same unit/kind/target)",
+        "survey sync trigger debounced 60s + sync-guard.lock (stale 5min)",
+        "agent ingest idempotent upsert",
+        "no generic idempotency keys on other write routes"
+      ],
+      "present": "partial"
+    },
+    "writes": [
+      {
+        "audit": "append data/runtime/human-command-audit.jsonl",
+        "concurrency": "atomic tmp+rename; per-unit replace",
+        "endpoint": "POST /api/command",
+        "guard": "core-moving guard rejects with 409",
+        "target": "data/runtime/human-commands/<tenant>.json"
+      },
+      {
+        "audit": "append data/runtime/human-command-audit.jsonl",
+        "concurrency": "atomic tmp+rename; dedupe 30s",
+        "endpoint": "POST /api/command/goal",
+        "guard": "goal kind allowlist",
+        "target": "data/runtime/human-commands/<tenant>.json"
+      },
+      {
+        "audit": "append data/runtime/human-command-audit.jsonl",
+        "concurrency": "atomic tmp+rename",
+        "endpoint": "DELETE /api/command",
+        "guard": "scope allowlist",
+        "target": "data/runtime/human-commands/<tenant>.json"
+      },
+      {
+        "audit": "append data/runtime/human-command-audit.jsonl",
+        "concurrency": "atomic tmp+rename",
+        "endpoint": "POST /api/command/clear",
+        "guard": "tenant allowlist",
+        "target": "data/runtime/human-commands/<tenant>.json"
+      },
+      {
+        "audit": "append data/runtime/human-command-audit.jsonl",
+        "concurrency": "atomic tmp+rename",
+        "endpoint": "POST /api/command/mode",
+        "guard": "mode allowlist",
+        "target": "data/runtime/human-commands/<tenant>.json"
+      },
+      {
+        "audit": "none (listable via GET arbitrations)",
+        "concurrency": "append-only",
+        "endpoint": "POST /api/alliance/survey/arbitrate",
+        "guard": "cell + winnerTenant allowlist",
+        "target": "data/runtime/survey/arbitration.jsonl"
+      },
+      {
+        "audit": "none",
+        "concurrency": "append-only (tombstone semantics)",
+        "endpoint": "POST /api/alliance/survey/arbitrate/clear",
+        "guard": "cell required",
+        "target": "data/runtime/survey/arbitration.jsonl"
+      },
+      {
+        "audit": "agents/agent_events table",
+        "concurrency": "SQLite WAL; busy_timeout; per-event isolation; idempotent upsert",
+        "endpoint": "POST /api/ingest/agents",
+        "guard": "tenant allowlist t1..t4 + sim-*; event kind allowlist",
+        "target": "data/runtime/survey/<tenant>.db"
+      },
+      {
+        "audit": "keys table (SHA-256 hash; plaintext once)",
+        "concurrency": "SQLite WAL; single writer = registry API",
+        "endpoint": "POST /api/registry/agents",
+        "guard": "mode allowlist; production requires api_key_tail",
+        "target": "data/runtime/registry.db"
+      },
+      {
+        "audit": "keys table (SHA-256 hash; plaintext once)",
+        "concurrency": "SQLite WAL; single writer = registry API",
+        "endpoint": "POST /api/registry/keys",
+        "guard": "simulation + non-revoked only",
+        "target": "data/runtime/registry.db"
+      },
+      {
+        "audit": "revoked_at set on agent + active keys",
+        "concurrency": "SQLite WAL; single writer = registry API",
+        "endpoint": "DELETE /api/registry/agents/:id",
+        "guard": "soft delete only",
+        "target": "data/runtime/registry.db"
+      },
+      {
+        "audit": "history.jsonl",
+        "concurrency": "write snapshot + append history; prune old snapshots",
+        "endpoint": "POST /api/leaderboard/refresh",
+        "guard": "none (request-driven)",
+        "target": "data/leaderboard/leaderboard-<date>.json + history.jsonl"
+      },
+      {
+        "audit": "shop-history.jsonl",
+        "concurrency": "append on change only",
+        "endpoint": "POST /api/shop/history/refresh",
+        "guard": "none (request-driven)",
+        "target": "data/runtime/shop-history.jsonl"
+      },
+      {
+        "audit": "none local",
+        "concurrency": "outbound fetch; no local store",
+        "endpoint": "POST /api/shop/order",
+        "guard": "X-Shop-Cookie required; CSRF forwarded",
+        "target": "external official shop (outbound)"
+      },
+      {
+        "audit": "redeem-log.jsonl",
+        "concurrency": "append-only; masked code (first 6 chars)",
+        "endpoint": "POST /api/redeem",
+        "guard": "code required; pending only (no external call yet)",
+        "target": "data/runtime/redeem-log.jsonl"
+      },
+      {
+        "audit": "sync-guard.log",
+        "concurrency": "debounce 60s; sync-guard.lock (stale 5min)",
+        "endpoint": "GET /api/health/pipeline",
+        "guard": "lag >60 ticks trigger threshold",
+        "target": "spawns survey:sync --latest-only (external CLI)"
+      }
+    ]
+  }
+}
