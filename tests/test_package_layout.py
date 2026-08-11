@@ -8,6 +8,7 @@ MODULES = (
     "application",
     "adapters",
     "adapters.recorder",
+    "adapters.telemetry",
     "strategies",
     "planning",
     "alliance",

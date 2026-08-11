@@ -9,7 +9,10 @@ Design constraints:
 
 - SDK-free: this module depends only on domain value objects, application
   DTOs, and the ``Clock`` port. It never imports adapters, filesystem, or HTTP.
-- No telemetry emission here (the P4-6 slice wires results to a sink).
+- No telemetry emission here; callers may pass an ``on_tick`` observer to watch
+  finalized outcomes. Observer failures are swallowed and never affect loop
+  results or return values (the P4-6 service wires recorder and telemetry
+  through that hook).
 - No real strategy here (the P4-8 slice supplies deciders); ``decide`` and
   ``submit`` are injected boundaries and must be deterministic per tick.
 - Deadline and submit outcome vocabulary matches the values already fixed by
@@ -28,6 +31,7 @@ Design constraints:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass, field
@@ -252,6 +256,22 @@ async def _close_iterator(iterator: TurnStream) -> None:
         return
 
 
+async def _notify_on_tick(
+    on_tick: Callable[[TickResult], Awaitable[None]] | None,
+    result: TickResult,
+) -> None:
+    """Best-effort observer notification that never affects loop outcomes.
+
+    Cancellation and other ``BaseException`` values propagate; ordinary
+    observer errors are swallowed so recorder or telemetry wiring can never
+    change the loop's decisions, submissions, or return values.
+    """
+    if on_tick is None:
+        return
+    with contextlib.suppress(Exception):
+        await on_tick(result)
+
+
 class SingleTenantTickLoop:
     """Drive one tenant's offline tick stream within explicit deadlines."""
 
@@ -263,11 +283,15 @@ class SingleTenantTickLoop:
         source: TickSource,
         decide: Decider,
         submit: Submitter,
+        *,
+        on_tick: Callable[[TickResult], Awaitable[None]] | None = None,
     ) -> TickLoopResult:
         """Consume the source until it ends, a deadline fires, or a stop policy applies.
 
         ``CancelledError`` always propagates; the active stream is closed
-        exactly once before the exception leaves this method.
+        exactly once before the exception leaves this method. When provided,
+        ``on_tick`` is awaited after each finalized outcome; observer failures
+        never affect loop results.
         """
         config = self._config
         last_tick = 0
@@ -330,14 +354,14 @@ class SingleTenantTickLoop:
                 budget = DeadlineBudget(config.tick_budget.nanoseconds)
                 if budget.exhausted:
                     stopped_reason = StoppedReason.SOFT_DEADLINE
-                    outcomes.append(
-                        TickResult(
-                            tick=tick,
-                            decision_id=decision_id,
-                            deadline_outcome=DeadlineOutcome.SOFT_DEADLINE,
-                            submit_result=SubmitResult.NOT_SUBMITTED,
-                        )
+                    result = TickResult(
+                        tick=tick,
+                        decision_id=decision_id,
+                        deadline_outcome=DeadlineOutcome.SOFT_DEADLINE,
+                        submit_result=SubmitResult.NOT_SUBMITTED,
                     )
+                    outcomes.append(result)
+                    await _notify_on_tick(on_tick, result)
                     break
 
                 started = config.clock.monotonic_ns()
@@ -345,14 +369,14 @@ class SingleTenantTickLoop:
                 remaining = budget.consume(config.clock.monotonic_ns() - started)
                 if remaining.exhausted:
                     stopped_reason = StoppedReason.SELECTION_TIMEOUT
-                    outcomes.append(
-                        TickResult(
-                            tick=tick,
-                            decision_id=decision_id,
-                            deadline_outcome=DeadlineOutcome.SELECTION_TIMEOUT,
-                            submit_result=SubmitResult.NOT_SUBMITTED,
-                        )
+                    result = TickResult(
+                        tick=tick,
+                        decision_id=decision_id,
+                        deadline_outcome=DeadlineOutcome.SELECTION_TIMEOUT,
+                        submit_result=SubmitResult.NOT_SUBMITTED,
                     )
+                    outcomes.append(result)
+                    await _notify_on_tick(on_tick, result)
                     break
 
                 outcome = await submit(decision, observation)
@@ -362,15 +386,15 @@ class SingleTenantTickLoop:
                 else:
                     submit_result = SubmitResult.REJECTED
                     submit_error = outcome.error
-                outcomes.append(
-                    TickResult(
-                        tick=tick,
-                        decision_id=decision_id,
-                        deadline_outcome=DeadlineOutcome.CANDIDATE,
-                        submit_result=submit_result,
-                        submit_error=submit_error,
-                    )
+                result = TickResult(
+                    tick=tick,
+                    decision_id=decision_id,
+                    deadline_outcome=DeadlineOutcome.CANDIDATE,
+                    submit_result=submit_result,
+                    submit_error=submit_error,
                 )
+                outcomes.append(result)
+                await _notify_on_tick(on_tick, result)
                 last_tick = tick
                 ticks_processed += 1
                 if (

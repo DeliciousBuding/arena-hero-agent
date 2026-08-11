@@ -1,6 +1,20 @@
 """Application turn DTOs, tick loop orchestration, and orchestration interfaces."""
 
 from .recorder import TickRecorder
+from .runtime import (
+    ComponentHealth,
+    RuntimeSnapshot,
+    RuntimeStatus,
+    TenantRuntime,
+)
+from .telemetry import (
+    MemoryRuntimeTelemetry,
+    NoopRuntimeTelemetry,
+    RuntimeTelemetry,
+    default_run_id,
+    loop_trace_record,
+    runtime_trace_record,
+)
 from .tick_loop import (
     Backoff,
     DeadlineOutcome,
@@ -31,27 +45,37 @@ from .turns import (
 
 __all__ = [
     "Backoff",
+    "ComponentHealth",
     "CoreAction",
     "CoreIntent",
     "DeadlineOutcome",
     "Decider",
     "Decision",
+    "MemoryRuntimeTelemetry",
+    "NoopRuntimeTelemetry",
     "PlayerLifecycle",
     "ReconnectLimitExceeded",
+    "RuntimeSnapshot",
+    "RuntimeStatus",
+    "RuntimeTelemetry",
     "SingleTenantTickLoop",
     "StoppedReason",
     "SubmitErrorPolicy",
     "SubmitOutcome",
     "SubmitResult",
     "Submitter",
+    "TenantRuntime",
     "TickLoopConfig",
     "TickLoopResult",
     "TickRecorder",
     "TickResult",
     "TickSource",
-    "TurnStream",
     "TurnEvent",
     "TurnObservation",
+    "TurnStream",
     "UnitAction",
     "UnitIntent",
+    "default_run_id",
+    "loop_trace_record",
+    "runtime_trace_record",
 ]
