@@ -322,13 +322,15 @@ class CommandResult:
 
 
 def validate_issuance(command: DirectorCommand) -> str | None:
-    """Director-side envelope checks; returns a fail-closed reason or None."""
+    """Director-side issuance policy; returns a fail-closed reason or None.
+
+    Envelope invariants (expiry after issue time) are enforced by the value
+    object itself; this function adds issuance policy checks only.
+    """
     if command.schema_version != COMMAND_SCHEMA_VERSION:
         return "unsupported command schema version"
     if command.issuer is CommandIssuer.AGENT:
         return "agent issuers are not authorized for director commands"
-    if command.expires_at_tick <= command.issued_at_tick:
-        return "command expiry must be after its issue time"
     return None
 
 
