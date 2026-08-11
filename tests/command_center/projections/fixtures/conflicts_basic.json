@@ -1,0 +1,39 @@
+{
+  "tenant": "t1",
+  "window": 3000,
+  "oLines": [
+    "{\"tick\": 50, \"humanOverride\": {\"applied\": [\"a1\", \"a2\"], \"rejected\": [{\"reason\": \"Core is already moving\"}, {\"reason\": \"unknown unit\"}]}}",
+    "{\"tick\": 51, \"humanOverride\": {\"applied\": [], \"rejected\": [{\"reason\": \"Core is already moving\"}]}}",
+    "{\"tick\": 52}"
+  ],
+  "auditEntries": [
+    {
+      "at": "2026-08-08T00:00:01Z",
+      "tenant": "t1",
+      "kind": "goal",
+      "action": "mine [3,4]",
+      "note": null
+    },
+    {
+      "at": "2026-08-08T00:00:02Z",
+      "tenant": "t1",
+      "kind": "mode",
+      "action": "override",
+      "note": null
+    },
+    {
+      "at": "2026-08-08T00:00:03Z",
+      "tenant": "t2",
+      "kind": "goal",
+      "action": "mine [1,1]",
+      "note": null
+    },
+    {
+      "at": "2026-08-08T00:00:04Z",
+      "tenant": "t1",
+      "kind": "clear",
+      "action": null,
+      "note": "clear all"
+    }
+  ]
+}

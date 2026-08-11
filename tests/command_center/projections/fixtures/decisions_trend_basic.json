@@ -1,0 +1,17 @@
+{
+  "tenant": "t1",
+  "window": 2,
+  "steps": 3,
+  "dLines": [
+    "{\"tick\": 1, \"decisionSource\": \"ai\", \"moveCount\": 1, \"waitCount\": 0, \"harvestCount\": 0, \"depositCount\": 0, \"repairCount\": 0, \"planHash\": \"p1\"}",
+    "{\"tick\": 2, \"decisionSource\": \"ai\", \"moveCount\": 0, \"waitCount\": 2, \"harvestCount\": 0, \"depositCount\": 0, \"repairCount\": 0, \"planHash\": \"p1\"}",
+    "{\"tick\": 3, \"decisionSource\": \"ai\", \"moveCount\": 0, \"waitCount\": 1, \"harvestCount\": 1, \"depositCount\": 0, \"repairCount\": 0, \"planHash\": \"p2\"}",
+    "{\"tick\": 4, \"decisionSource\": \"ai\", \"moveCount\": 2, \"waitCount\": 0, \"harvestCount\": 2, \"depositCount\": 1, \"repairCount\": 0, \"planHash\": \"p3\"}"
+  ],
+  "oLines": [
+    "{\"tick\": 1, \"coreResourceDelta\": 3, \"workerCount\": 2, \"workersWithCargo\": 1, \"workerMeanDistanceFromCore\": 8, \"humanOverride\": {\"applied\": [\"a\"], \"rejected\": []}}",
+    "{\"tick\": 2, \"coreResourceDelta\": 0, \"workerCount\": 2, \"workersWithCargo\": 2, \"workerMeanDistanceFromCore\": 5, \"humanOverride\": {\"applied\": [], \"rejected\": [\"r\"]}}",
+    "{\"tick\": 3, \"coreResourceDelta\": 1, \"workerCount\": 3, \"workersWithCargo\": 0, \"workerMeanDistanceFromCore\": 12}",
+    "{\"tick\": 4, \"coreResourceDelta\": 4, \"workerCount\": 3, \"workersWithCargo\": 3, \"workerMeanDistanceFromCore\": 6}"
+  ]
+}

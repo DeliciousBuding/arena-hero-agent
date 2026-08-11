@@ -1,0 +1,27 @@
+{
+  "lines": [
+    {
+      "cell": "5,5",
+      "winnerTenant": "t1",
+      "note": "first",
+      "createdAt": "2026-08-08T00:00:00Z"
+    },
+    {
+      "cell": "5,5",
+      "winnerTenant": "t2",
+      "note": "override",
+      "createdAt": "2026-08-08T01:00:00Z"
+    },
+    {
+      "cell": "",
+      "winnerTenant": "t3",
+      "createdAt": "2026-08-08T02:00:00Z"
+    },
+    {
+      "cell": "6,6",
+      "winnerTenant": null,
+      "createdAt": "2026-08-08T03:00:00Z"
+    },
+    "bad-line"
+  ]
+}

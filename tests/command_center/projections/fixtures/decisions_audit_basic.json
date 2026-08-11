@@ -1,0 +1,16 @@
+{
+  "tenant": "t1",
+  "window": 3000,
+  "dLines": [
+    "{\"tick\": 100, \"decisionSource\": \"ai\", \"moveCount\": 2, \"harvestCount\": 0, \"depositCount\": 0, \"waitCount\": 1, \"repairCount\": 0, \"planHash\": \"p1\", \"intentCounts\": {\"MINE\": 2, \"MOVE\": 1}}",
+    "{\"tick\": 101, \"decisionSource\": \"ai\", \"moveCount\": 0, \"harvestCount\": 1, \"depositCount\": 0, \"waitCount\": 0, \"repairCount\": 0, \"planHash\": \"p1\", \"intentCounts\": {\"MINE\": 1}}",
+    "{\"tick\": 102, \"decisionSource\": \"human\", \"moveCount\": 0, \"harvestCount\": 0, \"depositCount\": 0, \"waitCount\": 3, \"repairCount\": 0, \"planHash\": \"p2\", \"intentCounts\": {\"WAIT\": 3}}",
+    "not-json",
+    "{\"tick\": 103, \"decisionSource\": \"ai\", \"moveCount\": 1, \"harvestCount\": 2, \"depositCount\": 1, \"waitCount\": 0, \"repairCount\": 0, \"planHash\": \"p3\"}"
+  ],
+  "oLines": [
+    "{\"tick\": 100, \"coreResourceDelta\": 5, \"events\": [\"DEPOSIT_SUCCEEDED\", \"HARVEST_SUCCEEDED\"], \"workerCount\": 4, \"workersWithCargo\": 2, \"workerMeanDistanceFromCore\": 10, \"humanOverride\": {\"applied\": [\"a1\"], \"rejected\": []}}",
+    "{\"tick\": 101, \"coreResourceDelta\": -2, \"events\": [{\"eventType\": \"DEPOSIT_FAILED\"}], \"failedEvents\": [\"HARVEST_FAILED\"], \"workerCount\": 4, \"workersWithCargo\": 4, \"workerMeanDistanceFromCore\": 0, \"humanOverride\": {\"applied\": [], \"rejected\": [\"r1\"]}}",
+    "{\"tick\": 102, \"coreResourceDelta\": 0, \"events\": [], \"workerCount\": 0, \"workersWithCargo\": 0}"
+  ]
+}

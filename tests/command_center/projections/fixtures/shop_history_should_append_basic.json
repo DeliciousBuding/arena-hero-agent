@@ -1,0 +1,20 @@
+{
+  "mode": "shouldAppend",
+  "prev": {
+    "at": "2026-08-08T00:00:00Z",
+    "products": [
+      {
+        "id": "p1",
+        "resourceCost": 100,
+        "availableStock": 5
+      }
+    ]
+  },
+  "products": [
+    {
+      "id": "p1",
+      "resourceCost": 100,
+      "availableStock": 5
+    }
+  ]
+}

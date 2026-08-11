@@ -1,0 +1,87 @@
+{
+  "human": [
+    {
+      "at": "2026-08-08T01:00:00Z",
+      "tenant": "t1",
+      "kind": "goal",
+      "unitId": "u1",
+      "action": "mine [3,4]",
+      "note": "high priority"
+    },
+    {
+      "at": "2026-08-08T01:00:01Z",
+      "tenant": "t2",
+      "kind": "delete",
+      "unitId": "u2",
+      "action": null,
+      "note": null
+    },
+    {
+      "at": "2026-08-08T01:00:02Z",
+      "tenant": "t1",
+      "kind": "mode",
+      "unitId": null,
+      "action": "override",
+      "note": null
+    }
+  ],
+  "commandsByTenant": {
+    "t1": [
+      {
+        "at": "2026-08-08T01:00:03Z",
+        "kind": "worker_mine",
+        "action": "MINE",
+        "issuer": "user",
+        "evidence": {
+          "target": [
+            3,
+            4
+          ],
+          "unitIds": [
+            "u1",
+            "u2"
+          ]
+        }
+      },
+      {
+        "at": "2026-08-08T01:00:04Z",
+        "kind": "worker_mine",
+        "action": "MINE",
+        "issuer": null,
+        "evidence": null
+      }
+    ],
+    "t2": []
+  },
+  "arbitrations": [
+    {
+      "createdAt": "2026-08-08T01:00:05Z",
+      "cell": "5,5",
+      "winnerTenant": "t2",
+      "note": "t2 占矿"
+    },
+    {
+      "createdAt": "2026-08-08T01:00:06Z",
+      "cell": "6,6",
+      "winnerTenant": null
+    }
+  ],
+  "supervisors": [
+    {
+      "ts": "2026-08-08T01:00:07Z",
+      "type": "exited",
+      "pid": 1234,
+      "exitCode": 1,
+      "signal": null,
+      "tenantId": "t1"
+    },
+    {
+      "ts": "2026-08-08T01:00:08Z",
+      "type": "ready",
+      "pid": null,
+      "exitCode": null,
+      "signal": null,
+      "tenantId": null
+    }
+  ]
+}

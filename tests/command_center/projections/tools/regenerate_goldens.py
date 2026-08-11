@@ -1,0 +1,85 @@
+"""Regenerate TS-oracle golden outputs for the projection parity suite (P5-4).
+
+Each ``fixtures/<name>.golden.json`` is produced by running the actual legacy
+TypeScript oracle with Node on the paired ``fixtures/<name>.json`` input:
+
+- requires Node >= 22 (type stripping) and the read-only TS checkout at
+  ``arena-hero-agent-ts`` (HEAD ``8cf5cbb`` = P5-2 snapshot commit);
+- never writes into the TS checkout (the oracle harness lives outside it);
+- the harness is expected at ``<tmp>/cc-oracle.mjs`` (kept outside the repo
+  because the TS checkout must stay clean).
+
+Usage:
+
+    uv run python tests/command_center/projections/tools/regenerate_goldens.py
+
+Only run this after deliberately changing a fixture; goldens are committed so
+the suite runs without Node.
+"""
+
+from __future__ import annotations
+
+import json
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
+ORACLE_HARNESS = Path.home() / "tmp" / "cc-oracle.mjs"
+
+# fixture base name -> oracle dispatch kind (see cc-oracle.mjs)
+KIND_BY_FIXTURE: dict[str, str] = {
+    "alliance_cluster_basic": "cluster",
+    "alliance_mining_basic": "mining",
+    "decisions_audit_basic": "decisionAudit",
+    "decisions_trend_basic": "decisionTrend",
+    "workers_basic": "workerLiveness",
+    "conflicts_basic": "humanConflict",
+    "trail_normalize_basic": "normalizeTrails",
+    "trail_merge_basic": "mergeTrails",
+    "map_lod_basic": "mapLod",
+    "mines_util_basic": "mineUtil",
+    "mines_trend_basic": "mineTrend",
+    "shop_history_agg_basic": "shopHistory",
+    "shop_history_normalize_basic": "shopHistory",
+    "shop_history_signature_basic": "shopHistory",
+    "shop_history_should_append_basic": "shopHistory",
+    "mining_effectiveness_basic": "miningEffectiveness",
+    "arbitrations_basic": "arbitrations",
+    "human_audit_basic": "humanAudit",
+}
+
+
+def main() -> int:
+    if shutil.which("node") is None:
+        print("node is required to regenerate goldens", file=sys.stderr)
+        return 1
+    if not ORACLE_HARNESS.exists():
+        print(f"oracle harness missing: {ORACLE_HARNESS}", file=sys.stderr)
+        return 1
+    regenerated: list[str] = []
+    for base, kind in KIND_BY_FIXTURE.items():
+        fixture = FIXTURES / f"{base}.json"
+        golden = FIXTURES / f"{base}.golden.json"
+        if not fixture.exists():
+            print(f"missing fixture: {fixture}", file=sys.stderr)
+            return 1
+        result = subprocess.run(
+            ["node", str(ORACLE_HARNESS), str(fixture), kind],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            print(f"oracle failed for {base}: {result.stderr}", file=sys.stderr)
+            return 1
+        # validate the output parses as JSON before writing
+        json.loads(result.stdout)
+        golden.write_text(result.stdout, encoding="utf-8")
+        regenerated.append(base)
+    print(f"regenerated {len(regenerated)} goldens: {', '.join(regenerated)}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

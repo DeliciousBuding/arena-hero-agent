@@ -1,1 +1,116 @@
-"""Pure projections from runtime artifacts to API read models."""
+"""Pure projections from runtime artifacts to API read models (P5-4).
+
+Ports the legacy TypeScript Command Center audit / map / alliance / shop
+projections to Python on top of the P5-3 data base (``paths`` / ``jsonl`` /
+``cache`` / ``registry`` / ``survey_db``). Each module exposes a deterministic
+aggregation core (testable with synthetic fixtures) plus a thin loader that
+reads the same runtime artifacts the TypeScript oracle reads.
+
+Aggregation semantics are ported 1:1 from the TS oracle and verified by golden
+tests; where the P5-3 survey schema lacks a TS table (``sync_meta`` /
+``resource_events`` / ``chunks``) the loader degrades to empty inputs and the
+difference is registered in the module docstring (fail-closed, never guessed).
+"""
+
+from .alliance_cluster import (
+    CLUSTER_LINK_DIST,
+    COHESION_MAX_DIST,
+    build_alliance_cluster_view,
+)
+from .alliance_mining import assign_alliance_mining, build_observers_by_cell
+from .alliance_survey import TENANT_COLORS, aggregate_alliance_survey, load_alliance_survey
+from .arbitrations import arbitration_file, list_arbitrations, load_arbitrations
+from .conflicts import DEFAULT_WINDOW as CONFLICT_DEFAULT_WINDOW
+from .conflicts import aggregate_human_conflict, load_human_conflict
+from .decisions import (
+    DECISION_TREND_STEPS,
+    DECISION_TREND_WINDOW,
+    DEFAULT_RECORDS,
+    aggregate_decision_audit,
+    aggregate_decision_trend,
+    load_decision_audit,
+    load_decision_trend,
+)
+from .human import DEFAULT_LIMIT as HUMAN_AUDIT_DEFAULT_LIMIT
+from .human import MAX_KEEP as HUMAN_AUDIT_MAX_KEEP
+from .human import load_human_audit, read_human_audit
+from .map_lod import MAP_LOD_CHUNK, aggregate_map_lod, load_map_lod
+from .mines import (
+    DEFAULT_TREND_STEPS,
+    DEFAULT_TREND_WINDOW,
+    RESOURCE_FRESH_WINDOW_TICKS,
+    aggregate_mine_utilization,
+    aggregate_mine_utilization_trend,
+    load_mine_utilization,
+    load_mine_utilization_trend,
+)
+from .mining_effectiveness import FRESH_TICKS, aggregate_allocation_effectiveness
+from .shop_history import (
+    aggregate_shop_history,
+    load_shop_history,
+    load_shop_history_entries,
+    normalize_products,
+    should_append,
+    snapshot_signature,
+)
+from .trail import DEFAULT_LIMIT as TRAIL_DEFAULT_LIMIT
+from .trail import SOURCES as AUDIT_SOURCES
+from .trail import load_audit_trail, merge_audit_trails, normalize_audit_trails
+from .workers import DEFAULT_WINDOW as WORKERS_DEFAULT_WINDOW
+from .workers import RECENT_TICKS as WORKERS_RECENT_TICKS
+from .workers import aggregate_worker_liveness, load_worker_liveness_audit
+
+__all__ = [
+    "AUDIT_SOURCES",
+    "CLUSTER_LINK_DIST",
+    "COHESION_MAX_DIST",
+    "CONFLICT_DEFAULT_WINDOW",
+    "DECISION_TREND_STEPS",
+    "DECISION_TREND_WINDOW",
+    "DEFAULT_RECORDS",
+    "DEFAULT_TREND_STEPS",
+    "DEFAULT_TREND_WINDOW",
+    "FRESH_TICKS",
+    "HUMAN_AUDIT_DEFAULT_LIMIT",
+    "HUMAN_AUDIT_MAX_KEEP",
+    "MAP_LOD_CHUNK",
+    "RESOURCE_FRESH_WINDOW_TICKS",
+    "TENANT_COLORS",
+    "TRAIL_DEFAULT_LIMIT",
+    "WORKERS_DEFAULT_WINDOW",
+    "WORKERS_RECENT_TICKS",
+    "aggregate_allocation_effectiveness",
+    "aggregate_alliance_survey",
+    "aggregate_decision_audit",
+    "aggregate_decision_trend",
+    "aggregate_human_conflict",
+    "aggregate_map_lod",
+    "aggregate_mine_utilization",
+    "aggregate_mine_utilization_trend",
+    "aggregate_shop_history",
+    "aggregate_worker_liveness",
+    "arbitration_file",
+    "assign_alliance_mining",
+    "build_alliance_cluster_view",
+    "build_observers_by_cell",
+    "list_arbitrations",
+    "load_alliance_survey",
+    "load_arbitrations",
+    "load_audit_trail",
+    "load_decision_audit",
+    "load_decision_trend",
+    "load_human_audit",
+    "load_human_conflict",
+    "load_map_lod",
+    "load_mine_utilization",
+    "load_mine_utilization_trend",
+    "load_shop_history",
+    "load_shop_history_entries",
+    "load_worker_liveness_audit",
+    "merge_audit_trails",
+    "normalize_audit_trails",
+    "normalize_products",
+    "read_human_audit",
+    "should_append",
+    "snapshot_signature",
+]

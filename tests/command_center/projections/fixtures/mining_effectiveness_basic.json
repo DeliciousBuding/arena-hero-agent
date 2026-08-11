@@ -1,0 +1,57 @@
+{
+  "currentTick": 1000,
+  "assignments": [
+    {
+      "cell": "1,1",
+      "x": 1,
+      "y": 1,
+      "assignedTenant": "t1",
+      "distanceToCore": 5,
+      "lastSeenTick": 900
+    },
+    {
+      "cell": "2,2",
+      "x": 2,
+      "y": 2,
+      "assignedTenant": "t1",
+      "distanceToCore": 6,
+      "lastSeenTick": 950
+    },
+    {
+      "cell": "3,3",
+      "x": 3,
+      "y": 3,
+      "assignedTenant": "t2",
+      "distanceToCore": 7,
+      "lastSeenTick": 300
+    },
+    {
+      "cell": "4,4",
+      "x": 4,
+      "y": 4,
+      "assignedTenant": "t2",
+      "distanceToCore": 8,
+      "lastSeenTick": 700
+    }
+  ],
+  "harvestByTenantCell": {
+    "t1": {
+      "1,1": {
+        "ok": 2,
+        "fail": 0,
+        "amount": 12,
+        "first": 800,
+        "last": 850
+      }
+    },
+    "t2": {
+      "2,2": {
+        "ok": 1,
+        "fail": 0,
+        "amount": 5,
+        "first": 900,
+        "last": 910
+      }
+    }
+  }
+}

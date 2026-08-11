@@ -1,0 +1,27 @@
+{
+  "tenant": "t1",
+  "limit": 2,
+  "lines": [
+    {
+      "at": "2026-08-08T00:00:00Z",
+      "tenant": "t1",
+      "kind": "goal",
+      "action": "mine [3,4]"
+    },
+    {
+      "at": "2026-08-08T00:00:01Z",
+      "tenant": "t2",
+      "kind": "mode"
+    },
+    {
+      "at": "2026-08-08T00:00:02Z",
+      "tenant": "t1",
+      "kind": "clear"
+    },
+    {
+      "at": "2026-08-08T00:00:03Z",
+      "tenant": "t1",
+      "kind": "delete"
+    }
+  ]
+}

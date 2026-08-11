@@ -1,0 +1,1 @@
+[{"id":"p1","name":"Item A","resourceCost":100,"availableStock":5,"purchaseLimit":1},{"id":"p2","name":"Item B","resourceCost":50,"availableStock":10,"purchaseLimit":2}]

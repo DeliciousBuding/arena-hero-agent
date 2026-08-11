@@ -1,0 +1,1 @@
+[{"at":"2026-08-08T03:00:04Z","source":"human","tenant":"t1","kind":"clear","detail":"clear","ref":null},{"at":"2026-08-08T03:00:01Z","source":"command","tenant":"t1","kind":"worker_mine","detail":"MINE","ref":"[3,4]"}]
