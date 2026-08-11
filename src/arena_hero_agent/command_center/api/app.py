@@ -29,7 +29,7 @@ from urllib.parse import parse_qs
 from ..errors import CommandCenterError
 from ..goal_store import iso_utc
 from ..jsonl import read_jsonl_tail
-from ..paths import resolve_data_root, telemetry_dir, validate_tenant
+from ..paths import resolve_data_root, telemetry_dir, validate_tenant, write_api_audit_path
 from ..projections._common import current_epoch_ms
 from ..projections.map_lod import load_map_lod
 from .map import load_merged_map
@@ -43,6 +43,12 @@ from .routes import (
     MatchedRoute,
     Route,
     RouteTable,
+)
+from .security import (
+    WRITE_AUTH_TOKEN_ENV,
+    WRITE_CSRF_TOKEN_ENV,
+    WriteSecurity,
+    is_write_route,
 )
 
 JSON_MEDIA_TYPE = "application/json; charset=utf-8"
@@ -119,6 +125,7 @@ class CommandCenterApp:
         handlers: Mapping[tuple[str, str], Handler] | None = None,
         map_loader: Callable[[], tuple[dict[str, Any], str]] | None = None,
         now_ms: Callable[[], int] | None = None,
+        security: WriteSecurity | None = None,
     ) -> None:
         self.table = table if table is not None else RouteTable()
         self._data_root = resolve_data_root(override=data_root)
@@ -131,6 +138,19 @@ class CommandCenterApp:
         }
         if handlers:
             self._handlers.update(handlers)
+        # P5-9: default-deny write gate. Writes are only enabled when the
+        # operator explicitly configures the gate tokens (env by default);
+        # otherwise every write request is denied (fail-closed).
+        self._security = (
+            security
+            if security is not None
+            else WriteSecurity(
+                auth_token=os.environ.get(WRITE_AUTH_TOKEN_ENV),
+                csrf_token=os.environ.get(WRITE_CSRF_TOKEN_ENV),
+                audit_path=write_api_audit_path(self._data_root),
+                now_ms=self._now_ms,
+            )
+        )
 
     def handle(self, request: ApiRequest) -> ApiResponse:
         """Process one request into a response (404/400/500 translation)."""
@@ -138,6 +158,16 @@ class CommandCenterApp:
         if match is None:
             return json_response(404, {"error": "not found", "path": request.path})
         route = match.route
+        decision = None
+        if is_write_route(route):
+            # P5-9 default-deny gate runs before any route validation so an
+            # unauthenticated request can never learn route/tenant details.
+            decision = self._security.check(request)
+            if decision.outcome != "accepted":
+                self._security.audit(
+                    decision, request, route, None, match.path_params, status=decision.status
+                )
+                return json_response(decision.status, {"error": decision.reason})
         try:
             query = self._parse_query(route, request.query)
             tenant = self._tenant_for(route, query)
@@ -145,16 +175,24 @@ class CommandCenterApp:
             return json_response(400, {"error": str(exc)})
         handler = self._handlers.get((route.method, route.path))
         if handler is None:
-            return json_response(501, {"error": "not implemented"})
-        try:
-            result = handler(request, match, query, tenant)
-        except RequestValidationError as exc:
-            return json_response(400, {"error": str(exc)})
-        except CommandCenterError as exc:
-            return json_response(500, {"error": str(exc)})
-        except Exception as exc:  # noqa: BLE001 - Hono onError parity: handler failure -> 500
-            return json_response(500, {"error": str(exc)})
-        response = result if isinstance(result, ApiResponse) else json_response(200, result)
+            response = json_response(501, {"error": "not implemented"})
+        else:
+            try:
+                result = handler(request, match, query, tenant)
+            except RequestValidationError as exc:
+                response = json_response(400, {"error": str(exc)})
+            except CommandCenterError as exc:
+                response = json_response(500, {"error": str(exc)})
+            except Exception as exc:  # noqa: BLE001 - Hono onError parity: handler failure -> 500
+                response = json_response(500, {"error": str(exc)})
+            else:
+                response = result if isinstance(result, ApiResponse) else json_response(200, result)
+        if decision is not None:
+            # Accepted write requests are audited with the final response
+            # status (dispatch outcome); rejected decisions are audited above.
+            self._security.audit(
+                decision, request, route, tenant, match.path_params, status=response.status
+            )
         return self._apply_etag(request, response)
 
     def _parse_query(self, route: Route, raw: str) -> dict[str, str]:

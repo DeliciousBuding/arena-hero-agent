@@ -9,6 +9,8 @@
   poll-json streaming, and 404/400/500 error translation.
 - ``map.py``: merged-map read model and the artifact signature behind the
   weak ETag.
+- ``security.py``: P5-9 default-deny write gate (authorization, CSRF, replay
+  detection) plus the write-request audit log.
 """
 
 from .app import (
@@ -45,32 +47,64 @@ from .routes import (
     int_query_keys,
     load_route_entries,
 )
+from .security import (
+    AUTH_HEADER,
+    CSRF_HEADER,
+    DEFAULT_REPLAY_WINDOW_MS,
+    HEALTH_PIPELINE_PAIR,
+    IDEMPOTENCY_HEADER,
+    MAX_IDEMPOTENCY_KEY_LEN,
+    TIMESTAMP_HEADER,
+    WRITE_AUTH_TOKEN_ENV,
+    WRITE_CSRF_TOKEN_ENV,
+    ReplayStore,
+    SecurityDecision,
+    WriteOutcome,
+    WriteSecurity,
+    is_write_route,
+    write_route_pairs,
+)
 
 __all__ = [
+    "AUTH_HEADER",
     "ApiRequest",
     "ApiResponse",
     "CORE_TRAIL_MAX_POINTS",
     "CORE_TRAIL_MIN_POINTS",
+    "CSRF_HEADER",
     "CommandCenterApp",
     "DEFAULT_API_VERSION",
+    "DEFAULT_REPLAY_WINDOW_MS",
     "ETAG_PREFIX",
     "ETAG_SUFFIX",
+    "HEALTH_PIPELINE_PAIR",
+    "IDEMPOTENCY_HEADER",
     "JSON_MEDIA_TYPE",
     "MAP_CACHE_CONTROL",
+    "MAX_IDEMPOTENCY_KEY_LEN",
     "MatchedRoute",
     "OPENAPI_VERSION",
+    "ReplayStore",
     "RequestValidationError",
     "Route",
     "RouteTable",
     "STREAM_DEFAULT_N",
     "STREAM_MAX_N",
     "STREAM_MIN_N",
+    "SecurityDecision",
+    "TIMESTAMP_HEADER",
+    "WRITE_AUTH_TOKEN_ENV",
+    "WRITE_CSRF_TOKEN_ENV",
+    "WriteOutcome",
+    "WriteSecurity",
     "build_openapi",
     "int_query_keys",
+    "is_write_route",
     "json_response",
     "load_core_trails_from_survey_db",
     "load_merged_map",
     "load_route_entries",
     "map_signature",
     "openapi_json",
+    "write_route_pairs",
 ]
