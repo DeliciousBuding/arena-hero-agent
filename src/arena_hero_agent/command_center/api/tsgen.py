@@ -387,8 +387,10 @@ def generate_client_ts(doc: dict[str, Any]) -> str:
     lines.append("import type {")
     param_types: list[str] = []
     for _path, _method, operation in _iter_operations(doc):
-        param_types.append(f"  {_type_name(str(operation['operationId']))}Params,")
-    param_types.append('} from "./types.js";')
+        type_name = _type_name(str(operation["operationId"]))
+        param_types.append(f"  {type_name}Params,")
+        param_types.append(f"  {type_name}Response,")
+    param_types.append('} from "./types.ts";')
     lines.extend(param_types)
     lines.append("")
     lines.extend(_CLIENT_HELPERS)
@@ -528,7 +530,7 @@ _CLIENT_HELPERS = [
     "}",
     "",
     "/** 查询串构造：忽略 undefined；值经 encodeURIComponent。 */",
-    "export function buildQuery(params: Readonly<Record<string, unknown>>): string {",
+    "export function buildQuery(params: object): string {",
     "  const parts: string[] = [];",
     "  for (const [key, value] of Object.entries(params)) {",
     "    if (value === undefined) continue;",
@@ -540,7 +542,7 @@ _CLIENT_HELPERS = [
     "/** 路径模板（/api/registry/agents/{id}）替换 + 查询串。 */",
     "export function buildPath(",
     "  template: string,",
-    "  params: Readonly<Record<string, unknown>>,",
+    "  params: object,",
     "): string {",
     "  let path = template;",
     "  const rest: Record<string, unknown> = {};",
