@@ -1,0 +1,15 @@
+{
+  "mode": "signature",
+  "products": [
+    {
+      "id": "p2",
+      "resourceCost": 50,
+      "availableStock": 10
+    },
+    {
+      "id": "p1",
+      "resourceCost": 100,
+      "availableStock": 5
+    }
+  ]
+}

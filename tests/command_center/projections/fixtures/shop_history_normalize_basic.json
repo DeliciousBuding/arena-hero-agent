@@ -1,0 +1,26 @@
+{
+  "mode": "normalize",
+  "products": [
+    {
+      "id": "p1",
+      "name": "Item A",
+      "resource_cost": 100,
+      "available_stock": 5,
+      "purchase_limit": 1
+    },
+    {
+      "id": "",
+      "name": "Empty",
+      "resource_cost": 1,
+      "available_stock": 1,
+      "purchase_limit": 1
+    },
+    {
+      "id": "p2",
+      "name": "Item B",
+      "resource_cost": "50",
+      "available_stock": 10,
+      "purchase_limit": 2
+    }
+  ]
+}

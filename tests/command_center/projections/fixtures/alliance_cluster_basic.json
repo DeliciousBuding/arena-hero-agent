@@ -1,0 +1,9 @@
+{
+  "input": [
+    {"tenantId": "t1", "core": [0, 0], "military": 5, "workers": 3, "status": "READY"},
+    {"tenantId": "t2", "core": [10, 10], "military": 4, "workers": 2, "status": "READY"},
+    {"tenantId": "t3", "core": null, "military": 1, "workers": 0, "status": "DEGRADED"},
+    {"tenantId": "t4", "core": [200, 200], "military": 6, "workers": 4, "status": "READY"}
+  ],
+  "nowMs": 1752000000000
+}

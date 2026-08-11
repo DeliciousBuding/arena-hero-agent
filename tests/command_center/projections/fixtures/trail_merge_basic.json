@@ -1,0 +1,56 @@
+{
+  "normalized": [
+    {
+      "at": "2026-08-08T03:00:00Z",
+      "source": "human",
+      "tenant": "t1",
+      "kind": "goal",
+      "detail": "mine",
+      "ref": "u1"
+    },
+    {
+      "at": "2026-08-08T03:00:01Z",
+      "source": "command",
+      "tenant": "t1",
+      "kind": "worker_mine",
+      "detail": "MINE",
+      "ref": "[3,4]"
+    },
+    {
+      "at": "2026-08-08T03:00:02Z",
+      "source": "arbitration",
+      "tenant": null,
+      "kind": "arbitrate",
+      "detail": "cell",
+      "ref": "5,5"
+    },
+    {
+      "at": "2026-08-08T03:00:03Z",
+      "source": "supervisor",
+      "tenant": "t2",
+      "kind": "exited",
+      "detail": "exited",
+      "ref": null
+    },
+    {
+      "at": "2026-08-08T03:00:04Z",
+      "source": "human",
+      "tenant": "t1",
+      "kind": "clear",
+      "detail": "clear",
+      "ref": null
+    },
+    {
+      "at": "2026-08-08T03:00:05Z",
+      "source": "command",
+      "tenant": "t2",
+      "kind": "worker_mine",
+      "detail": "MINE",
+      "ref": "[1,1]"
+    }
+  ],
+  "opts": {
+    "tenant": "t1",
+    "limit": 2
+  }
+}

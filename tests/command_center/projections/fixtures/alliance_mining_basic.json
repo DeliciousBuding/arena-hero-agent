@@ -1,0 +1,101 @@
+{
+  "cores": {
+    "t1": [
+      0,
+      0
+    ],
+    "t2": [
+      100,
+      100
+    ],
+    "t3": [
+      50,
+      50
+    ],
+    "t4": null
+  },
+  "workers": {
+    "t1": 3,
+    "t2": 4,
+    "t3": 2,
+    "t4": null
+  },
+  "candidatesByTenant": {
+    "t1": [
+      {
+        "cell": "10,10",
+        "x": 10,
+        "y": 10,
+        "lastSeenTick": 900
+      }
+    ],
+    "t2": [
+      {
+        "cell": "90,90",
+        "x": 90,
+        "y": 90,
+        "lastSeenTick": 850
+      }
+    ],
+    "t3": [
+      {
+        "cell": "10,10",
+        "x": 10,
+        "y": 10,
+        "lastSeenTick": 910
+      }
+    ],
+    "t4": [
+      {
+        "cell": "300,300",
+        "x": 300,
+        "y": 300,
+        "lastSeenTick": 800
+      }
+    ]
+  },
+  "observersByCell": {
+    "10,10": [
+      "t1",
+      "t3"
+    ],
+    "90,90": [
+      "t2"
+    ],
+    "300,300": [
+      "t4"
+    ]
+  },
+  "conflictCells": [
+    "10,10"
+  ],
+  "metaByCell": {
+    "10,10": {
+      "gapAgeTicks": 50,
+      "predictedNextTick": 950,
+      "dueInTicks": 20
+    },
+    "90,90": {
+      "gapAgeTicks": 10,
+      "predictedNextTick": null,
+      "dueInTicks": null
+    }
+  },
+  "heatByBucket": {
+    "0,0": {
+      "combatCount": 5,
+      "count": 3,
+      "lastTick": 900
+    },
+    "5,5": {
+      "combatCount": 1,
+      "count": 1,
+      "lastTick": 850
+    },
+    "18,18": {
+      "combatCount": 12,
+      "count": 4,
+      "lastTick": 880
+    }
+  }
+}

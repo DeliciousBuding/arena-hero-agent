@@ -1,0 +1,35 @@
+{
+  "tenant": "t1",
+  "window": 200,
+  "steps": 3,
+  "currentTick": 1000,
+  "resources": [
+    {
+      "cell": "1,1",
+      "firstSeenTick": 10,
+      "lastSeenTick": 990
+    },
+    {
+      "cell": "2,2",
+      "firstSeenTick": 300,
+      "lastSeenTick": 980
+    },
+    {
+      "cell": "3,3",
+      "firstSeenTick": 900,
+      "lastSeenTick": 950
+    }
+  ],
+  "harvestEvents": [
+    {
+      "cell": "1,1",
+      "tick": 50,
+      "eventType": "HARVEST_SUCCEEDED"
+    },
+    {
+      "cell": "2,2",
+      "tick": 400,
+      "eventType": "HARVEST_SUCCEEDED"
+    }
+  ]
+}

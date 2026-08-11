@@ -1,0 +1,78 @@
+{
+  "tenant": "t1",
+  "currentTick": 1000,
+  "resources": [
+    {
+      "cell": "1,1",
+      "x": 1,
+      "y": 1,
+      "firstSeenTick": 10,
+      "lastSeenTick": 900,
+      "seenCount": 5
+    },
+    {
+      "cell": "2,2",
+      "x": 2,
+      "y": 2,
+      "firstSeenTick": 20,
+      "lastSeenTick": 950,
+      "seenCount": 8
+    },
+    {
+      "cell": "3,3",
+      "x": 3,
+      "y": 3,
+      "firstSeenTick": 30,
+      "lastSeenTick": 700,
+      "seenCount": 2
+    },
+    {
+      "cell": "4,4",
+      "x": 4,
+      "y": 4,
+      "firstSeenTick": 40,
+      "lastSeenTick": 100,
+      "seenCount": 1
+    },
+    {
+      "cell": "5,5",
+      "x": 5,
+      "y": 5,
+      "firstSeenTick": 50,
+      "lastSeenTick": 980,
+      "seenCount": 3
+    }
+  ],
+  "harvestEvents": [
+    {
+      "cell": "1,1",
+      "tick": 100,
+      "eventType": "HARVEST_SUCCEEDED",
+      "amount": 5
+    },
+    {
+      "cell": "1,1",
+      "tick": 200,
+      "eventType": "HARVEST_SUCCEEDED",
+      "amount": 7
+    },
+    {
+      "cell": "2,2",
+      "tick": 300,
+      "eventType": "HARVEST_FAILED",
+      "amount": null
+    },
+    {
+      "cell": "3,3",
+      "tick": 400,
+      "eventType": "HARVEST_SUCCEEDED",
+      "amount": 3
+    },
+    {
+      "cell": "9,9",
+      "tick": 500,
+      "eventType": "OTHER",
+      "amount": null
+    }
+  ]
+}

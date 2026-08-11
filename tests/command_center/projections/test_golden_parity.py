@@ -1,0 +1,240 @@
+"""Golden parity: Python projection cores vs TS oracle outputs (P5-4).
+
+Every fixture under ``fixtures/`` pairs a synthetic runtime-artifact input
+(the same shape the TypeScript oracle consumes) with a ``.golden.json`` output
+produced by running the actual legacy oracle with Node (see
+``tools/regenerate_goldens.py``). Each parametrized case must classify MATCH;
+documented divergences live in :data:`ALLOWED_DIFFERENCES` (conftest) and stay
+visible. Any mismatch is an UNKNOWN and fails the suite.
+"""
+
+from __future__ import annotations
+
+import json
+from typing import Any
+
+import pytest
+
+from arena_hero_agent.command_center.projections import (
+    aggregate_allocation_effectiveness,
+    aggregate_decision_audit,
+    aggregate_decision_trend,
+    aggregate_human_conflict,
+    aggregate_map_lod,
+    aggregate_mine_utilization,
+    aggregate_mine_utilization_trend,
+    aggregate_shop_history,
+    aggregate_worker_liveness,
+    assign_alliance_mining,
+    build_alliance_cluster_view,
+    load_arbitrations,
+    load_human_audit,
+    merge_audit_trails,
+    normalize_audit_trails,
+    normalize_products,
+    should_append,
+    snapshot_signature,
+)
+from arena_hero_agent.command_center.projections._common import num
+
+from .conftest import assert_matches, load_fixture, load_golden
+
+NOW_MS = 1_752_000_000_000
+
+
+def _parse_lines(raw_lines: list[object]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for line in raw_lines:
+        if not isinstance(line, str):
+            continue
+        try:
+            parsed = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            rows.append(parsed)
+    return rows
+
+
+def _run_python(name: str, fixture: dict[str, Any]) -> object:
+    if name == "alliance_cluster_basic":
+        return build_alliance_cluster_view(
+            [dict(item) for item in fixture["input"]], int(fixture["nowMs"])
+        )
+    if name == "alliance_mining_basic":
+        return assign_alliance_mining(
+            {str(k): (tuple(v) if v is not None else None) for k, v in fixture["cores"].items()},
+            {str(k): v for k, v in fixture["workers"].items()},
+            {str(k): [dict(item) for item in v] for k, v in fixture["candidatesByTenant"].items()},
+            {str(k): [str(t) for t in v] for k, v in fixture["observersByCell"].items()},
+            set(fixture["conflictCells"]),
+            {str(k): dict(v) for k, v in fixture["metaByCell"].items()},
+            {str(k): dict(v) for k, v in fixture["heatByBucket"].items()},
+            now_ms=NOW_MS,
+        )
+    if name == "decisions_audit_basic":
+        return aggregate_decision_audit(
+            str(fixture["tenant"]),
+            int(fixture["window"]),
+            _parse_lines(fixture["dLines"]),
+            _parse_lines(fixture["oLines"]),
+            now_ms=NOW_MS,
+        )
+    if name == "decisions_trend_basic":
+        return aggregate_decision_trend(
+            str(fixture["tenant"]),
+            int(fixture["window"]),
+            int(fixture["steps"]),
+            _parse_lines(fixture["dLines"]),
+            _parse_lines(fixture["oLines"]),
+            now_ms=NOW_MS,
+        )
+    if name == "workers_basic":
+        return aggregate_worker_liveness(str(fixture["tenant"]), [dict(r) for r in fixture["rows"]])
+    if name == "conflicts_basic":
+        return aggregate_human_conflict(
+            str(fixture["tenant"]),
+            int(fixture["window"]),
+            _parse_lines(fixture["oLines"]),
+            [dict(e) for e in fixture["auditEntries"]],
+            now_ms=NOW_MS,
+        )
+    if name == "trail_normalize_basic":
+        return normalize_audit_trails(
+            [dict(e) for e in fixture["human"]],
+            {str(k): [dict(r) for r in v] for k, v in fixture["commandsByTenant"].items()},
+            [dict(e) for e in fixture["arbitrations"]],
+            [dict(e) for e in fixture["supervisors"]],
+        )
+    if name == "trail_merge_basic":
+        return merge_audit_trails(
+            [dict(e) for e in fixture["normalized"]],
+            tenant=fixture["opts"].get("tenant"),
+            source=fixture["opts"].get("source"),
+            limit=int(fixture["opts"].get("limit", 200)),
+        )
+    if name == "map_lod_basic":
+        return aggregate_map_lod(
+            str(fixture["tenant"]),
+            [dict(r) for r in fixture["resources"]],
+            [dict(r) for r in fixture["obstacles"]],
+            [dict(r) for r in fixture["cores"]],
+        )
+    if name == "mines_util_basic":
+        return aggregate_mine_utilization(
+            str(fixture["tenant"]),
+            fixture["currentTick"],
+            [dict(r) for r in fixture["resources"]],
+            [dict(r) for r in fixture["harvestEvents"]],
+        )
+    if name == "mines_trend_basic":
+        return aggregate_mine_utilization_trend(
+            str(fixture["tenant"]),
+            int(fixture["window"]),
+            int(fixture["steps"]),
+            [dict(r) for r in fixture["resources"]],
+            [dict(r) for r in fixture["harvestEvents"]],
+            fixture["currentTick"],
+            now_ms=NOW_MS,
+        )
+    if name == "shop_history_agg_basic":
+        return aggregate_shop_history([dict(e) for e in fixture["entries"]])
+    if name == "shop_history_normalize_basic":
+        return normalize_products([dict(p) for p in fixture["products"]])
+    if name == "shop_history_signature_basic":
+        return snapshot_signature([dict(p) for p in fixture["products"]])
+    if name == "shop_history_should_append_basic":
+        prev = fixture["prev"]
+        return should_append(
+            dict(prev) if prev is not None else None,
+            [dict(p) for p in fixture["products"]],
+        )
+    if name == "mining_effectiveness_basic":
+        return aggregate_allocation_effectiveness(
+            [dict(a) for a in fixture["assignments"]],
+            {
+                str(t): {str(c): dict(v) for c, v in cells.items()}
+                for t, cells in fixture["harvestByTenantCell"].items()
+            },
+            fixture["currentTick"],
+            now_ms=NOW_MS,
+        )
+    if name == "arbitrations_basic":
+        rows = [dict(row) for row in fixture["lines"] if isinstance(row, dict)]
+        return [[cell, entry] for cell, entry in load_arbitrations(rows).items()]
+    if name == "human_audit_basic":
+        rows = [dict(row) for row in fixture["lines"] if isinstance(row, dict)]
+        tenant = fixture.get("tenant")
+        return load_human_audit(rows, tenant=tenant, limit=int(fixture["limit"]))
+    raise AssertionError(f"no Python runner registered for fixture {name}")
+
+
+CASES = [
+    "alliance_cluster_basic",
+    "alliance_mining_basic",
+    "decisions_audit_basic",
+    "decisions_trend_basic",
+    "workers_basic",
+    "conflicts_basic",
+    "trail_normalize_basic",
+    "trail_merge_basic",
+    "map_lod_basic",
+    "mines_util_basic",
+    "mines_trend_basic",
+    "shop_history_agg_basic",
+    "shop_history_normalize_basic",
+    "shop_history_signature_basic",
+    "shop_history_should_append_basic",
+    "mining_effectiveness_basic",
+    "arbitrations_basic",
+    "human_audit_basic",
+]
+
+
+@pytest.mark.parametrize("case", CASES)
+def test_projection_matches_ts_oracle_golden(case: str) -> None:
+    """Every projection core classifies MATCH against the TS oracle golden."""
+    fixture = load_fixture(case)
+    actual = _run_python(case, fixture)
+    expected = load_golden(case)
+    assert_matches(actual, expected, case)
+
+
+def test_all_golden_cases_classify_match() -> None:
+    """Aggregate classification: every registered case is MATCH, no UNKNOWN."""
+    mismatches: list[str] = []
+    for case in CASES:
+        fixture = load_fixture(case)
+        actual = _run_python(case, fixture)
+        expected = load_golden(case)
+        try:
+            assert_matches(actual, expected, case)
+        except AssertionError:
+            mismatches.append(case)
+    assert mismatches == [], f"UNKNOWN parity results: {mismatches}"
+
+
+def test_fixture_golden_pairs_are_complete() -> None:
+    """Every fixture has a golden and every golden has a fixture."""
+    from .conftest import FIXTURES
+
+    json_bases = sorted(
+        p.name[: -len(".json")]
+        for p in FIXTURES.glob("*.json")
+        if not p.name.endswith(".golden.json")
+    )
+    goldens = sorted(p.name for p in FIXTURES.glob("*.golden.json"))
+    assert {f"{base}.golden.json" for base in json_bases} == set(goldens)
+
+
+def test_num_coercion_matches_ts_number() -> None:
+    """The shared number coercion mirrors the TS ``num`` helper."""
+    assert num(3) == 3
+    assert num("3") == 3
+    assert num("12.5") == 12.5
+    assert num("") == 0
+    assert num("abc") == 0
+    assert num(None) == 0
+    assert num(True) == 0
+    assert num(False) == 0
+    assert num(3.5) == 3.5
