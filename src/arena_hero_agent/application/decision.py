@@ -124,8 +124,10 @@ class DecisionTicket:
         if self._closed:
             return
         self._closed = True
-        await self.decision_lease.release()
-        await self.writer_lease.release()
+        try:
+            await self.decision_lease.release()
+        finally:
+            await self.writer_lease.release()
 
 
 @dataclass(frozen=True, slots=True)
@@ -203,19 +205,21 @@ class DecisionArbiter:
             _initial_state=initial_state,
             _initial_generation=initial_generation,
         )
-        current = await self._recover(initial_state, initial_generation)
-        if not self._same_revision(recovered, current):
+        try:
+            current = await self._recover(initial_state, initial_generation)
+            if not self._same_revision(recovered, current):
+                raise StaleDecisionContextError(
+                    f"tenant {tenant_id.value} advanced while leases were acquired"
+                )
+            self._reject_duplicate(current, decision_id)
+            if not await self._ensure_snapshot(current, writer):
+                raise StaleDecisionContextError(
+                    f"tenant {tenant_id.value} snapshot could not be restored"
+                )
+            return ticket
+        except BaseException:
             await ticket.close()
-            raise StaleDecisionContextError(
-                f"tenant {tenant_id.value} advanced while leases were acquired"
-            )
-        self._reject_duplicate(current, decision_id)
-        if not await self._ensure_snapshot(current, writer):
-            await ticket.close()
-            raise StaleDecisionContextError(
-                f"tenant {tenant_id.value} snapshot could not be restored"
-            )
-        return ticket
+            raise
 
     async def commit(
         self,
