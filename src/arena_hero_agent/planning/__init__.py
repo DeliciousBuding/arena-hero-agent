@@ -1,5 +1,6 @@
-"""Deterministic planning: snapshots, worker tasks, missions, and plan validation."""
+"""Deterministic planning: snapshots, worker tasks, missions, assignment, and validation."""
 
+from .min_cost_assignment import minimum_cost_assignment
 from .mission import (
     DEFAULT_MISSION_CONFIG,
     MissionConfig,
@@ -44,6 +45,18 @@ from .task import (
     can_return_for_heal,
     forced_task_for,
 )
+from .worker_assignment import (
+    DEFAULT_WORKER_TASK_PLANNER_CONFIG,
+    Assignment,
+    WorkerAssignmentResult,
+    WorkerClaim,
+    WorkerTaskPlan,
+    WorkerTaskPlannerConfig,
+    apply_sticky_bonus,
+    assign_worker_tasks,
+    progress_decay,
+    shortest_path_distances,
+)
 
 __all__ = [
     "BeaconInfo",
@@ -80,4 +93,15 @@ __all__ = [
     "target_confidence",
     "threat_contribution",
     "validate_plan",
+    "Assignment",
+    "DEFAULT_WORKER_TASK_PLANNER_CONFIG",
+    "WorkerAssignmentResult",
+    "WorkerClaim",
+    "WorkerTaskPlan",
+    "WorkerTaskPlannerConfig",
+    "apply_sticky_bonus",
+    "assign_worker_tasks",
+    "minimum_cost_assignment",
+    "progress_decay",
+    "shortest_path_distances",
 ]

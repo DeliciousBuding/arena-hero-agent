@@ -48,6 +48,9 @@ _TARGET_REQUIRED = frozenset(
     }
 )
 _CELL_KEY_REQUIRED = frozenset({TaskType.HARVEST_CURRENT, TaskType.PICKUP_BEACON})
+# GO_RESOURCE may (optionally) declare a target_cell_key: the assignment layer
+# (P4-12) uses it for sticky matching and claim leases, mirroring the oracle.
+_CELL_KEY_ALLOWED = _CELL_KEY_REQUIRED | frozenset({TaskType.GO_RESOURCE})
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,8 +74,10 @@ class Task:
             raise ValueError(f"{self.type.value} tasks require a target")
         if self.type in _CELL_KEY_REQUIRED and self.target_cell_key is None:
             raise ValueError(f"{self.type.value} tasks require target_cell_key")
-        if self.type not in _CELL_KEY_REQUIRED and self.target_cell_key is not None:
-            raise ValueError("only harvest-current and pickup-beacon tasks declare target_cell_key")
+        if self.type not in _CELL_KEY_ALLOWED and self.target_cell_key is not None:
+            raise ValueError(
+                "only harvest-current, pickup-beacon, and go-resource tasks declare target_cell_key"
+            )
 
 
 def can_deposit(unit: PlanningUnit, snapshot: PlanningSnapshot) -> bool:
