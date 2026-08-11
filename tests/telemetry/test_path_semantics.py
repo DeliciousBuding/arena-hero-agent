@@ -279,6 +279,10 @@ def test_concurrent_appends_all_records_present(tmp_path: Path) -> None:
 def test_concurrent_appends_with_rotation_preserve_newest_suffix(tmp_path: Path) -> None:
     # maxBytes < one record: every append rotates, retaining max_backups + 1
     # complete files (bounded retention, no torn lines, newest suffix only).
+    # The retained set is the last-written records; under concurrent writers the
+    # completion order is scheduler-dependent, so only the retention bound, the
+    # source membership, and the completeness invariant are asserted here (the
+    # sequential retention order is covered by the rotation-shift test below).
     path = str(tmp_path / "conc-rot.jsonl")
     writer = JsonlWriter(path, JsonlRotationOptions(max_bytes=16, max_backups=3))
     count = 32
@@ -286,7 +290,9 @@ def test_concurrent_appends_with_rotation_preserve_newest_suffix(tmp_path: Path)
         list(pool.map(lambda i: writer.write(runtime_trace(_record(i, f"r-{i}"))), range(count)))
     writer.close()
     rows = _read_all(path, max_backups=3)
-    assert [row["runId"] for row in rows] == [f"r-{i}" for i in range(count - 4, count)]
+    assert len(rows) == 4  # bounded retention: max_backups + 1
+    assert {row["runId"] for row in rows} <= {f"r-{i}" for i in range(count)}
+    assert len({row["runId"] for row in rows}) == len(rows)  # no duplicates
     for row in rows:
         assert set(row.keys()) >= {"tick", "runId"}  # every row is complete JSON
 

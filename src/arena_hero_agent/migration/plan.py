@@ -335,7 +335,7 @@ def parse_migration_plan(raw: object) -> MigrationPlanParseResult:
         return _reject(raw, f"invalid mode: {mode!r}")
 
     state_value = raw.get("state")
-    if not _is_str(state_value) or state_value not in MigrationState:
+    if not _is_str(state_value) or state_value not in MigrationState._value2member_map_:
         return _reject(raw, f"invalid state: {state_value!r}")
 
     core = raw.get("core")
