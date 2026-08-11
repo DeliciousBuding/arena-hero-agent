@@ -12,9 +12,9 @@ from .errors import SdkContractViolationError
 
 _MINIMUM_VERSION = (0, 2, 9)
 _NEXT_BREAKING_VERSION = (0, 3, 0)
-# The fork's 0.3.0a2 migration baseline is additive over the 0.2.9 public
+# The fork's 0.3.0a3 migration baseline is additive over the 0.2.9 public
 # surface and is the pinned dependency for this repository (pyproject.toml).
-_MIGRATION_BASELINE = "0.3.0a2"
+_MIGRATION_BASELINE = "0.3.0a3"
 _ALLOWED_0_3_PRERELEASES = frozenset({_MIGRATION_BASELINE})
 _RELEASE_PREFIX = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:[a-zA-Z]|[-+]|$)")
 _REQUIRED_PUBLIC_NAMES = (
