@@ -1,4 +1,4 @@
-"""Versioned offline known-answer fixture for the P4-8 tenant state reducer."""
+"""Versioned offline known-answer fixture for the P4-10 tenant/economy reducer."""
 
 from __future__ import annotations
 
@@ -15,6 +15,8 @@ from arena_hero_agent.domain import (
     CoreObservation,
     CoreState,
     DecisionId,
+    EconomyState,
+    EconomyTurnInput,
     EntityId,
     EntityKind,
     EntityObservation,
@@ -28,12 +30,13 @@ from arena_hero_agent.domain import (
     TerrainState,
     TurnInput,
     UnitObservation,
+    UnitPrices,
     UnitRole,
     WorldProjection,
     canonical_sha256,
 )
 
-FIXTURE = Path(__file__).parent / "fixtures" / "tenant_state_reducer_known_answers_v1.json"
+FIXTURE = Path(__file__).parent / "fixtures" / "tenant_state_reducer_known_answers_v2.json"
 
 
 def _load_fixture() -> dict[str, Any]:
@@ -116,14 +119,55 @@ def _world_projection(payload: dict[str, Any]) -> WorldProjection:
     )
 
 
+def _unit_prices(payload: dict[str, Any]) -> UnitPrices:
+    return UnitPrices(
+        worker=payload["worker"],
+        vanguard=payload["vanguard"],
+        ranger=payload["ranger"],
+    )
+
+
+def _economy_input(payload: dict[str, Any]) -> EconomyTurnInput:
+    return EconomyTurnInput(
+        seed=payload["seed"],
+        tick=payload["tick"],
+        rules_version=RulesVersion(payload["rules_version"]),
+        resources=payload["resources"],
+        population=payload["population"],
+        unit_prices=_unit_prices(payload["unit_prices"]),
+    )
+
+
+def _economy_state(payload: dict[str, Any]) -> EconomyState:
+    return EconomyState(
+        seed=payload["seed"],
+        tick=payload["tick"],
+        rules_version=RulesVersion(payload["rules_version"]),
+        resources=payload["resources"],
+        population=payload["population"],
+        resource_capacity=payload["resource_capacity"],
+        resource_space=payload["resource_space"],
+        base_costs=_unit_prices(payload["base_costs"]),
+        unit_prices=_unit_prices(payload["unit_prices"]),
+        resource_delta=payload["resource_delta"],
+        population_delta=payload["population_delta"],
+        input_digest=StateDigest(payload["input_digest"]),
+    )
+
+
 def _turn_input(payload: dict[str, Any]) -> TurnInput:
-    return TurnInput(tick=payload["tick"], projection=_world_projection(payload["projection"]))
+    return TurnInput(
+        tick=payload["tick"],
+        projection=_world_projection(payload["projection"]),
+        economy=_economy_input(payload["economy"]),
+    )
 
 
 def _tenant_state(payload: dict[str, Any]) -> TenantState:
     return TenantState(
         tenant_id=TenantId(payload["tenant_id"]["value"]),
         world=_world_projection(payload["world"]),
+        economy=_economy_state(payload["economy"]),
         decision_count=payload["decision_count"],
         last_decision_id=(
             None
@@ -135,7 +179,7 @@ def _tenant_state(payload: dict[str, Any]) -> TenantState:
 
 def test_fixture_round_trip_pins_reducer_chain() -> None:
     fixture = _load_fixture()
-    assert fixture["metadata"]["version"] == 1
+    assert fixture["metadata"]["version"] == 2
     assert fixture["tenant"] == "sample"
 
     initial = _tenant_state(fixture["initial"])
@@ -144,13 +188,17 @@ def test_fixture_round_trip_pins_reducer_chain() -> None:
     tenant = TenantId(fixture["tenant"])
 
     assert initial.state_digest.value == fixture["digests"]["initial"]
+    assert initial.economy.economy_digest.value == fixture["digests"]["economy_initial"]
 
-    observed = initial.observe(turn.projection)
+    observed = initial.observe(turn.projection, turn.economy)
     assert observed.state_digest.value == fixture["digests"]["after_observe"]
+    assert observed.economy.economy_digest.value == fixture["digests"]["economy_after"]
+    assert observed.economy_input.selection_seed == fixture["decision_input"]["selection_seed"]
 
     reduced = initial.reduce_turn(turn, decision, actor=tenant)
     assert reduced == _tenant_state(fixture["expected"])
     assert reduced.state_digest.value == fixture["digests"]["after_decision"]
+    assert reduced.economy_input.economy_digest.value == fixture["decision_input"]["economy_digest"]
     assert canonical_sha256((initial, observed, reduced)) == fixture["digests"]["sequence"]
 
 

@@ -15,7 +15,7 @@ from types import MappingProxyType
 from typing import Final, Self
 
 from .rules import RulesVersion, assert_current_rules_version
-from .value_objects import StateDigest, _require_int
+from .value_objects import StateDigest, TenantId, _require_int
 from .world import UnitRole
 
 _MAX_SAFE_INTEGER = 2**53 - 1
@@ -323,9 +323,10 @@ class EconomyState:
     def economy_digest(self) -> StateDigest:
         return StateDigest.from_state(self)
 
-    @property
-    def decision_input(self) -> EconomyDecisionInput:
-        return EconomyDecisionInput.from_state(self)
+    def decision_input(self, tenant_id: TenantId) -> EconomyDecisionInput:
+        """Bind this economic state to one tenant-scoped policy input."""
+
+        return EconomyDecisionInput.from_state(tenant_id, self)
 
 
 @dataclass(frozen=True, slots=True)
@@ -334,36 +335,43 @@ class EconomyDecisionInput:
 
     __canonical_name__ = "arena-hero.economy-decision-input.v1"
 
+    tenant_id: TenantId
     economy: EconomyState
     economy_digest: StateDigest
     selection_seed: int
 
     def __post_init__(self) -> None:
+        if not isinstance(self.tenant_id, TenantId):
+            raise TypeError("tenant_id must be a TenantId")
         if not isinstance(self.economy, EconomyState):
             raise TypeError("economy must be an EconomyState")
         if not isinstance(self.economy_digest, StateDigest):
             raise TypeError("economy_digest must be a StateDigest")
         if self.economy.economy_digest != self.economy_digest:
             raise ValueError("economy_digest does not match economy state")
-        expected_seed = self._selection_seed(self.economy)
+        expected_seed = self._selection_seed(self.tenant_id, self.economy)
         if self.selection_seed != expected_seed:
             raise ValueError("selection_seed does not match economy state")
 
     @classmethod
-    def from_state(cls, economy: EconomyState) -> Self:
+    def from_state(cls, tenant_id: TenantId, economy: EconomyState) -> Self:
+        if not isinstance(tenant_id, TenantId):
+            raise TypeError("tenant_id must be a TenantId")
         if not isinstance(economy, EconomyState):
             raise TypeError("economy must be an EconomyState")
         return cls(
+            tenant_id=tenant_id,
             economy=economy,
             economy_digest=economy.economy_digest,
-            selection_seed=cls._selection_seed(economy),
+            selection_seed=cls._selection_seed(tenant_id, economy),
         )
 
     @staticmethod
-    def _selection_seed(economy: EconomyState) -> int:
+    def _selection_seed(tenant_id: TenantId, economy: EconomyState) -> int:
         digest = StateDigest.from_state(
             (
                 "arena-hero.economy-selection-seed.v1",
+                tenant_id,
                 economy.seed,
                 economy.economy_digest,
             )

@@ -1,0 +1,407 @@
+{
+  "decision": "decision:known-answer-1",
+  "decision_input": {
+    "economy_digest": "605ca8ddb2ec83beebcb5e019a8c8dd556486027328bbf1e6b31c641cf04252d",
+    "selection_seed": 2647832747316793
+  },
+  "digests": {
+    "after_decision": "bfc27e007d70bcfd030ac66322b6c7edb3d7d39307db76de52ad4ffd26f049bc",
+    "after_observe": "67f37d4e4d7fec96ed7283f0c3074bc3a45e8af5c4f97148e89345f53fa98adc",
+    "economy_after": "605ca8ddb2ec83beebcb5e019a8c8dd556486027328bbf1e6b31c641cf04252d",
+    "economy_initial": "693529703734dba487a3825bb23809b1588199658a6b00ee0c9b25bb907c4577",
+    "initial": "b397ad48e1b4d6535d1ca511e0aaa01140f17ec799453fddc34d006b123c4a2a",
+    "sequence": "8d59a963460186cf3c48d0f2e49a9d238a72b6410e489a25630f86c280c21c88"
+  },
+  "expected": {
+    "decision_count": 1,
+    "economy": {
+      "base_costs": {
+        "ranger": 12,
+        "vanguard": 10,
+        "worker": 5
+      },
+      "input_digest": "ba0f79675647c79090371745dda2ac0f55c7aaf4b4c6a9cbc795fdb8f3133f19",
+      "population": 2,
+      "population_delta": 0,
+      "resource_capacity": 10,
+      "resource_delta": 1,
+      "resource_space": 1,
+      "resources": 9,
+      "rules_version": "v0.14",
+      "seed": 659918,
+      "tick": 43,
+      "unit_prices": {
+        "ranger": 12,
+        "vanguard": 10,
+        "worker": 5
+      }
+    },
+    "last_decision_id": {
+      "value": "decision:known-answer-1"
+    },
+    "tenant_id": {
+      "value": "sample"
+    },
+    "world": {
+      "beacon": {
+        "carrier_id": null,
+        "position": [
+          8,
+          8
+        ],
+        "status": "ground"
+      },
+      "core": {
+        "destination": null,
+        "health": 5,
+        "id": "core-a",
+        "owner": "player",
+        "position": [
+          0,
+          0
+        ],
+        "shield": 4,
+        "state": "normal"
+      },
+      "entities": [
+        {
+          "health": 3,
+          "id": "enemy-a",
+          "kind": "unit",
+          "owner": "opponent",
+          "position": [
+            4,
+            1
+          ],
+          "unit_role": "vanguard"
+        },
+        {
+          "health": 3,
+          "id": "enemy-b",
+          "kind": "unit",
+          "owner": "opponent",
+          "position": [
+            5,
+            1
+          ],
+          "unit_role": "vanguard"
+        }
+      ],
+      "resources": [
+        {
+          "position": [
+            -1,
+            2
+          ],
+          "remaining": 4
+        },
+        {
+          "position": [
+            3,
+            0
+          ],
+          "remaining": null
+        }
+      ],
+      "rules_version": "v0.14",
+      "terrain": [
+        {
+          "position": [
+            0,
+            0
+          ],
+          "state": "open"
+        },
+        {
+          "position": [
+            1,
+            0
+          ],
+          "state": "blocked"
+        }
+      ],
+      "tick": 43,
+      "units": [
+        {
+          "cargo": 1,
+          "health": 2,
+          "id": "unit-a",
+          "position": [
+            1,
+            0
+          ],
+          "role": "worker"
+        },
+        {
+          "cargo": 1,
+          "health": 2,
+          "id": "unit-b",
+          "position": [
+            2,
+            0
+          ],
+          "role": "worker"
+        }
+      ]
+    }
+  },
+  "initial": {
+    "decision_count": 0,
+    "economy": {
+      "base_costs": {
+        "ranger": 12,
+        "vanguard": 10,
+        "worker": 5
+      },
+      "input_digest": "962c64fadad206695055c4a16845ed7d596daec075550b20807461d57b80a568",
+      "population": 2,
+      "population_delta": 0,
+      "resource_capacity": 10,
+      "resource_delta": 0,
+      "resource_space": 2,
+      "resources": 8,
+      "rules_version": "v0.14",
+      "seed": 659918,
+      "tick": 42,
+      "unit_prices": {
+        "ranger": 12,
+        "vanguard": 10,
+        "worker": 5
+      }
+    },
+    "last_decision_id": null,
+    "tenant_id": {
+      "value": "sample"
+    },
+    "world": {
+      "beacon": {
+        "carrier_id": null,
+        "position": [
+          8,
+          8
+        ],
+        "status": "ground"
+      },
+      "core": {
+        "destination": null,
+        "health": 5,
+        "id": "core-a",
+        "owner": "player",
+        "position": [
+          0,
+          0
+        ],
+        "shield": 4,
+        "state": "normal"
+      },
+      "entities": [
+        {
+          "health": 3,
+          "id": "enemy-a",
+          "kind": "unit",
+          "owner": "opponent",
+          "position": [
+            4,
+            1
+          ],
+          "unit_role": "vanguard"
+        },
+        {
+          "health": 3,
+          "id": "enemy-b",
+          "kind": "unit",
+          "owner": "opponent",
+          "position": [
+            5,
+            1
+          ],
+          "unit_role": "vanguard"
+        }
+      ],
+      "resources": [
+        {
+          "position": [
+            -1,
+            2
+          ],
+          "remaining": 4
+        },
+        {
+          "position": [
+            3,
+            0
+          ],
+          "remaining": null
+        }
+      ],
+      "rules_version": "v0.14",
+      "terrain": [
+        {
+          "position": [
+            0,
+            0
+          ],
+          "state": "open"
+        },
+        {
+          "position": [
+            1,
+            0
+          ],
+          "state": "blocked"
+        }
+      ],
+      "tick": 42,
+      "units": [
+        {
+          "cargo": 1,
+          "health": 2,
+          "id": "unit-a",
+          "position": [
+            1,
+            0
+          ],
+          "role": "worker"
+        },
+        {
+          "cargo": 1,
+          "health": 2,
+          "id": "unit-b",
+          "position": [
+            2,
+            0
+          ],
+          "role": "worker"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "captured_on": "2026-08-11",
+    "intentional_differences": [
+      "turn input carries authoritative resource and population observations",
+      "dynamic unit prices use exact v0.14 integer round-half-up arithmetic",
+      "tenant reducer advances world and economy together before decision commit"
+    ],
+    "oracle": "python domain P4-10 deterministic economy reducer known-answer corpus",
+    "version": 2
+  },
+  "tenant": "sample",
+  "turn": {
+    "economy": {
+      "population": 2,
+      "resources": 9,
+      "rules_version": "v0.14",
+      "seed": 659918,
+      "tick": 43,
+      "unit_prices": {
+        "ranger": 12,
+        "vanguard": 10,
+        "worker": 5
+      }
+    },
+    "projection": {
+      "beacon": {
+        "carrier_id": null,
+        "position": [
+          8,
+          8
+        ],
+        "status": "ground"
+      },
+      "core": {
+        "destination": null,
+        "health": 5,
+        "id": "core-a",
+        "owner": "player",
+        "position": [
+          0,
+          0
+        ],
+        "shield": 4,
+        "state": "normal"
+      },
+      "entities": [
+        {
+          "health": 3,
+          "id": "enemy-a",
+          "kind": "unit",
+          "owner": "opponent",
+          "position": [
+            4,
+            1
+          ],
+          "unit_role": "vanguard"
+        },
+        {
+          "health": 3,
+          "id": "enemy-b",
+          "kind": "unit",
+          "owner": "opponent",
+          "position": [
+            5,
+            1
+          ],
+          "unit_role": "vanguard"
+        }
+      ],
+      "resources": [
+        {
+          "position": [
+            -1,
+            2
+          ],
+          "remaining": 4
+        },
+        {
+          "position": [
+            3,
+            0
+          ],
+          "remaining": null
+        }
+      ],
+      "rules_version": "v0.14",
+      "terrain": [
+        {
+          "position": [
+            0,
+            0
+          ],
+          "state": "open"
+        },
+        {
+          "position": [
+            1,
+            0
+          ],
+          "state": "blocked"
+        }
+      ],
+      "tick": 43,
+      "units": [
+        {
+          "cargo": 1,
+          "health": 2,
+          "id": "unit-a",
+          "position": [
+            1,
+            0
+          ],
+          "role": "worker"
+        },
+        {
+          "cargo": 1,
+          "health": 2,
+          "id": "unit-b",
+          "position": [
+            2,
+            0
+          ],
+          "role": "worker"
+        }
+      ]
+    },
+    "tick": 43
+  }
+}

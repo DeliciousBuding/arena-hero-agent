@@ -19,6 +19,8 @@ from arena_hero_agent.application.decision import (
 from arena_hero_agent.domain import (
     DeadlineBudget,
     DecisionId,
+    EconomyState,
+    EconomyTurnInput,
     Generation,
     RulesVersion,
     TenantId,
@@ -44,12 +46,31 @@ def _world(tick: int) -> WorldProjection:
     return WorldProjection(tick=tick, rules_version=RulesVersion.V0_14)
 
 
-def _initial(tenant: str) -> TenantState:
-    return TenantState(tenant_id=TenantId(tenant), world=_world(0))
+def _initial(tenant: str, *, seed: int = 0xA11CE) -> TenantState:
+    economy = EconomyState.initial(
+        EconomyTurnInput.observed(
+            seed=seed,
+            tick=0,
+            rules_version=RulesVersion.V0_14,
+            resources=10,
+            population=0,
+        )
+    )
+    return TenantState(tenant_id=TenantId(tenant), world=_world(0), economy=economy)
 
 
-def _turn(tick: int) -> TurnInput:
-    return TurnInput(tick=tick, projection=_world(tick))
+def _turn(tick: int, *, resources: int = 10, seed: int = 0xA11CE) -> TurnInput:
+    return TurnInput(
+        tick=tick,
+        projection=_world(tick),
+        economy=EconomyTurnInput.observed(
+            seed=seed,
+            tick=tick,
+            rules_version=RulesVersion.V0_14,
+            resources=resources,
+            population=0,
+        ),
+    )
 
 
 def _arbiter(
@@ -166,13 +187,13 @@ async def test_different_tenants_progress_independently() -> None:
     first, second = await asyncio.gather(
         arbiter.acquire(
             initial_state=_initial("t1"),
-            turn=_turn(1),
+            turn=_turn(1, resources=9),
             decision_id=DecisionId("decision:t1"),
             budget=budget,
         ),
         arbiter.acquire(
             initial_state=_initial("t2"),
-            turn=_turn(1),
+            turn=_turn(1, resources=7),
             decision_id=DecisionId("decision:t2"),
             budget=budget,
         ),
@@ -185,6 +206,11 @@ async def test_different_tenants_progress_independently() -> None:
     assert committed_first.state.tenant_id == TenantId("t1")
     assert committed_second.state.tenant_id == TenantId("t2")
     assert committed_first.generation == committed_second.generation == Generation(1)
+    assert committed_first.state.economy.resources == 9
+    assert committed_second.state.economy.resources == 7
+    assert committed_first.state.economy_input.selection_seed != (
+        committed_second.state.economy_input.selection_seed
+    )
 
 
 async def test_expired_ticket_cannot_commit() -> None:
@@ -221,6 +247,7 @@ async def test_decision_context_is_reproducible_policy_input() -> None:
         budget=DeadlineBudget(1),
     )
     first_hash = canonical_sha256(first.context)
+    first_economy_input = first.context.economy_input
     await first.close()
     second = await arbiter.acquire(
         initial_state=initial,
@@ -231,4 +258,7 @@ async def test_decision_context_is_reproducible_policy_input() -> None:
 
     assert isinstance(second.context, DecisionContext)
     assert canonical_sha256(second.context) == first_hash
+    assert second.context.observed_state.economy.resources == turn.economy.resources
+    assert second.context.economy_input == first_economy_input
+    assert second.context.economy_input.tenant_id == TenantId("sample")
     await second.close()

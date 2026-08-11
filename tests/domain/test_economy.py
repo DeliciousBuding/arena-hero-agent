@@ -12,6 +12,7 @@ from arena_hero_agent.domain import (
     EconomyTurnInput,
     RulesVersion,
     StateDigest,
+    TenantId,
     UnitPrices,
     UnitRole,
     core_resource_capacity,
@@ -21,6 +22,7 @@ from arena_hero_agent.domain import (
 
 SEED = 0xA11CE
 RULES = RulesVersion.V0_14
+TENANT = TenantId("sample")
 
 
 def _input(
@@ -152,8 +154,13 @@ def test_same_seed_same_inputs_replay_to_identical_states_and_decision_inputs() 
 
     assert first == second
     assert [state.economy_digest for state in first] == [state.economy_digest for state in second]
-    assert [state.decision_input for state in first] == [state.decision_input for state in second]
-    assert first[-1].decision_input.selection_seed == second[-1].decision_input.selection_seed
+    assert [state.decision_input(TENANT) for state in first] == [
+        state.decision_input(TENANT) for state in second
+    ]
+    assert (
+        first[-1].decision_input(TENANT).selection_seed
+        == second[-1].decision_input(TENANT).selection_seed
+    )
 
 
 @pytest.mark.parametrize(
@@ -186,23 +193,36 @@ def test_reducer_rejects_seed_tick_and_same_tick_conflicts() -> None:
 
 def test_decision_input_rejects_digest_and_selection_seed_tampering() -> None:
     economy = EconomyState.initial(_input(10, resources=8, population=2))
-    decision_input = economy.decision_input
+    decision_input = economy.decision_input(TENANT)
 
     assert decision_input.economy is economy
     assert decision_input.economy_digest == economy.economy_digest
     assert 0 <= decision_input.selection_seed < 2**52
     with pytest.raises(ValueError, match="economy_digest"):
         EconomyDecisionInput(
+            tenant_id=TENANT,
             economy=economy,
             economy_digest=StateDigest("0" * 64),
             selection_seed=decision_input.selection_seed,
         )
     with pytest.raises(ValueError, match="selection_seed"):
         EconomyDecisionInput(
+            tenant_id=TENANT,
             economy=economy,
             economy_digest=economy.economy_digest,
             selection_seed=decision_input.selection_seed + 1,
         )
+
+
+def test_decision_input_seed_is_tenant_scoped() -> None:
+    economy = EconomyState.initial(_input(10, resources=8, population=2))
+
+    first = economy.decision_input(TenantId("t1"))
+    second = economy.decision_input(TenantId("t2"))
+
+    assert first.economy == second.economy
+    assert first.economy_digest == second.economy_digest
+    assert first.selection_seed != second.selection_seed
 
 
 def test_replay_rejects_non_economy_inputs() -> None:

@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from arena_hero_agent.domain import (
     DeadlineBudget,
     DecisionId,
+    EconomyDecisionInput,
     Generation,
     StateDigest,
     TenantId,
@@ -67,7 +68,19 @@ class DecisionContext:
         self.state.require_owner(self.tenant_id)
         if self.state.state_digest != self.state_digest:
             raise ValueError("state_digest does not match state")
-        self.state.observe(self.turn.projection, actor=self.tenant_id)
+        self.state.observe_turn(self.turn, actor=self.tenant_id)
+
+    @property
+    def observed_state(self) -> TenantState:
+        """Return the fully reduced world/economy input before decision commit."""
+
+        return self.state.observe_turn(self.turn, actor=self.tenant_id)
+
+    @property
+    def economy_input(self) -> EconomyDecisionInput:
+        """Return the stable P4-11 economy input for safety and tactical policy."""
+
+        return self.observed_state.economy_input
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,7 +181,7 @@ class DecisionArbiter:
         tenant_id = initial_state.tenant_id
         recovered = await self._recover(initial_state, initial_generation)
         self._reject_duplicate(recovered, decision_id)
-        recovered.state.observe(turn.projection, actor=tenant_id)
+        recovered.state.observe_turn(turn, actor=tenant_id)
 
         writer = await self._writer_leases.acquire_writer(
             tenant_id,
