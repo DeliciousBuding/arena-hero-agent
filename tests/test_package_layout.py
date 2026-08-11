@@ -7,6 +7,7 @@ MODULES = (
     "ports",
     "application",
     "adapters",
+    "adapters.recorder",
     "strategies",
     "planning",
     "alliance",

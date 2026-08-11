@@ -1,5 +1,6 @@
 """Application turn DTOs, tick loop orchestration, and orchestration interfaces."""
 
+from .recorder import TickRecorder
 from .tick_loop import (
     Backoff,
     DeadlineOutcome,
@@ -45,6 +46,7 @@ __all__ = [
     "Submitter",
     "TickLoopConfig",
     "TickLoopResult",
+    "TickRecorder",
     "TickResult",
     "TickSource",
     "TurnStream",
