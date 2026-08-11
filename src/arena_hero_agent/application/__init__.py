@@ -1,5 +1,22 @@
-"""Application turn DTOs and orchestration interfaces."""
+"""Application turn DTOs, tick loop orchestration, and orchestration interfaces."""
 
+from .tick_loop import (
+    Backoff,
+    DeadlineOutcome,
+    Decider,
+    ReconnectLimitExceeded,
+    SingleTenantTickLoop,
+    StoppedReason,
+    SubmitErrorPolicy,
+    SubmitOutcome,
+    SubmitResult,
+    Submitter,
+    TickLoopConfig,
+    TickLoopResult,
+    TickResult,
+    TickSource,
+    TurnStream,
+)
 from .turns import (
     CoreAction,
     CoreIntent,
@@ -12,10 +29,25 @@ from .turns import (
 )
 
 __all__ = [
+    "Backoff",
     "CoreAction",
     "CoreIntent",
+    "DeadlineOutcome",
+    "Decider",
     "Decision",
     "PlayerLifecycle",
+    "ReconnectLimitExceeded",
+    "SingleTenantTickLoop",
+    "StoppedReason",
+    "SubmitErrorPolicy",
+    "SubmitOutcome",
+    "SubmitResult",
+    "Submitter",
+    "TickLoopConfig",
+    "TickLoopResult",
+    "TickResult",
+    "TickSource",
+    "TurnStream",
     "TurnEvent",
     "TurnObservation",
     "UnitAction",
