@@ -11,7 +11,7 @@ integrated through replaceable adapters.
 
 ## Current capabilities
 
-- **SDK turn adaptation** (`adapt_async_turn`): converts an `arena-hero` 0.2.x `AsyncTurn` /
+- **SDK turn adaptation** (`adapt_async_turn`): converts an `arena-hero` 0.3.x `AsyncTurn` /
   `PlayerState` into immutable application DTOs (`TurnObservation`, `WorldProjection`). Malformed,
   duplicate, or future SDK shapes fail closed as `SdkContractViolationError`.
 - **Decision construction** (`build_command_plan`): converts an immutable application `Decision`
@@ -25,15 +25,29 @@ integrated through replaceable adapters.
 The full SDK event stream, submission acknowledgement, and error classification are covered by the
 existing adapter contract tests; all tests run offline without credentials or live endpoints.
 
-## Not yet implemented
+## Runtime foundation
 
-The following Phase 4 items are intentionally out of scope for the current milestone and will be
-added in later waves:
+The offline runtime includes a single-tenant tick loop with deadline and reconnect handling,
+JSONL/SQLite recording, failure-isolated telemetry, and the replay/health CLI below. Live game
+submission, service units, and production promotion remain intentionally separate.
 
-- a single-tenant tick loop with deadline budgets and reconnect handling;
-- a SQLite recorder with atomic write and recovery tests;
-- telemetry wiring into the decision path (failure isolation);
-- a CLI entrypoint, `doctor`, and systemd readiness/health integration.
+## Command-line interface
+
+The `arena-hero-agent` console script provides the offline replay and health
+contracts. It never reads credentials, never connects to a live game API, and
+never accepts an API key.
+
+```bash
+# Replay canonical turn observations for one tenant, writing recorder,
+# telemetry, and a health snapshot under the data root.
+arena-hero-agent run --tenant tenant-a --input replay.json --data-root ./data
+
+# Print the persisted health snapshot; exit code 0 = ready, 1 = not ready.
+arena-hero-agent health --tenant tenant-a --data-root ./data
+```
+
+`run` accepts a JSON array/object or JSON Lines file of canonical turn
+observations. See `arena-hero-agent run --help` for all options.
 
 ## Planned capabilities
 
@@ -46,7 +60,7 @@ added in later waves:
 
 ## Repository boundaries
 
-- [`arena-hero`](https://pypi.org/project/arena-hero/) provides the Python SDK and official
+- [`arena-hero`](https://github.com/DeliciousBuding/arena-hero-sdk-py) provides the pinned Python SDK and official
   wire/Turn/Action contracts used by this project.
 - `arena-hero-lab` owns simulation, benchmarking, replay analysis, and research workloads.
 - This repository does not import Lab internals and does not duplicate SDK-owned protocol models.

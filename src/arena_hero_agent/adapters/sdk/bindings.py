@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from importlib import import_module, metadata
 from types import ModuleType
@@ -11,6 +12,11 @@ from .errors import SdkContractViolationError
 
 _MINIMUM_VERSION = (0, 2, 9)
 _NEXT_BREAKING_VERSION = (0, 3, 0)
+# The fork's 0.3.0a1 migration baseline is additive over the 0.2.9 public
+# surface and is the pinned dependency for this repository (pyproject.toml).
+_MIGRATION_BASELINE = "0.3.0a1"
+_ALLOWED_0_3_PRERELEASES = frozenset({_MIGRATION_BASELINE})
+_RELEASE_PREFIX = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:[a-zA-Z]|[-+]|$)")
 _REQUIRED_PUBLIC_NAMES = (
     "APIError",
     "Accepted",
@@ -59,10 +65,16 @@ class SdkBindings:
 
 
 def _release_tuple(version: str) -> tuple[int, int, int]:
-    release = version.split("+", 1)[0].split("-", 1)[0].split(".")
-    if len(release) < 3 or any(not part.isdigit() for part in release[:3]):
+    match = _RELEASE_PREFIX.match(version)
+    if match is None:
         raise SdkContractViolationError("load", f"unsupported SDK version syntax: {version!r}")
-    return int(release[0]), int(release[1]), int(release[2])
+    return int(match.group(1)), int(match.group(2)), int(match.group(3))
+
+
+def _accepts_version(version: str, release: tuple[int, int, int]) -> bool:
+    if _MINIMUM_VERSION <= release < _NEXT_BREAKING_VERSION:
+        return True
+    return version in _ALLOWED_0_3_PRERELEASES
 
 
 def _require_public_api(module: ModuleType, name: str) -> Any:
@@ -79,10 +91,11 @@ def load_sdk_bindings() -> SdkBindings:
 
     version = metadata.version("arena-hero")
     release = _release_tuple(version)
-    if not _MINIMUM_VERSION <= release < _NEXT_BREAKING_VERSION:
+    if not _accepts_version(version, release):
         raise SdkContractViolationError(
             "load",
-            f"arena-hero version must satisfy >=0.2.9,<0.3 (installed {version})",
+            f"arena-hero version must satisfy >=0.2.9,<0.3 or the pinned "
+            f"{_MIGRATION_BASELINE} baseline (installed {version})",
         )
 
     module = import_module("arena_hero")

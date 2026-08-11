@@ -9,6 +9,7 @@ MODULES = (
     "adapters",
     "adapters.recorder",
     "adapters.telemetry",
+    "adapters.replay",
     "strategies",
     "planning",
     "alliance",
@@ -22,6 +23,7 @@ MODULES = (
     "command_center.projections",
     "command_center.streams",
     "cli",
+    "cli.main",
 )
 
 

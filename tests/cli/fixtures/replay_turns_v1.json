@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "observations": [
+    {
+      "tick": 1,
+      "lifecycle": "active",
+      "resources": 10,
+      "population": 0,
+      "projection": {
+        "tick": 1,
+        "rules_version": "v0.14",
+        "core": null,
+        "units": [],
+        "entities": [],
+        "resources": [],
+        "terrain": [],
+        "beacon": null
+      },
+      "events": [],
+      "respawn_at_tick": null
+    },
+    {
+      "tick": 2,
+      "lifecycle": "active",
+      "resources": 12,
+      "population": 0,
+      "projection": {
+        "tick": 2,
+        "rules_version": "v0.14",
+        "core": null,
+        "units": [],
+        "entities": [],
+        "resources": [],
+        "terrain": [],
+        "beacon": null
+      },
+      "events": [],
+      "respawn_at_tick": null
+    },
+    {
+      "tick": 3,
+      "lifecycle": "active",
+      "resources": 14,
+      "population": 0,
+      "projection": {
+        "tick": 3,
+        "rules_version": "v0.14",
+        "core": null,
+        "units": [],
+        "entities": [],
+        "resources": [],
+        "terrain": [],
+        "beacon": null
+      },
+      "events": [],
+      "respawn_at_tick": null
+    }
+  ]
+}

@@ -15,8 +15,11 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "arena-hero>=0.2.9,<0.3",
+    "arena-hero==0.3.0a1",
 ]
+
+[project.scripts]
+arena-hero-agent = "arena_hero_agent.cli:console_entrypoint"
 
 [dependency-groups]
 dev = [
@@ -44,3 +47,6 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.uv.sources]
+arena-hero = { git = "https://github.com/DeliciousBuding/arena-hero-sdk-py.git", tag = "v0.3.0a1" }

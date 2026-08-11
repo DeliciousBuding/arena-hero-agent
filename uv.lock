@@ -26,16 +26,12 @@ wheels = [
 
 [[package]]
 name = "arena-hero"
-version = "0.2.9"
-source = { registry = "https://pypi.org/simple" }
+version = "0.3.0a1"
+source = { git = "https://github.com/DeliciousBuding/arena-hero-sdk-py.git?tag=v0.3.0a1#08e32be53eb5ab88ae843297b1242a79187480a0" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
     { name = "websockets" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/32/dc/d6a83d22e6df55eb09bd205af0aa3fd0508bd92eb0df619f8f75779818eb/arena_hero-0.2.9.tar.gz", hash = "sha256:620c5fbd5a7dd1d5c32c145ee8f3f184538d0a7c08ee69e7eda34459916db8d1", size = 87076, upload-time = "2026-08-06T09:54:55.964Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/68/20/8e7a20b23be76526c840d0aea4ac62e4402a48dbd707f38106635789cb99/arena_hero-0.2.9-py3-none-any.whl", hash = "sha256:822e4de0999e8f26e8c8beb910c786513fcc5be6e426175d9b5e2e3e32b899d9", size = 29177, upload-time = "2026-08-06T09:54:54.596Z" },
 ]
 
 [[package]]
@@ -56,7 +52,7 @@ dev = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "arena-hero", specifier = ">=0.2.9,<0.3" }]
+requires-dist = [{ name = "arena-hero", git = "https://github.com/DeliciousBuding/arena-hero-sdk-py.git?tag=v0.3.0a1" }]
 
 [package.metadata.requires-dev]
 dev = [
