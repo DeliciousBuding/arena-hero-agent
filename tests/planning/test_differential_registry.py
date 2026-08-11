@@ -1,4 +1,4 @@
-"""Behavior-difference classification for the P4-11 oracle fixture.
+"""Behavior-difference classification for the P4-11/P4-12 oracle fixture.
 
 Every fixture section must be classified as MATCH (fixture-compared in this
 suite), ALLOWED_DIFFERENCE (intentional, documented), or EXPECTED_UNKNOWN
@@ -40,6 +40,11 @@ MATCH_SECTIONS = frozenset(
         "plan_validation",
         "step_toward",
         "mission_value",
+        "min_cost_assignment",
+        "assignment_routing",
+        "progress_decay",
+        "sticky_bonus",
+        "worker_assignments",
     }
 )
 
@@ -51,6 +56,8 @@ ALLOWED_DIFFERENCES = frozenset(
         "planner_composition",
         "validator_unknown_shapes",
         "beacon_sentinel",
+        "worker_assignment_refill_predictions_parameter",
+        "worker_assignment_claims_explicit_state",
     }
 )
 
@@ -66,7 +73,7 @@ EXPECTED_UNKNOWN = frozenset(
         "alliance_logic",
         "refill_prediction_pipeline",
         "macro_policy",
-        "worker_assignment_matrix",
+        "worker_liveness_blockade",
     }
 )
 
@@ -90,6 +97,9 @@ def test_oracle_metadata_is_pinned() -> None:
         "packages/arena-agent/src/strategies/safety-planner-helpers.ts",
         "packages/arena-agent/src/strategies/tactical-squads.ts",
         "packages/arena-agent/src/domain/plan-validator.ts",
+        "packages/arena-agent/src/planning/worker-task-planner.ts",
+        "packages/arena-agent/src/algorithms/min-cost-assignment.ts",
+        "packages/arena-agent/src/domain/nav.ts",
     ):
         assert source in metadata["source_files"]
 

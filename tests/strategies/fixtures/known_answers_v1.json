@@ -10,13 +10,19 @@
       "packages/arena-agent/src/strategies/safety-planner-config.ts",
       "packages/arena-agent/src/strategies/safety-planner-helpers.ts",
       "packages/arena-agent/src/strategies/tactical-squads.ts",
-      "packages/arena-agent/src/domain/plan-validator.ts"
+      "packages/arena-agent/src/domain/plan-validator.ts",
+      "packages/arena-agent/src/planning/worker-task-planner.ts",
+      "packages/arena-agent/src/algorithms/min-cost-assignment.ts",
+      "packages/arena-agent/src/domain/nav.ts"
     ],
     "captured_on": "2026-08-12",
     "intentional_differences": [
       "python cell keys and coordinates are strict typed values instead of JS Number permissiveness",
       "python plan validation rejects unknown action shapes instead of silently skipping",
-      "float threat contributions are accumulated in input order like the oracle (IEEE-754 doubles)"
+      "float threat contributions are accumulated in input order like the oracle (IEEE-754 doubles)",
+      "P4-12 worker assignment: deterministic Hungarian cost matrix and sticky routing captured from worker-task-planner.ts",
+      "P4-12 refillPredictions is passed as an explicit parameter instead of a snapshot field (pipeline not migrated)",
+      "P4-12 claim leases are explicit deterministic state instead of hidden class state"
     ]
   },
   "threat_maps": [
@@ -3633,5 +3639,3278 @@
         "expected": []
       }
     ]
-  }
+  },
+  "min_cost_assignment": [
+    {
+      "name": "empty",
+      "matrix": [],
+      "expected": []
+    },
+    {
+      "name": "single_one",
+      "matrix": [
+        [
+          5
+        ]
+      ],
+      "expected": [
+        0
+      ]
+    },
+    {
+      "name": "single_wide",
+      "matrix": [
+        [
+          3,
+          1,
+          2
+        ]
+      ],
+      "expected": [
+        1
+      ]
+    },
+    {
+      "name": "two_by_two",
+      "matrix": [
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "expected": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "two_by_two_alt",
+      "matrix": [
+        [
+          4,
+          1
+        ],
+        [
+          1,
+          4
+        ]
+      ],
+      "expected": [
+        1,
+        0
+      ]
+    },
+    {
+      "name": "tie_lower_column",
+      "matrix": [
+        [
+          1,
+          1
+        ],
+        [
+          1,
+          1
+        ]
+      ],
+      "expected": [
+        0,
+        1
+      ]
+    },
+    {
+      "name": "rectangular_2x3",
+      "matrix": [
+        [
+          1,
+          2,
+          3
+        ],
+        [
+          2,
+          3,
+          1
+        ]
+      ],
+      "expected": [
+        0,
+        2
+      ]
+    },
+    {
+      "name": "rectangular_3x4",
+      "matrix": [
+        [
+          1,
+          5,
+          5,
+          5
+        ],
+        [
+          5,
+          1,
+          5,
+          5
+        ],
+        [
+          5,
+          5,
+          1,
+          5
+        ]
+      ],
+      "expected": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "name": "three_by_three",
+      "matrix": [
+        [
+          9,
+          2,
+          7
+        ],
+        [
+          4,
+          5,
+          6
+        ],
+        [
+          3,
+          8,
+          1
+        ]
+      ],
+      "expected": [
+        1,
+        0,
+        2
+      ]
+    },
+    {
+      "name": "sentinel_ties",
+      "matrix": [
+        [
+          1000001,
+          1000002
+        ],
+        [
+          1000002,
+          1000001
+        ]
+      ],
+      "expected": [
+        0,
+        1
+      ]
+    }
+  ],
+  "assignment_routing": [
+    {
+      "name": "empty_targets",
+      "start": [
+        0,
+        0
+      ],
+      "targets": [],
+      "obstacles": [],
+      "searchRadius": 24,
+      "nodeBudget": 1024,
+      "expected": {}
+    },
+    {
+      "name": "start_is_target",
+      "start": [
+        0,
+        0
+      ],
+      "targets": [
+        [
+          0,
+          0
+        ],
+        [
+          5,
+          0
+        ]
+      ],
+      "obstacles": [],
+      "searchRadius": 24,
+      "nodeBudget": 1024,
+      "expected": {
+        "0,0": 0,
+        "5,0": 5
+      }
+    },
+    {
+      "name": "open_field",
+      "start": [
+        0,
+        0
+      ],
+      "targets": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          2
+        ]
+      ],
+      "obstacles": [],
+      "searchRadius": 24,
+      "nodeBudget": 1024,
+      "expected": {
+        "1,0": 1,
+        "0,1": 1,
+        "2,2": 4
+      }
+    },
+    {
+      "name": "single_obstacle_detour",
+      "start": [
+        0,
+        0
+      ],
+      "targets": [
+        [
+          0,
+          2
+        ]
+      ],
+      "obstacles": [
+        "0,1"
+      ],
+      "searchRadius": 24,
+      "nodeBudget": 1024,
+      "expected": {
+        "0,2": 4
+      }
+    },
+    {
+      "name": "obstacle_wall_detour",
+      "start": [
+        0,
+        0
+      ],
+      "targets": [
+        [
+          3,
+          0
+        ]
+      ],
+      "obstacles": [
+        "1,0",
+        "2,0"
+      ],
+      "searchRadius": 24,
+      "nodeBudget": 1024,
+      "expected": {
+        "3,0": 5
+      }
+    },
+    {
+      "name": "beyond_radius",
+      "start": [
+        0,
+        0
+      ],
+      "targets": [
+        [
+          30,
+          0
+        ]
+      ],
+      "obstacles": [],
+      "searchRadius": 24,
+      "nodeBudget": 1024,
+      "expected": {}
+    },
+    {
+      "name": "budget_cutoff",
+      "start": [
+        0,
+        0
+      ],
+      "targets": [
+        [
+          1,
+          0
+        ],
+        [
+          0,
+          2
+        ]
+      ],
+      "obstacles": [],
+      "searchRadius": 24,
+      "nodeBudget": 5,
+      "expected": {
+        "1,0": 1,
+        "0,2": 2
+      }
+    },
+    {
+      "name": "partial_targets_in_radius",
+      "start": [
+        0,
+        0
+      ],
+      "targets": [
+        [
+          1,
+          0
+        ],
+        [
+          30,
+          0
+        ]
+      ],
+      "obstacles": [],
+      "searchRadius": 24,
+      "nodeBudget": 1024,
+      "expected": {
+        "1,0": 1
+      }
+    }
+  ],
+  "progress_decay": [
+    {
+      "name": "distance_zero",
+      "distance": 0,
+      "expected": 1
+    },
+    {
+      "name": "distance_five",
+      "distance": 5,
+      "expected": 0.8
+    },
+    {
+      "name": "distance_norm",
+      "distance": 20,
+      "expected": 0.5
+    },
+    {
+      "name": "distance_forty",
+      "distance": 40,
+      "expected": 0.3333333333333333
+    },
+    {
+      "name": "distance_hundred",
+      "distance": 100,
+      "expected": 0.16666666666666666
+    }
+  ],
+  "sticky_bonus": [
+    {
+      "name": "no_previous",
+      "unitId": "w1",
+      "targetCellKey": "1,0",
+      "previousAssignments": [],
+      "amount": 0.5,
+      "expected": 0
+    },
+    {
+      "name": "same_target_no_distance",
+      "unitId": "w1",
+      "targetCellKey": "1,0",
+      "previousAssignments": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ],
+      "amount": 0.5,
+      "expected": 0.5
+    },
+    {
+      "name": "same_target_with_distance",
+      "unitId": "w1",
+      "targetCellKey": "1,0",
+      "previousAssignments": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ],
+      "amount": 0.5,
+      "distance": 5,
+      "expected": 0.4
+    },
+    {
+      "name": "different_target",
+      "unitId": "w1",
+      "targetCellKey": "9,0",
+      "previousAssignments": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ],
+      "amount": 0.5,
+      "expected": 0
+    },
+    {
+      "name": "previous_target_only_deposit",
+      "unitId": "w1",
+      "targetCellKey": "0,0",
+      "previousAssignments": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "DEPOSIT",
+            "target": [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "amount": 0.5,
+      "distance": 2,
+      "expected": 0.45454545454545453
+    },
+    {
+      "name": "previous_other_unit",
+      "unitId": "w2",
+      "targetCellKey": "1,0",
+      "previousAssignments": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ],
+      "amount": 0.5,
+      "expected": 0
+    },
+    {
+      "name": "amount_zero",
+      "unitId": "w1",
+      "targetCellKey": "1,0",
+      "previousAssignments": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ],
+      "amount": 0,
+      "distance": 5,
+      "expected": 0
+    }
+  ],
+  "worker_assignments": [
+    {
+      "name": "empty_pool",
+      "snapshot": {
+        "tick": 10,
+        "units": [],
+        "resourceCells": {},
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": []
+    },
+    {
+      "name": "single_worker_single_cell",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "single_worker_memory_beyond_40",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "45,0": {
+            "position": [
+              45,
+              0
+            ],
+            "visible": false,
+            "lastSeenTick": 1
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "WAIT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "memory_at_40_boundary",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "40,0": {
+            "position": [
+              40,
+              0
+            ],
+            "visible": false,
+            "lastSeenTick": 1
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              40,
+              0
+            ],
+            "targetCellKey": "40,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "two_workers_one_cell",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w2",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              2
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        },
+        {
+          "unitId": "w2",
+          "task": {
+            "type": "WAIT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "two_workers_two_cells",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w2",
+            "unitType": "WORKER",
+            "position": [
+              4,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          },
+          "3,0": {
+            "position": [
+              3,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        },
+        {
+          "unitId": "w2",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              3,
+              0
+            ],
+            "targetCellKey": "3,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "cargo_worker_forced_deposit",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              1,
+              0
+            ],
+            "hp": 2,
+            "cargo": 1
+          }
+        ],
+        "resourceCells": {},
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "DEPOSIT",
+            "target": [
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "worker_on_visible_cell_forced_harvest",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              1,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "HARVEST_CURRENT",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "low_hp_worker_forced_return",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              3,
+              0
+            ],
+            "hp": 1,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {},
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "RETURN_FOR_HEAL",
+            "target": [
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "beacon_on_worker_cell_forced_pickup",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              2,
+              2
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {},
+        "beacon": {
+          "position": [
+            2,
+            2
+          ],
+          "status": "GROUND",
+          "carrierId": null
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL"
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "PICKUP_BEACON",
+            "target": [
+              2,
+              2
+            ],
+            "targetCellKey": "2,2"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mixed_forced_and_matrix",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              1,
+              0
+            ],
+            "hp": 2,
+            "cargo": 1
+          },
+          {
+            "id": "w2",
+            "unitType": "WORKER",
+            "position": [
+              3,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "2,0": {
+            "position": [
+              2,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "DEPOSIT",
+            "target": [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "unitId": "w2",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              2,
+              0
+            ],
+            "targetCellKey": "2,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "sticky_keeps_previous_target",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              2
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "2,1": {
+            "position": [
+              2,
+              1
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          },
+          "2,2": {
+            "position": [
+              2,
+              2
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "previousAssignments": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              2,
+              2
+            ],
+            "targetCellKey": "2,2"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              2,
+              2
+            ],
+            "targetCellKey": "2,2"
+          }
+        }
+      ]
+    },
+    {
+      "name": "sticky_switches_better_cell",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              3,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          },
+          "9,0": {
+            "position": [
+              9,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "previousAssignments": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              9,
+              0
+            ],
+            "targetCellKey": "9,0"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "obstacle_detour_still_assigned",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "0,2": {
+            "position": [
+              0,
+              2
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "obstacleCells": [
+          "0,1"
+        ],
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              0,
+              2
+            ],
+            "targetCellKey": "0,2"
+          }
+        }
+      ]
+    },
+    {
+      "name": "enemy_cell_not_assignable",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "enemyCells": [
+          "1,0"
+        ],
+        "enemyUnits": [
+          {
+            "id": "e1",
+            "position": [
+              1,
+              0
+            ],
+            "unitType": "WORKER"
+          }
+        ],
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "WAIT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "invisible_occupied_cell_excluded",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              1,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": false,
+            "lastSeenTick": 1
+          },
+          "2,0": {
+            "position": [
+              2,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              2,
+              0
+            ],
+            "targetCellKey": "2,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "stale_memory_cell_deprioritized",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          },
+          "1,1": {
+            "position": [
+              1,
+              1
+            ],
+            "visible": false,
+            "lastSeenTick": 1
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "survey_burst_pre_reserve",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w2",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              1
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w3",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              2
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w4",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              3
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          },
+          "2,0": {
+            "position": [
+              2,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "mission": {
+        "surveyWorkerCap": 3,
+        "surveyWorkerFloor": 2
+      },
+      "options": {
+        "surveyBurstActive": true
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "EXPLORE"
+          }
+        },
+        {
+          "unitId": "w2",
+          "task": {
+            "type": "EXPLORE"
+          }
+        },
+        {
+          "unitId": "w3",
+          "task": {
+            "type": "EXPLORE"
+          }
+        },
+        {
+          "unitId": "w4",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "leftover_surveyor_cap",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w2",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              1
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w3",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              2
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "mission": {
+        "surveyWorkerCap": 2
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        },
+        {
+          "unitId": "w2",
+          "task": {
+            "type": "EXPLORE"
+          }
+        },
+        {
+          "unitId": "w3",
+          "task": {
+            "type": "EXPLORE"
+          }
+        }
+      ]
+    },
+    {
+      "name": "leftover_wait_when_over_cap",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w2",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              1
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w3",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              2
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "mission": {
+        "surveyWorkerCap": 1
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        },
+        {
+          "unitId": "w2",
+          "task": {
+            "type": "EXPLORE"
+          }
+        },
+        {
+          "unitId": "w3",
+          "task": {
+            "type": "WAIT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "claim_keeps_cell_two_ticks",
+      "ticks": [
+        {
+          "tick": 10,
+          "units": [
+            {
+              "id": "w1",
+              "unitType": "WORKER",
+              "position": [
+                0,
+                0
+              ],
+              "hp": 2,
+              "cargo": 0
+            },
+            {
+              "id": "w2",
+              "unitType": "WORKER",
+              "position": [
+                0,
+                2
+              ],
+              "hp": 2,
+              "cargo": 0
+            }
+          ],
+          "resourceCells": {
+            "1,0": {
+              "position": [
+                1,
+                0
+              ],
+              "visible": true,
+              "lastSeenTick": 10
+            }
+          },
+          "resources": 0,
+          "resourceCapacity": 100,
+          "resourceSpace": 100,
+          "population": 0,
+          "obstacleCells": [],
+          "enemyCells": [],
+          "enemyUnits": [],
+          "threatMap": {},
+          "corePosition": [
+            0,
+            0
+          ],
+          "coreHp": 5,
+          "coreState": "NORMAL",
+          "beacon": {
+            "position": [
+              0,
+              0
+            ],
+            "status": null,
+            "carrierId": null
+          }
+        },
+        {
+          "tick": 11,
+          "units": [
+            {
+              "id": "w1",
+              "unitType": "WORKER",
+              "position": [
+                0,
+                1
+              ],
+              "hp": 2,
+              "cargo": 0
+            },
+            {
+              "id": "w2",
+              "unitType": "WORKER",
+              "position": [
+                0,
+                2
+              ],
+              "hp": 2,
+              "cargo": 0
+            }
+          ],
+          "resourceCells": {
+            "1,0": {
+              "position": [
+                1,
+                0
+              ],
+              "visible": true,
+              "lastSeenTick": 11
+            }
+          },
+          "resources": 0,
+          "resourceCapacity": 100,
+          "resourceSpace": 100,
+          "population": 0,
+          "obstacleCells": [],
+          "enemyCells": [],
+          "enemyUnits": [],
+          "threatMap": {},
+          "corePosition": [
+            0,
+            0
+          ],
+          "coreHp": 5,
+          "coreState": "NORMAL",
+          "beacon": {
+            "position": [
+              0,
+              0
+            ],
+            "status": null,
+            "carrierId": null
+          }
+        }
+      ],
+      "expected": [
+        [
+          {
+            "unitId": "w1",
+            "task": {
+              "type": "GO_RESOURCE",
+              "target": [
+                1,
+                0
+              ],
+              "targetCellKey": "1,0"
+            }
+          },
+          {
+            "unitId": "w2",
+            "task": {
+              "type": "WAIT"
+            }
+          }
+        ],
+        [
+          {
+            "unitId": "w1",
+            "task": {
+              "type": "GO_RESOURCE",
+              "target": [
+                1,
+                0
+              ],
+              "targetCellKey": "1,0"
+            }
+          },
+          {
+            "unitId": "w2",
+            "task": {
+              "type": "WAIT"
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "claim_released_when_worker_forced",
+      "ticks": [
+        {
+          "tick": 10,
+          "units": [
+            {
+              "id": "w1",
+              "unitType": "WORKER",
+              "position": [
+                0,
+                0
+              ],
+              "hp": 2,
+              "cargo": 0
+            },
+            {
+              "id": "w2",
+              "unitType": "WORKER",
+              "position": [
+                0,
+                2
+              ],
+              "hp": 2,
+              "cargo": 0
+            }
+          ],
+          "resourceCells": {
+            "1,0": {
+              "position": [
+                1,
+                0
+              ],
+              "visible": true,
+              "lastSeenTick": 10
+            }
+          },
+          "resources": 0,
+          "resourceCapacity": 100,
+          "resourceSpace": 100,
+          "population": 0,
+          "obstacleCells": [],
+          "enemyCells": [],
+          "enemyUnits": [],
+          "threatMap": {},
+          "corePosition": [
+            0,
+            0
+          ],
+          "coreHp": 5,
+          "coreState": "NORMAL",
+          "beacon": {
+            "position": [
+              0,
+              0
+            ],
+            "status": null,
+            "carrierId": null
+          }
+        },
+        {
+          "tick": 11,
+          "units": [
+            {
+              "id": "w1",
+              "unitType": "WORKER",
+              "position": [
+                1,
+                0
+              ],
+              "hp": 2,
+              "cargo": 1
+            },
+            {
+              "id": "w2",
+              "unitType": "WORKER",
+              "position": [
+                0,
+                2
+              ],
+              "hp": 2,
+              "cargo": 0
+            }
+          ],
+          "resourceCells": {
+            "1,0": {
+              "position": [
+                1,
+                0
+              ],
+              "visible": true,
+              "lastSeenTick": 11
+            }
+          },
+          "resources": 0,
+          "resourceCapacity": 100,
+          "resourceSpace": 100,
+          "population": 0,
+          "obstacleCells": [],
+          "enemyCells": [],
+          "enemyUnits": [],
+          "threatMap": {},
+          "corePosition": [
+            0,
+            0
+          ],
+          "coreHp": 5,
+          "coreState": "NORMAL",
+          "beacon": {
+            "position": [
+              0,
+              0
+            ],
+            "status": null,
+            "carrierId": null
+          }
+        }
+      ],
+      "expected": [
+        [
+          {
+            "unitId": "w1",
+            "task": {
+              "type": "GO_RESOURCE",
+              "target": [
+                1,
+                0
+              ],
+              "targetCellKey": "1,0"
+            }
+          },
+          {
+            "unitId": "w2",
+            "task": {
+              "type": "WAIT"
+            }
+          }
+        ],
+        [
+          {
+            "unitId": "w1",
+            "task": {
+              "type": "DEPOSIT",
+              "target": [
+                0,
+                0
+              ]
+            }
+          },
+          {
+            "unitId": "w2",
+            "task": {
+              "type": "GO_RESOURCE",
+              "target": [
+                1,
+                0
+              ],
+              "targetCellKey": "1,0"
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "claim_ttl_released_after_no_progress",
+      "plannerConfig": {
+        "claimNoProgressTtlTicks": 2
+      },
+      "ticks": [
+        {
+          "tick": 10,
+          "units": [
+            {
+              "id": "w1",
+              "unitType": "WORKER",
+              "position": [
+                0,
+                0
+              ],
+              "hp": 2,
+              "cargo": 0
+            }
+          ],
+          "resourceCells": {
+            "2,0": {
+              "position": [
+                2,
+                0
+              ],
+              "visible": true,
+              "lastSeenTick": 10
+            }
+          },
+          "resources": 0,
+          "resourceCapacity": 100,
+          "resourceSpace": 100,
+          "population": 0,
+          "obstacleCells": [],
+          "enemyCells": [],
+          "enemyUnits": [],
+          "threatMap": {},
+          "corePosition": [
+            0,
+            0
+          ],
+          "coreHp": 5,
+          "coreState": "NORMAL",
+          "beacon": {
+            "position": [
+              0,
+              0
+            ],
+            "status": null,
+            "carrierId": null
+          }
+        },
+        {
+          "tick": 11,
+          "units": [
+            {
+              "id": "w1",
+              "unitType": "WORKER",
+              "position": [
+                0,
+                0
+              ],
+              "hp": 2,
+              "cargo": 0
+            },
+            {
+              "id": "w2",
+              "unitType": "WORKER",
+              "position": [
+                1,
+                0
+              ],
+              "hp": 2,
+              "cargo": 0
+            }
+          ],
+          "resourceCells": {
+            "2,0": {
+              "position": [
+                2,
+                0
+              ],
+              "visible": true,
+              "lastSeenTick": 11
+            }
+          },
+          "resources": 0,
+          "resourceCapacity": 100,
+          "resourceSpace": 100,
+          "population": 0,
+          "obstacleCells": [],
+          "enemyCells": [],
+          "enemyUnits": [],
+          "threatMap": {},
+          "corePosition": [
+            0,
+            0
+          ],
+          "coreHp": 5,
+          "coreState": "NORMAL",
+          "beacon": {
+            "position": [
+              0,
+              0
+            ],
+            "status": null,
+            "carrierId": null
+          }
+        },
+        {
+          "tick": 12,
+          "units": [
+            {
+              "id": "w1",
+              "unitType": "WORKER",
+              "position": [
+                0,
+                0
+              ],
+              "hp": 2,
+              "cargo": 0
+            },
+            {
+              "id": "w2",
+              "unitType": "WORKER",
+              "position": [
+                1,
+                0
+              ],
+              "hp": 2,
+              "cargo": 0
+            }
+          ],
+          "resourceCells": {
+            "2,0": {
+              "position": [
+                2,
+                0
+              ],
+              "visible": true,
+              "lastSeenTick": 12
+            }
+          },
+          "resources": 0,
+          "resourceCapacity": 100,
+          "resourceSpace": 100,
+          "population": 0,
+          "obstacleCells": [],
+          "enemyCells": [],
+          "enemyUnits": [],
+          "threatMap": {},
+          "corePosition": [
+            0,
+            0
+          ],
+          "coreHp": 5,
+          "coreState": "NORMAL",
+          "beacon": {
+            "position": [
+              0,
+              0
+            ],
+            "status": null,
+            "carrierId": null
+          }
+        }
+      ],
+      "expected": [
+        [
+          {
+            "unitId": "w1",
+            "task": {
+              "type": "GO_RESOURCE",
+              "target": [
+                2,
+                0
+              ],
+              "targetCellKey": "2,0"
+            }
+          }
+        ],
+        [
+          {
+            "unitId": "w1",
+            "task": {
+              "type": "GO_RESOURCE",
+              "target": [
+                2,
+                0
+              ],
+              "targetCellKey": "2,0"
+            }
+          },
+          {
+            "unitId": "w2",
+            "task": {
+              "type": "WAIT"
+            }
+          }
+        ],
+        [
+          {
+            "unitId": "w1",
+            "task": {
+              "type": "WAIT"
+            }
+          },
+          {
+            "unitId": "w2",
+            "task": {
+              "type": "GO_RESOURCE",
+              "target": [
+                2,
+                0
+              ],
+              "targetCellKey": "2,0"
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "beacon_bonus_breaks_tie",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "2,0": {
+            "position": [
+              2,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          },
+          "0,2": {
+            "position": [
+              0,
+              2
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "beacon": {
+          "position": [
+            2,
+            0
+          ],
+          "status": "GROUND",
+          "carrierId": null
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL"
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              2,
+              0
+            ],
+            "targetCellKey": "2,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "threat_risk_penalty",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          },
+          "0,1": {
+            "position": [
+              0,
+              1
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "threatMap": {
+          "1,0": 0.5
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              0,
+              1
+            ],
+            "targetCellKey": "0,1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "no_core",
+      "snapshot": {
+        "tick": 10,
+        "corePosition": null,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "resource_full_no_forced_deposit",
+      "snapshot": {
+        "tick": 10,
+        "resourceSpace": 0,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              1,
+              0
+            ],
+            "hp": 2,
+            "cargo": 1
+          }
+        ],
+        "resourceCells": {
+          "2,0": {
+            "position": [
+              2,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "DEPOSIT",
+            "target": [
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "two_workers_equidistant_tie_lower_id",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w2",
+            "unitType": "WORKER",
+            "position": [
+              2,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        },
+        {
+          "unitId": "w2",
+          "task": {
+            "type": "WAIT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "visible_bonus_confidence",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          },
+          "1,2": {
+            "position": [
+              1,
+              2
+            ],
+            "visible": false,
+            "lastSeenTick": 1
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "mission": {
+        "visibleBonus": 3
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "switch_threshold_hysteresis",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              3,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          },
+          "9,0": {
+            "position": [
+              9,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "previousAssignments": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ],
+      "mission": {
+        "switchThreshold": 2
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ]
+    },
+    {
+      "name": "no_candidate_cells_all_workers_wait",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              1,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w2",
+            "unitType": "WORKER",
+            "position": [
+              2,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": false,
+            "lastSeenTick": 1
+          },
+          "2,0": {
+            "position": [
+              2,
+              0
+            ],
+            "visible": false,
+            "lastSeenTick": 1
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "WAIT"
+          }
+        },
+        {
+          "unitId": "w2",
+          "task": {
+            "type": "WAIT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "always_survey_noop",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w2",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              1
+            ],
+            "hp": 2,
+            "cargo": 0
+          },
+          {
+            "id": "w3",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              2
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "mission": {
+        "alwaysSurvey": true
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        },
+        {
+          "unitId": "w2",
+          "task": {
+            "type": "WAIT"
+          }
+        },
+        {
+          "unitId": "w3",
+          "task": {
+            "type": "WAIT"
+          }
+        }
+      ]
+    },
+    {
+      "name": "refill_bonus_early_claim",
+      "snapshot": {
+        "tick": 10,
+        "units": [
+          {
+            "id": "w1",
+            "unitType": "WORKER",
+            "position": [
+              0,
+              0
+            ],
+            "hp": 2,
+            "cargo": 0
+          }
+        ],
+        "resourceCells": {
+          "1,0": {
+            "position": [
+              1,
+              0
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          },
+          "0,1": {
+            "position": [
+              0,
+              1
+            ],
+            "visible": true,
+            "lastSeenTick": 10
+          }
+        },
+        "refillPredictions": {
+          "1,0": 1
+        },
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 0,
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "threatMap": {},
+        "corePosition": [
+          0,
+          0
+        ],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {
+          "position": [
+            0,
+            0
+          ],
+          "status": null,
+          "carrierId": null
+        }
+      },
+      "mission": {
+        "refillLookahead": 3,
+        "refillBonus": 2,
+        "deadMineOverdueTicks": 5
+      },
+      "expected": [
+        {
+          "unitId": "w1",
+          "task": {
+            "type": "GO_RESOURCE",
+            "target": [
+              1,
+              0
+            ],
+            "targetCellKey": "1,0"
+          }
+        }
+      ]
+    }
+  ]
 }
