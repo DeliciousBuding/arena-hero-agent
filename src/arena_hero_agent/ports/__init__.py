@@ -6,6 +6,7 @@ from .game import GameClient
 from .leases import (
     DecisionLease,
     DecisionLeaseHandle,
+    LeaseDisposition,
     LeaseHandle,
     MigrationLease,
     MigrationLeaseHandle,
@@ -24,6 +25,7 @@ __all__ = [
     "EventJournal",
     "GameClient",
     "HealthReporter",
+    "LeaseDisposition",
     "LeaseHandle",
     "MigrationLease",
     "MigrationLeaseHandle",

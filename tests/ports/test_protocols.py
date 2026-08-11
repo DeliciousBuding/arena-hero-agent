@@ -23,6 +23,7 @@ from arena_hero_agent.ports import (
     EventJournal,
     GameClient,
     HealthReporter,
+    LeaseDisposition,
     LeaseHandle,
     MigrationLease,
     MigrationLeaseHandle,
@@ -49,6 +50,7 @@ class FakeClock:
 class _BaseHandle:
     tenant_id: TenantId = TENANT
     fencing_token: FencingToken = FENCE
+    disposition: LeaseDisposition = LeaseDisposition.ACTIVE
 
     async def renew(self, budget: DeadlineBudget) -> bool:
         return not budget.exhausted
@@ -76,10 +78,29 @@ class FakeDecisionLease:
     async def acquire_decision(
         self,
         tenant_id: TenantId,
+        generation: Generation,
         decision_id: DecisionId,
         budget: DeadlineBudget,
     ) -> DecisionLeaseHandle | None:
-        return FakeDecisionHandle(tenant_id=tenant_id, decision_id=decision_id)
+        return FakeDecisionHandle(
+            tenant_id=tenant_id,
+            decision_id=decision_id,
+        )
+
+    async def replace_decision(
+        self,
+        tenant_id: TenantId,
+        generation: Generation,
+        decision_id: DecisionId,
+        *,
+        expected_fencing_token: FencingToken,
+        budget: DeadlineBudget,
+    ) -> DecisionLeaseHandle | None:
+        return FakeDecisionHandle(
+            tenant_id=tenant_id,
+            decision_id=decision_id,
+            fencing_token=expected_fencing_token.next(),
+        )
 
 
 class FakeWriterLease:
@@ -90,6 +111,20 @@ class FakeWriterLease:
         budget: DeadlineBudget,
     ) -> WriterLeaseHandle | None:
         return FakeWriterHandle(tenant_id=tenant_id, generation=generation)
+
+    async def replace_writer(
+        self,
+        tenant_id: TenantId,
+        generation: Generation,
+        *,
+        expected_fencing_token: FencingToken,
+        budget: DeadlineBudget,
+    ) -> WriterLeaseHandle | None:
+        return FakeWriterHandle(
+            tenant_id=tenant_id,
+            generation=generation,
+            fencing_token=expected_fencing_token.next(),
+        )
 
 
 class FakeMigrationLease:
