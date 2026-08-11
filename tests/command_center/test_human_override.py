@@ -193,18 +193,14 @@ def test_human_override_matches_oracle_fixture() -> None:
 
 
 def test_stale_override_is_ignored_wholesale() -> None:
-    snapshot = _snapshot(
-        {"units": [{"id": WORKER, "role": "WORKER", "position": [1, 1]}]}
-    )
+    snapshot = _snapshot({"units": [{"id": WORKER, "role": "WORKER", "position": [1, 1]}]})
     store = _store(
         {
             "version": 1,
             "mode": "override",
             "updatedAt": "2026-08-12T00:00:00.000Z",
             "commands": [],
-            "goals": [
-                {"id": "g1", "unitId": WORKER, "kind": "goto", "target": [50, 50]}
-            ],
+            "goals": [{"id": "g1", "unitId": WORKER, "kind": "goto", "target": [50, 50]}],
         }
     )
     from datetime import datetime
@@ -222,9 +218,7 @@ def test_stale_override_is_ignored_wholesale() -> None:
 
 
 def test_invalid_or_missing_updated_at_never_expires() -> None:
-    snapshot = _snapshot(
-        {"units": [{"id": WORKER, "role": "WORKER", "position": [1, 1]}]}
-    )
+    snapshot = _snapshot({"units": [{"id": WORKER, "role": "WORKER", "position": [1, 1]}]})
     for updated_at in ("x", None):
         store = _store(
             {
@@ -241,9 +235,7 @@ def test_invalid_or_missing_updated_at_never_expires() -> None:
 
 
 def test_disabled_store_hands_control_to_agent() -> None:
-    snapshot = _snapshot(
-        {"units": [{"id": WORKER, "role": "WORKER", "position": [5, 1]}]}
-    )
+    snapshot = _snapshot({"units": [{"id": WORKER, "role": "WORKER", "position": [5, 1]}]})
     store = _store(
         {
             "version": 1,
@@ -290,15 +282,11 @@ def test_action_from_wire_parses_and_rejects() -> None:
 
 
 def test_basic_check_rejects_unknown_and_capability_mismatch() -> None:
-    snapshot = _snapshot(
-        {"units": [{"id": WORKER, "role": "WORKER", "position": [1, 1]}]}
-    )
+    snapshot = _snapshot({"units": [{"id": WORKER, "role": "WORKER", "position": [1, 1]}]})
     assert basic_check(snapshot, "ghost-unit", _move_up()) == "unknown_unit"
     assert basic_check(snapshot, WORKER, _shoot()) == "action_requires_ranger"
     assert basic_check(snapshot, WORKER, _move_up()) is None
-    vanguard = _snapshot(
-        {"units": [{"id": "v1", "role": "VANGUARD", "position": [1, 1]}]}
-    )
+    vanguard = _snapshot({"units": [{"id": "v1", "role": "VANGUARD", "position": [1, 1]}]})
     assert basic_check(vanguard, "v1", _shoot()) == "action_requires_ranger"
 
 
@@ -315,9 +303,7 @@ def test_goal_action_for_unit_mine_and_goto() -> None:
     assert isinstance(action, UnitAction) and action.type is UnitActionType.MOVE
     exhausted = GoalEntry(id="g2", unit_id=WORKER, kind="mine", target=(9, 9), created_at="x")
     assert goal_action_for_unit(snapshot, unit, exhausted) is None  # satisfied
-    arrived = _snapshot(
-        {"units": [{"id": WORKER, "role": "WORKER", "position": [5, 1]}]}
-    )
+    arrived = _snapshot({"units": [{"id": WORKER, "role": "WORKER", "position": [5, 1]}]})
     assert goal_action_for_unit(arrived, arrived.units[0], mine) == UnitAction(
         unit_id=EntityId(WORKER), type=UnitActionType.HARVEST
     )
