@@ -1,10 +1,12 @@
-# P4-11 SafetyPlanner/tactical — Behavior-Difference Registry
+# P4-11/P4-12 SafetyPlanner/tactical + worker assignment — Behavior-Difference Registry
 
 最后更新：2026-08-12
 
 This file is the authoritative behavior-difference registry for the P4-11
 deterministic safety/tactical layer (`src/arena_hero_agent/planning/` and
-`src/arena_hero_agent/strategies/`). It classifies every observable difference
+`src/arena_hero_agent/strategies/`) and the P4-12 worker assignment layer
+(`src/arena_hero_agent/planning/worker_assignment.py` and
+`min_cost_assignment.py`). It classifies every observable difference
 between the Python implementation and the legacy TypeScript oracle
 (`arena-hero-agent-ts@8cf5cbb`).
 
@@ -30,6 +32,24 @@ Classification rules:
 `step_toward`, `mission_value` (target_confidence / is_collectable /
 refill_bonus / surveyor_ids).
 
+P4-12 worker assignment sections:
+
+- `min_cost_assignment` — the deterministic rectangular Hungarian solver
+  (`minimumCostAssignment` / `minimum_cost_assignment`), tie-break included.
+- `assignment_routing` — the bounded obstacle-aware BFS distance field
+  (`shortestPathDistances` / `shortest_path_distances`).
+- `progress_decay` and `sticky_bonus` — the progress-aware sticky kernel and
+  its application over the previous tick's assignments.
+- `worker_assignments` — full `WorkerTaskPlanner.plan()` outputs (single-tick
+  and multi-tick claim-lease sequences). This replaces the former
+  EXPECTED_UNKNOWN `worker_assignment_matrix` entry.
+
+Note on dead mission config: `alwaysSurvey` and `surveyOnSupplyGap` are dead
+variables in the oracle's worker-task-planner (edfa8ab cleanup) and have no
+behavioral effect in either runtime at this layer. The `always_survey_noop`
+fixture case pins that the Python layer also ignores them. The config fields
+remain in `MissionConfig` for parity only.
+
 ## ALLOWED_DIFFERENCES
 
 | id | Python behavior | Oracle behavior | Rationale |
@@ -39,6 +59,8 @@ refill_bonus / surveyor_ids).
 | `planner_composition` | `SafetyPlanner` is a deterministic composition of fixture-compared helpers (worker forced-task → action, vanguard sweep/guard, ranger shoot/guard, core spawn budget). | The oracle SafetyPlanner is stateful and spans thousands of lines. | The composition is deliberately simpler; every helper it calls is oracle-compared. Composition behavior is not a MATCH claim. |
 | `beacon_sentinel` | When no beacon observation exists, the snapshot uses `BeaconInfo(position=(0,0), status=None, carrier_id=None)`. | TS snapshot leaves `beacon` undefined. | `status=None` means unseen; every beacon-dependent gate (pickup/drop/forced task) fails closed on it. |
 | `threat_map_float_accumulation` | Threat contributions accumulate in enemy input order, then fixed `(dx, dy)` order, using IEEE-754 doubles. | Same accumulation order in the oracle. | The captured fixture values are bit-exact because both runtimes use doubles; registered so a future reorder cannot silently change values. |
+| `worker_assignment_refill_predictions_parameter` | `assign_worker_tasks` receives `refillPredictions` as an explicit `refill_predictions` parameter (default `None` = zero regression). | The oracle reads `snapshot.refillPredictions` as a snapshot field. | The prediction pipeline itself is EXPECTED_UNKNOWN; the deterministic layer takes the predictions as an input so the same snapshot contract stays pure and diffable. |
+| `worker_assignment_claims_explicit_state` | The cross-tick GO_RESOURCE claim lease is an explicit deterministic input/output (`claims` → result `claims`). | The oracle hides the lease in `WorkerTaskPlanner` class state (`this.claims`). | Same pruning/reservation/update behavior, but as a pure function: identical inputs always produce identical outputs and claims, which is what the P4-12 differential requires. |
 
 ## EXPECTED_UNKNOWN (not migrated, never MATCH)
 
@@ -53,7 +75,9 @@ layer. These remain visible as open work for later phases:
 - `alliance_logic` — ally awareness and coordination
 - `refill_prediction_pipeline` — mine refill prediction model
 - `macro_policy` — economy/macro transition policy
-- `worker_assignment_matrix` — worker cost-matrix assignment (P4-12)
+- `worker_liveness_blockade` — W5 cell-blocker view (`options.cellBlocker`):
+  a stateful liveness-tracker hook that the deterministic worker-assignment
+  layer does not take; the oracle default (no blocker) is bit-identical
 
 The registry test (`tests/planning/test_differential_registry.py`) enforces
 that every fixture section is classified and that the EXPECTED_UNKNOWN set can
