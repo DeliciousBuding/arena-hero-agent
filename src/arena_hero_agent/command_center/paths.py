@@ -160,6 +160,11 @@ def outcome_jsonl_path(data_root: str | os.PathLike[str], tenant: str | TenantId
     return telemetry_dir(data_root, tenant) / "outcome.jsonl"
 
 
+def write_api_audit_path(data_root: str | os.PathLike[str]) -> Path:
+    """Write API security gate audit log: ``<data_root>/runtime/write-api-audit.jsonl``."""
+    return validate_data_root(data_root) / "runtime" / "write-api-audit.jsonl"
+
+
 __all__ = [
     "DATA_ROOT_ENV",
     "SIM_TENANT_PREFIX",
@@ -179,4 +184,5 @@ __all__ = [
     "validate_data_root",
     "validate_survey_tenant",
     "validate_tenant",
+    "write_api_audit_path",
 ]

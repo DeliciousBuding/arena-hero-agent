@@ -81,6 +81,7 @@ from .paths import (
     validate_data_root,
     validate_survey_tenant,
     validate_tenant,
+    write_api_audit_path,
 )
 from .registry import (
     AGENT_MODES,
@@ -178,5 +179,6 @@ __all__ = [
     "validate_data_root",
     "validate_survey_tenant",
     "validate_tenant",
+    "write_api_audit_path",
     "write_human_store",
 ]
