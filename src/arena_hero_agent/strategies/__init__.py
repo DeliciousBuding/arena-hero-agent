@@ -1,5 +1,13 @@
 """Deterministic safety and tactical strategy implementations."""
 
+from .composition import (
+    ComposedDecider,
+    ComposedDeciderConfig,
+    compose_decider,
+    merge_worker_tasks,
+    plan_to_decision,
+    snapshot_from_turn,
+)
 from .safety_helpers import (
     VisibleEnemy,
     aggressive_shot_priority,
@@ -107,6 +115,12 @@ __all__ = [
     "threat_weighted_direction",
     "tier_of_damage_rank",
     "worker_dense_direction",
+    "ComposedDecider",
+    "ComposedDeciderConfig",
+    "compose_decider",
+    "merge_worker_tasks",
+    "plan_to_decision",
+    "snapshot_from_turn",
     "apply_variant_overrides",
     "is_safety_variant",
     "resolve_safety_variant_config",
