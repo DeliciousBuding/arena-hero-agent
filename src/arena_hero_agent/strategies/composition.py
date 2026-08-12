@@ -50,6 +50,9 @@ from arena_hero_agent.domain import (
     EconomyState,
     EconomyTurnInput,
     UnitRole,
+    manhattan,
+    parse_cell_key,
+    unit_price,
 )
 from arena_hero_agent.planning import (
     Assignment,
@@ -71,6 +74,38 @@ from arena_hero_agent.planning import (
     UnitAction as PlanningUnitAction,
 )
 
+from .economy_budget import heal_reserve, projected_core_resources, unit_max_health
+from .movement_guard import (
+    DEFAULT_DEPOSIT_REPATH_STREAK,
+    DEFAULT_DEPOSIT_STALL_TICKS,
+    DEFAULT_LOOP_MIN_UNIQUE,
+    DEFAULT_LOOP_WINDOW,
+    DepositProgress,
+    LoopTrail,
+    MoveBackoffState,
+    deposit_escape_needed,
+    detect_spatial_loop,
+    forced_escape_step,
+    mark_loop_repath,
+    observe_loop_position,
+    record_deposit_repath,
+    refresh_deposit_progress,
+    should_pause_move,
+    soft_obstacles_from_trail,
+    update_move_backoff,
+)
+from .raid_quota import (
+    RAID_MAX_DISTANCE,
+    RAID_MIN_FIGHTERS,
+    RAID_MIN_OBSERVATIONS,
+    StationaryCore,
+    StrikeGroup,
+    core_assault_quota,
+    pick_raid_target,
+    raid_fighters_ready,
+    raid_guard_ids,
+    select_strike_group,
+)
 from .safety_planner import SafetyPlanner, step_toward, worker_dense_direction
 from .safety_planner_config import DEFAULT_SAFETY_CONFIG, SafetyPlannerConfig
 from .stuck_guard import (
@@ -78,6 +113,7 @@ from .stuck_guard import (
     DEFAULT_STUCK_GUARD_TICKS,
     detect_stuck_unit_ids,
 )
+from .tactical_squads import reconcile_tactical_squads
 from .variant_registry import apply_variant_overrides
 
 # Legacy TS DENSE_DELTAS table (safety-planner.ts): 16 dense scan slots. The
@@ -143,6 +179,16 @@ class ComposedDeciderConfig:
     stuck_guard_enabled: bool = False
     stuck_guard_ticks: int = DEFAULT_STUCK_GUARD_TICKS
     stuck_guard_radius: int = DEFAULT_STUCK_GUARD_RADIUS
+    movement_guard_enabled: bool = False
+    movement_loop_window: int = DEFAULT_LOOP_WINDOW
+    movement_loop_min_unique: int = DEFAULT_LOOP_MIN_UNIQUE
+    movement_deposit_stall_ticks: int = DEFAULT_DEPOSIT_STALL_TICKS
+    movement_deposit_repath_streak: int = DEFAULT_DEPOSIT_REPATH_STREAK
+    economy_budget_enabled: bool = False
+    raid_quota_enabled: bool = False
+    raid_min_observations: int = RAID_MIN_OBSERVATIONS
+    raid_max_distance: int = RAID_MAX_DISTANCE
+    raid_min_fighters: int = RAID_MIN_FIGHTERS
 
     def __post_init__(self) -> None:
         if not isinstance(self.safety_config, SafetyPlannerConfig):
@@ -161,10 +207,36 @@ class ComposedDeciderConfig:
             raise TypeError("stuck_guard_ticks must be an integer")
         if self.stuck_guard_ticks < 1:
             raise ValueError("stuck_guard_ticks must be at least 1")
-        if isinstance(self.stuck_guard_radius, bool) or not isinstance(self.stuck_guard_radius, int):
+        if isinstance(self.stuck_guard_radius, bool) or not isinstance(
+            self.stuck_guard_radius, int
+        ):
             raise TypeError("stuck_guard_radius must be an integer")
         if self.stuck_guard_radius < 1:
             raise ValueError("stuck_guard_radius must be at least 1")
+        for name in (
+            "movement_guard_enabled",
+            "economy_budget_enabled",
+            "raid_quota_enabled",
+        ):
+            if not isinstance(getattr(self, name), bool):
+                raise TypeError(f"{name} must be a boolean")
+        for name in (
+            "movement_loop_window",
+            "movement_loop_min_unique",
+            "movement_deposit_stall_ticks",
+            "movement_deposit_repath_streak",
+            "raid_min_observations",
+            "raid_min_fighters",
+        ):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, int):
+                raise TypeError(f"{name} must be an integer")
+            if value < 1:
+                raise ValueError(f"{name} must be at least 1")
+        if isinstance(self.raid_max_distance, bool) or not isinstance(self.raid_max_distance, int):
+            raise TypeError("raid_max_distance must be an integer")
+        if self.raid_max_distance < 0:
+            raise ValueError("raid_max_distance cannot be negative")
 
 
 def snapshot_from_turn(observation: TurnObservation) -> PlanningSnapshot:
@@ -281,6 +353,87 @@ def merge_worker_tasks(
     )
 
 
+_MOVEMENT_TASK_TYPES: Final = frozenset(
+    {
+        TaskType.GO_RESOURCE,
+        TaskType.DEPOSIT,
+        TaskType.RETURN_FOR_HEAL,
+        TaskType.PICKUP_BEACON,
+    }
+)
+
+
+def _apply_movement_overrides(
+    plan: Plan,
+    escape_steps: dict[str, Direction],
+    pause_ids: frozenset[str],
+) -> Plan:
+    """Override worker MOVE actions with forced escapes or short-stop WAITs."""
+
+    if not escape_steps and not pause_ids:
+        return plan
+    actions = []
+    for action in plan.unit_actions:
+        unit_id = action.unit_id.value
+        if action.type is UnitActionType.MOVE and unit_id in pause_ids:
+            actions.append(PlanningUnitAction(unit_id=action.unit_id, type=UnitActionType.WAIT))
+        elif action.type is UnitActionType.MOVE and unit_id in escape_steps:
+            actions.append(
+                PlanningUnitAction(
+                    unit_id=action.unit_id,
+                    type=UnitActionType.MOVE,
+                    direction=escape_steps[unit_id],
+                )
+            )
+        else:
+            actions.append(action)
+    return Plan(
+        tick=plan.tick,
+        unit_actions=tuple(actions),
+        core_action=plan.core_action,
+    )
+
+
+def _apply_raid_strike(
+    plan: Plan,
+    snapshot: PlanningSnapshot,
+    target: Coordinate,
+    strike: StrikeGroup,
+) -> Plan:
+    """Point strike-group rangers and vanguards at a confirmed enemy core."""
+
+    unit_by_id = {unit.id.value: unit for unit in snapshot.units}
+    actions = []
+    for action in plan.unit_actions:
+        unit_id = action.unit_id.value
+        unit = unit_by_id.get(unit_id)
+        if unit is None:
+            actions.append(action)
+        elif unit_id in strike.ranger_ids:
+            actions.append(
+                PlanningUnitAction(
+                    unit_id=action.unit_id,
+                    type=UnitActionType.SHOOT,
+                    expected_cell=target,
+                )
+            )
+        elif unit_id in strike.vanguard_ids and unit.position != target:
+            actions.append(
+                PlanningUnitAction(
+                    unit_id=action.unit_id,
+                    type=UnitActionType.MOVE,
+                    direction=step_toward(unit.position, target),
+                )
+            )
+        else:
+            actions.append(action)
+    return Plan(
+        tick=plan.tick,
+        unit_actions=tuple(actions),
+        core_action=plan.core_action,
+    )
+
+
 def _unit_intent(action: object) -> UnitIntent:
     if type(action) is not PlanningUnitAction:
         raise TypeError("expected a planning UnitAction")
@@ -338,6 +491,12 @@ class ComposedDecider:
         self._previous_assignments: tuple[Assignment, ...] = ()
         self._claims: frozenset[WorkerClaim] = frozenset()
         self._position_history: dict[str, tuple[Coordinate, ...]] = {}
+        self._loop_trails: dict[str, LoopTrail] = {}
+        self._deposit_progress: dict[str, DepositProgress] = {}
+        self._move_backoff: dict[str, MoveBackoffState] = {}
+        self._previous_move_actions: dict[str, bool] = {}
+        self._squad_by_unit: dict[str, str] = {}
+        self._stationary_cores: dict[str, StationaryCore] = {}
 
     @property
     def config(self) -> ComposedDeciderConfig:
@@ -393,6 +552,244 @@ class ComposedDecider:
         self._position_history = positions_by_unit
         return frozenset(blocked)
 
+    def _previous_assignment_for(self, unit_id: str) -> Assignment | None:
+        """Return the worker's assignment from the previous tick, if any."""
+
+        return next(
+            (
+                assignment
+                for assignment in self._previous_assignments
+                if assignment.unit_id == unit_id
+            ),
+            None,
+        )
+
+    @staticmethod
+    def _movement_target_for(assignment: Assignment | None) -> Coordinate | None:
+        """Return the previous movement target, or None for non-movement tasks."""
+
+        if assignment is None or assignment.task.type not in _MOVEMENT_TASK_TYPES:
+            return None
+        return assignment.task.target
+
+    @staticmethod
+    def _previous_go_resource_key(assignment: Assignment | None) -> str | None:
+        """Return the previous GO_RESOURCE cell key to block, if any."""
+
+        if assignment is None or assignment.task.type is not TaskType.GO_RESOURCE:
+            return None
+        key = assignment.task.target_cell_key
+        if key is None and assignment.task.target is not None:
+            key = assignment.task.target.cell_key
+        return key
+
+    @staticmethod
+    def _is_core_return(assignment: Assignment | None) -> bool:
+        """Return whether the previous assignment walks the worker back to Core."""
+
+        return assignment is not None and assignment.task.type in (
+            TaskType.DEPOSIT,
+            TaskType.RETURN_FOR_HEAL,
+        )
+
+    def _movement_guard_hook(
+        self,
+        snapshot: PlanningSnapshot,
+        blocked_cells: frozenset[str],
+    ) -> tuple[frozenset[str], dict[str, Direction], frozenset[str]]:
+        """Fold one tick of movement observations into escape/pause overrides."""
+
+        escape_steps: dict[str, Direction] = {}
+        pause_ids: set[str] = set()
+        core = snapshot.core_position
+        for unit in snapshot.units:
+            if unit.unit_role is not UnitRole.WORKER:
+                continue
+            unit_id = unit.id.value
+            previous_trail = self._loop_trails.get(unit_id, LoopTrail())
+
+            previous_move = self._previous_move_actions.get(unit_id, False)
+            previous_position = previous_trail.last_pos
+            moved = (
+                previous_move
+                and previous_position is not None
+                and previous_position != unit.position
+            )
+            blocked = (
+                previous_move
+                and previous_position is not None
+                and previous_position == unit.position
+            )
+            backoff = update_move_backoff(
+                self._move_backoff.get(unit_id),
+                tick=snapshot.tick,
+                moved=moved,
+                blocked=blocked,
+            )
+            self._move_backoff[unit_id] = backoff
+            if should_pause_move(backoff, tick=snapshot.tick):
+                pause_ids.add(unit_id)
+
+            trail = observe_loop_position(
+                previous_trail,
+                unit.position,
+                window=self._config.movement_loop_window,
+            )
+            assignment = self._previous_assignment_for(unit_id)
+            target = self._movement_target_for(assignment)
+            loop = detect_spatial_loop(
+                trail,
+                target=target,
+                window=self._config.movement_loop_window,
+                min_unique=self._config.movement_loop_min_unique,
+            )
+            if loop and target is not None:
+                trail = mark_loop_repath(trail, snapshot.tick)
+                key = self._previous_go_resource_key(assignment)
+                if key is not None:
+                    blocked_cells = blocked_cells | {key}
+                step = forced_escape_step(
+                    unit.position,
+                    target,
+                    soft_obstacles_from_trail(trail, unit.position),
+                    repath_side=trail.repath_side,
+                )
+                if step is not None:
+                    escape_steps[unit_id] = step
+            elif core is not None and target is not None and self._is_core_return(assignment):
+                progress = refresh_deposit_progress(
+                    self._deposit_progress.get(unit_id),
+                    manhattan(unit.position, core),
+                    snapshot.tick,
+                )
+                needs_escape = deposit_escape_needed(
+                    progress,
+                    snapshot.tick,
+                    stall_ticks=self._config.movement_deposit_stall_ticks,
+                    repath_streak_limit=self._config.movement_deposit_repath_streak,
+                )
+                if needs_escape:
+                    step = forced_escape_step(
+                        unit.position,
+                        core,
+                        soft_obstacles_from_trail(trail, unit.position),
+                        repath_side=trail.repath_side,
+                    )
+                    if step is not None:
+                        escape_steps[unit_id] = step
+                    progress = record_deposit_repath(progress, repathed=True)
+                else:
+                    progress = record_deposit_repath(progress, repathed=False)
+                self._deposit_progress[unit_id] = progress
+            self._loop_trails[unit_id] = trail
+        return blocked_cells, escape_steps, frozenset(pause_ids)
+
+    def _economy_budget_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
+        """Skip Core SPAWN when same-tick deposits minus heal reserve cannot pay."""
+
+        core_action = plan.core_action
+        if core_action is None or core_action.type is not CoreActionType.SPAWN:
+            return plan
+        core = snapshot.core_position
+        deposit_cargo = 0
+        healing_roles: list[UnitRole] = []
+        if core is not None:
+            for unit in snapshot.units:
+                if unit.position != core:
+                    continue
+                if unit.unit_role is UnitRole.WORKER and unit.cargo > 0:
+                    deposit_cargo += unit.cargo
+                if unit.health < unit_max_health(unit.unit_role):
+                    healing_roles.append(unit.unit_role)
+        projected = projected_core_resources(
+            resources=snapshot.resources,
+            resource_space=snapshot.resource_space,
+            deposit_cargo=deposit_cargo,
+            healing_reserve=heal_reserve(healing_roles),
+        )
+        cost = unit_price(core_action.unit_role, snapshot.population, snapshot.rules_version)
+        if projected >= cost:
+            return plan
+        return Plan(
+            tick=plan.tick,
+            unit_actions=plan.unit_actions,
+            core_action=PlanningCoreAction(type=CoreActionType.WAIT),
+        )
+
+    @staticmethod
+    def _raid_tenant_id(snapshot: PlanningSnapshot) -> str:
+        """Return a stable tenant id for squad formation."""
+
+        return snapshot.core_id if snapshot.core_id else "arena"
+
+    def _advance_stationary_cores(self, snapshot: PlanningSnapshot) -> dict[str, StationaryCore]:
+        """Track non-unit enemy cells as candidate stationary enemy cores."""
+
+        enemy_unit_cells = {unit.position.cell_key for unit in snapshot.enemy_units}
+        stationary: dict[str, StationaryCore] = {}
+        for key in snapshot.enemy_cells - enemy_unit_cells:
+            previous = self._stationary_cores.get(key)
+            observations = previous.observations + 1 if previous is not None else 1
+            position = previous.position if previous is not None else parse_cell_key(key)
+            stationary[key] = StationaryCore(key=key, position=position, observations=observations)
+        self._stationary_cores = stationary
+        return stationary
+
+    def _raid_quota_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
+        """Form squads and, when a raid is ready, point the strike group at Core."""
+
+        membership = reconcile_tactical_squads(
+            snapshot.units,
+            self._squad_by_unit or None,
+            self._raid_tenant_id(snapshot),
+        )
+        self._squad_by_unit = dict(membership.squad_by_unit)
+        home_squad = next(
+            (squad for squad in membership.squads if squad.role == "HOME_DEFENSE"),
+            None,
+        )
+        guard_ids = raid_guard_ids(home_squad)
+
+        target: Coordinate | None = None
+        if snapshot.core_position is not None:
+            target = pick_raid_target(
+                self._advance_stationary_cores(snapshot),
+                snapshot.core_position,
+                min_observations=self._config.raid_min_observations,
+                max_distance=self._config.raid_max_distance,
+            )
+
+        fighter_count = sum(
+            1
+            for unit in snapshot.units
+            if unit.unit_role in (UnitRole.VANGUARD, UnitRole.RANGER)
+        )
+        if not raid_fighters_ready(fighter_count, min_fighters=self._config.raid_min_fighters):
+            return plan
+        if target is None:
+            return plan
+
+        vanguard_ids = [
+            unit.id.value
+            for unit in snapshot.units
+            if unit.unit_role is UnitRole.VANGUARD and unit.id.value not in guard_ids
+        ]
+        ranger_ids = [
+            unit.id.value
+            for unit in snapshot.units
+            if unit.unit_role is UnitRole.RANGER and unit.id.value not in guard_ids
+        ]
+        quota = core_assault_quota(
+            len(vanguard_ids),
+            len(ranger_ids),
+            home_vanguards=0,
+            home_rangers=0,
+        )
+        strike = select_strike_group(vanguard_ids, ranger_ids, quota)
+        if not strike.member_ids:
+            return plan
+        return _apply_raid_strike(plan, snapshot, target, strike)
+
     def decide_snapshot(self, snapshot: PlanningSnapshot) -> Plan:
         """Produce one merged plan for a planning snapshot (pure aside from state)."""
 
@@ -402,6 +799,15 @@ class ComposedDecider:
             if self._config.stuck_guard_enabled
             else frozenset()
         )
+
+        escape_steps: dict[str, Direction] = {}
+        pause_ids: frozenset[str] = frozenset()
+        if self._config.movement_guard_enabled:
+            blocked_cells, escape_steps, pause_ids = self._movement_guard_hook(
+                snapshot,
+                blocked_cells,
+            )
+
         result = assign_worker_tasks(
             snapshot,
             self._previous_assignments,
@@ -412,7 +818,25 @@ class ComposedDecider:
         )
         self._previous_assignments = result.plan.assignments
         self._claims = result.claims
-        return merge_worker_tasks(baseline, result.plan.assignments, snapshot)
+
+        plan = merge_worker_tasks(baseline, result.plan.assignments, snapshot)
+
+        if self._config.movement_guard_enabled:
+            plan = _apply_movement_overrides(plan, escape_steps, pause_ids)
+
+        if self._config.economy_budget_enabled:
+            plan = self._economy_budget_hook(snapshot, plan)
+
+        if self._config.raid_quota_enabled:
+            plan = self._raid_quota_hook(snapshot, plan)
+
+        if self._config.movement_guard_enabled:
+            self._previous_move_actions = {
+                action.unit_id.value: action.type is UnitActionType.MOVE
+                for action in plan.unit_actions
+            }
+
+        return plan
 
 
 def compose_decider(config: ComposedDeciderConfig | None = None) -> Decider:
