@@ -100,9 +100,12 @@ def test_exploration_openapi_schema_is_non_empty() -> None:
     }
 
 
-def test_exploration_route_unwired_returns_501(tmp_path: Path) -> None:
-    # /api/exploration (per-tenant survey+lifecycle+current) has no Python port yet:
-    # registered + validated, but unwired -> 501 (parity gap, not 404/200).
+def test_exploration_route_returns_200(tmp_path: Path) -> None:
+    # /api/exploration (per-tenant survey+lifecycle+current) wired in W44 wave 6:
+    # empty root fails open with survey null (TS parity), never 500.
     response = _app(tmp_path).handle(ApiRequest("GET", "/api/exploration"))
-    assert response.status == 501
-    assert _json_body(response) == {"error": "not implemented"}
+    assert response.status == 200
+    body = _json_body(response)
+    assert body["tenant"] == "t1"
+    assert body["survey"] is None
+    assert body["generatedAt"] == body.get("generatedAt")

@@ -47,6 +47,7 @@ from .enemy_cores import (
 )
 from .enemy_heat import load_enemy_heat
 from .events import EVENT_KINDS, load_events
+from .exploration import load_exploration
 from .exploration_coverage import (
     CHUNK_SIZE,
     RESURVEY_CAP,
@@ -58,6 +59,7 @@ from .human import DEFAULT_LIMIT as HUMAN_AUDIT_DEFAULT_LIMIT
 from .human import MAX_KEEP as HUMAN_AUDIT_MAX_KEEP
 from .human import load_human_audit, read_human_audit
 from .leaderboard import SNAPSHOT_STALE_SECONDS, load_leaderboard_intel
+from .lifecycle import aggregate_lifecycle, load_lifecycle_audit
 from .map_lod import MAP_LOD_CHUNK, aggregate_map_lod, load_map_lod
 from .mine_patterns import load_mine_patterns
 from .mines import (
@@ -85,6 +87,15 @@ from .shop_history import (
     snapshot_signature,
 )
 from .snapshots import load_plan, load_world
+from .survey import (
+    load_chunks_db,
+    load_lifecycle_db,
+    load_spend_trend,
+    load_survey,
+    load_survey_db,
+    load_tenant_survey_cached,
+    load_unit_lifecycle_db,
+)
 from .survey_mine import load_survey_mine
 from .trail import DEFAULT_LIMIT as TRAIL_DEFAULT_LIMIT
 from .trail import SOURCES as AUDIT_SOURCES
@@ -143,8 +154,10 @@ __all__ = [
     "load_alliance_defense",
     "load_alliance_survey",
     "load_alliance_snapshot",
+    "aggregate_lifecycle",
     "load_arbitrations",
     "load_audit_trail",
+    "load_lifecycle_audit",
     "load_decision_audit",
     "load_decision_input",
     "load_events",
@@ -174,6 +187,14 @@ __all__ = [
     "load_plan",
     "load_shop_history",
     "load_shop_history",
+    "load_chunks_db",
+    "load_exploration",
+    "load_lifecycle_db",
+    "load_spend_trend",
+    "load_survey",
+    "load_survey_db",
+    "load_tenant_survey_cached",
+    "load_unit_lifecycle_db",
     "load_survey_mine",
     "load_redeem_history",
     "load_shop_history_entries",

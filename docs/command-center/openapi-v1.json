@@ -2156,7 +2156,637 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "oneOf": [
+                    {
+                      "properties": {
+                        "cachedAt": {
+                          "type": "string"
+                        },
+                        "consumption": {
+                          "properties": {
+                            "cargoDropped": {
+                              "type": "integer"
+                            },
+                            "coreDamageTaken": {
+                              "type": "integer"
+                            },
+                            "depositAmount": {
+                              "type": "integer"
+                            },
+                            "depositFail": {
+                              "type": "integer"
+                            },
+                            "depositOk": {
+                              "type": "integer"
+                            },
+                            "destroyedByEnemy": {
+                              "type": "integer"
+                            },
+                            "harvestAmount": {
+                              "type": "integer"
+                            },
+                            "harvestFail": {
+                              "type": "integer"
+                            },
+                            "harvestOk": {
+                              "type": "integer"
+                            },
+                            "respawns": {
+                              "type": "integer"
+                            },
+                            "selfDestructs": {
+                              "type": "integer"
+                            },
+                            "spawns": {
+                              "type": "integer"
+                            },
+                            "spends": {
+                              "properties": {
+                                "byKind": {
+                                  "additionalProperties": {
+                                    "type": "integer"
+                                  },
+                                  "type": "object"
+                                },
+                                "byType": {
+                                  "additionalProperties": {
+                                    "type": "integer"
+                                  },
+                                  "type": "object"
+                                },
+                                "total": {
+                                  "type": "integer"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "unitDestroyed": {
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "harvestOk",
+                            "harvestFail",
+                            "harvestAmount",
+                            "depositOk",
+                            "spends"
+                          ],
+                          "type": "object"
+                        },
+                        "core": {
+                          "nullable": true,
+                          "properties": {
+                            "actor": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "capturedResources": {
+                              "type": "integer"
+                            },
+                            "captures": {
+                              "type": "object"
+                            },
+                            "damageEvents": {
+                              "type": "integer"
+                            },
+                            "damageTaken": {
+                              "type": "integer"
+                            },
+                            "destroyed": {
+                              "type": "boolean"
+                            },
+                            "destroyedAtTick": {
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "destroyedBy": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "healFail": {
+                              "type": "integer"
+                            },
+                            "healOk": {
+                              "type": "integer"
+                            },
+                            "lastPosition": {
+                              "items": {
+                                "type": "integer"
+                              },
+                              "nullable": true,
+                              "type": "array"
+                            },
+                            "moveFail": {
+                              "type": "integer"
+                            },
+                            "moveOk": {
+                              "type": "integer"
+                            },
+                            "positionSamples": {
+                              "items": {
+                                "type": "object"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "generatedAt": {
+                          "type": "string"
+                        },
+                        "mines": {
+                          "items": {
+                            "properties": {
+                              "active": {
+                                "type": "boolean"
+                              },
+                              "cell": {
+                                "type": "string"
+                              },
+                              "firstSeenTick": {
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "harvestAmount": {
+                                "type": "integer"
+                              },
+                              "harvestCount": {
+                                "type": "integer"
+                              },
+                              "harvestFailCount": {
+                                "type": "integer"
+                              },
+                              "lastSeenTick": {
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "refillGapTicks": {
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "x": {
+                                "type": "integer"
+                              },
+                              "y": {
+                                "type": "integer"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "runId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "tenant": {
+                          "type": "string"
+                        },
+                        "units": {
+                          "items": {
+                            "properties": {
+                              "actor": {
+                                "type": "string"
+                              },
+                              "alive": {
+                                "type": "boolean"
+                              },
+                              "combat": {
+                                "type": "object"
+                              },
+                              "deposit": {
+                                "type": "object"
+                              },
+                              "destroyedAtTick": {
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "destroyedBy": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "drops": {
+                                "type": "integer"
+                              },
+                              "firstSeenTick": {
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "harvest": {
+                                "type": "object"
+                              },
+                              "heals": {
+                                "type": "object"
+                              },
+                              "lastPosition": {
+                                "items": {
+                                  "type": "integer"
+                                },
+                                "nullable": true,
+                                "type": "array"
+                              },
+                              "lastSeenTick": {
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "moves": {
+                                "type": "object"
+                              },
+                              "pickups": {
+                                "type": "integer"
+                              },
+                              "positionSamples": {
+                                "items": {
+                                  "properties": {
+                                    "position": {
+                                      "items": {
+                                        "type": "integer"
+                                      },
+                                      "type": "array"
+                                    },
+                                    "tick": {
+                                      "type": "integer"
+                                    }
+                                  },
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "role": {
+                                "type": "string"
+                              },
+                              "spawned": {
+                                "type": "boolean"
+                              },
+                              "unitType": {
+                                "nullable": true,
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "actor",
+                              "role",
+                              "alive",
+                              "spawned"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "window": {
+                          "properties": {
+                            "cases": {
+                              "type": "integer"
+                            },
+                            "events": {
+                              "type": "integer"
+                            },
+                            "fromTick": {
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "toTick": {
+                              "nullable": true,
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "fromTick",
+                            "toTick",
+                            "cases",
+                            "events"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "generatedAt",
+                        "tenant",
+                        "window",
+                        "units",
+                        "mines",
+                        "core",
+                        "consumption"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": {
+                        "properties": {
+                          "cachedAt": {
+                            "type": "string"
+                          },
+                          "consumption": {
+                            "properties": {
+                              "cargoDropped": {
+                                "type": "integer"
+                              },
+                              "coreDamageTaken": {
+                                "type": "integer"
+                              },
+                              "depositAmount": {
+                                "type": "integer"
+                              },
+                              "depositFail": {
+                                "type": "integer"
+                              },
+                              "depositOk": {
+                                "type": "integer"
+                              },
+                              "destroyedByEnemy": {
+                                "type": "integer"
+                              },
+                              "harvestAmount": {
+                                "type": "integer"
+                              },
+                              "harvestFail": {
+                                "type": "integer"
+                              },
+                              "harvestOk": {
+                                "type": "integer"
+                              },
+                              "respawns": {
+                                "type": "integer"
+                              },
+                              "selfDestructs": {
+                                "type": "integer"
+                              },
+                              "spawns": {
+                                "type": "integer"
+                              },
+                              "spends": {
+                                "properties": {
+                                  "byKind": {
+                                    "additionalProperties": {
+                                      "type": "integer"
+                                    },
+                                    "type": "object"
+                                  },
+                                  "byType": {
+                                    "additionalProperties": {
+                                      "type": "integer"
+                                    },
+                                    "type": "object"
+                                  },
+                                  "total": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "type": "object"
+                              },
+                              "unitDestroyed": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "harvestOk",
+                              "harvestFail",
+                              "harvestAmount",
+                              "depositOk",
+                              "spends"
+                            ],
+                            "type": "object"
+                          },
+                          "core": {
+                            "nullable": true,
+                            "properties": {
+                              "actor": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "capturedResources": {
+                                "type": "integer"
+                              },
+                              "captures": {
+                                "type": "object"
+                              },
+                              "damageEvents": {
+                                "type": "integer"
+                              },
+                              "damageTaken": {
+                                "type": "integer"
+                              },
+                              "destroyed": {
+                                "type": "boolean"
+                              },
+                              "destroyedAtTick": {
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "destroyedBy": {
+                                "nullable": true,
+                                "type": "string"
+                              },
+                              "healFail": {
+                                "type": "integer"
+                              },
+                              "healOk": {
+                                "type": "integer"
+                              },
+                              "lastPosition": {
+                                "items": {
+                                  "type": "integer"
+                                },
+                                "nullable": true,
+                                "type": "array"
+                              },
+                              "moveFail": {
+                                "type": "integer"
+                              },
+                              "moveOk": {
+                                "type": "integer"
+                              },
+                              "positionSamples": {
+                                "items": {
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "generatedAt": {
+                            "type": "string"
+                          },
+                          "mines": {
+                            "items": {
+                              "properties": {
+                                "active": {
+                                  "type": "boolean"
+                                },
+                                "cell": {
+                                  "type": "string"
+                                },
+                                "firstSeenTick": {
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "harvestAmount": {
+                                  "type": "integer"
+                                },
+                                "harvestCount": {
+                                  "type": "integer"
+                                },
+                                "harvestFailCount": {
+                                  "type": "integer"
+                                },
+                                "lastSeenTick": {
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "refillGapTicks": {
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "x": {
+                                  "type": "integer"
+                                },
+                                "y": {
+                                  "type": "integer"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "runId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          },
+                          "units": {
+                            "items": {
+                              "properties": {
+                                "actor": {
+                                  "type": "string"
+                                },
+                                "alive": {
+                                  "type": "boolean"
+                                },
+                                "combat": {
+                                  "type": "object"
+                                },
+                                "deposit": {
+                                  "type": "object"
+                                },
+                                "destroyedAtTick": {
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "destroyedBy": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "drops": {
+                                  "type": "integer"
+                                },
+                                "firstSeenTick": {
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "harvest": {
+                                  "type": "object"
+                                },
+                                "heals": {
+                                  "type": "object"
+                                },
+                                "lastPosition": {
+                                  "items": {
+                                    "type": "integer"
+                                  },
+                                  "nullable": true,
+                                  "type": "array"
+                                },
+                                "lastSeenTick": {
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "moves": {
+                                  "type": "object"
+                                },
+                                "pickups": {
+                                  "type": "integer"
+                                },
+                                "positionSamples": {
+                                  "items": {
+                                    "properties": {
+                                      "position": {
+                                        "items": {
+                                          "type": "integer"
+                                        },
+                                        "type": "array"
+                                      },
+                                      "tick": {
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "role": {
+                                  "type": "string"
+                                },
+                                "spawned": {
+                                  "type": "boolean"
+                                },
+                                "unitType": {
+                                  "nullable": true,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "actor",
+                                "role",
+                                "alive",
+                                "spawned"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "window": {
+                            "properties": {
+                              "cases": {
+                                "type": "integer"
+                              },
+                              "events": {
+                                "type": "integer"
+                              },
+                              "fromTick": {
+                                "nullable": true,
+                                "type": "integer"
+                              },
+                              "toTick": {
+                                "nullable": true,
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "fromTick",
+                              "toTick",
+                              "cases",
+                              "events"
+                            ],
+                            "type": "object"
+                          }
+                        },
+                        "required": [
+                          "generatedAt",
+                          "tenant",
+                          "window",
+                          "units",
+                          "mines",
+                          "core",
+                          "consumption"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "object"
+                    }
+                  ]
                 }
               }
             },
@@ -3332,6 +3962,79 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "current": {
+                      "nullable": true,
+                      "type": "object"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "lifecycle": {
+                      "nullable": true,
+                      "type": "object"
+                    },
+                    "survey": {
+                      "nullable": true,
+                      "properties": {
+                        "caseCount": {
+                          "type": "integer"
+                        },
+                        "chunks": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "coreCells": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "fromDb": {
+                          "type": "boolean"
+                        },
+                        "obstacleCells": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "resourceCells": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "runId": {
+                          "type": "string"
+                        },
+                        "tenant": {
+                          "type": "string"
+                        },
+                        "tickMax": {
+                          "type": "integer"
+                        },
+                        "unitCells": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "tenant",
+                    "generatedAt",
+                    "survey",
+                    "current"
+                  ],
                   "type": "object"
                 }
               }
@@ -4628,6 +5331,82 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "colors": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "tenants": {
+                      "additionalProperties": {
+                        "properties": {
+                          "cachedAt": {
+                            "type": "string"
+                          },
+                          "caseCount": {
+                            "type": "integer"
+                          },
+                          "chunks": {
+                            "items": {
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "coreHunts": {
+                            "items": {
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "error": {
+                            "type": "string"
+                          },
+                          "lifecycle": {
+                            "nullable": true,
+                            "type": "object"
+                          },
+                          "obstacles": {
+                            "items": {
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "resources": {
+                            "items": {
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "spendsTrend": {
+                            "items": {
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "tickMax": {
+                            "type": "integer"
+                          },
+                          "unitsDetail": {
+                            "items": {
+                              "type": "object"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenants",
+                    "colors"
+                  ],
                   "type": "object"
                 }
               }

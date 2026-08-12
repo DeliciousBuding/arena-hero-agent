@@ -102,6 +102,132 @@ _HUMAN_CONFLICT_SHAPE: dict[str, Any] = {
 }
 
 
+_LIFECYCLE_AUDIT_SHAPE: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "generatedAt": _STR,
+        "tenant": _STR,
+        "runId": {"type": "string", "nullable": True},
+        "window": {
+            "type": "object",
+            "properties": {
+                "fromTick": _NULLABLE_INT,
+                "toTick": _NULLABLE_INT,
+                "cases": _INT,
+                "events": _INT,
+            },
+            "required": ["fromTick", "toTick", "cases", "events"],
+        },
+        "units": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "actor": _STR,
+                    "unitType": {"type": "string", "nullable": True},
+                    "role": _STR,
+                    "firstSeenTick": _NULLABLE_INT,
+                    "lastSeenTick": _NULLABLE_INT,
+                    "alive": {"type": "boolean"},
+                    "destroyedAtTick": _NULLABLE_INT,
+                    "destroyedBy": {"type": "string", "nullable": True},
+                    "spawned": {"type": "boolean"},
+                    "moves": _OBJ,
+                    "harvest": _OBJ,
+                    "deposit": _OBJ,
+                    "combat": _OBJ,
+                    "heals": _OBJ,
+                    "drops": _INT,
+                    "pickups": _INT,
+                    "lastPosition": {
+                        "type": "array",
+                        "items": _INT,
+                        "nullable": True,
+                    },
+                    "positionSamples": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "tick": _INT,
+                                "position": {"type": "array", "items": _INT},
+                            },
+                        },
+                    },
+                },
+                "required": ["actor", "role", "alive", "spawned"],
+            },
+        },
+        "mines": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "cell": _STR,
+                    "x": _INT,
+                    "y": _INT,
+                    "firstSeenTick": _NULLABLE_INT,
+                    "lastSeenTick": _NULLABLE_INT,
+                    "harvestCount": _INT,
+                    "harvestAmount": _INT,
+                    "harvestFailCount": _INT,
+                    "active": {"type": "boolean"},
+                    "refillGapTicks": _NULLABLE_INT,
+                },
+            },
+        },
+        "core": {
+            "type": "object",
+            "properties": {
+                "actor": {"type": "string", "nullable": True},
+                "damageTaken": _INT,
+                "damageEvents": _INT,
+                "healOk": _INT,
+                "healFail": _INT,
+                "moveOk": _INT,
+                "moveFail": _INT,
+                "capturedResources": _INT,
+                "captures": _OBJ,
+                "destroyed": {"type": "boolean"},
+                "destroyedAtTick": _NULLABLE_INT,
+                "destroyedBy": {"type": "string", "nullable": True},
+                "lastPosition": {"type": "array", "items": _INT, "nullable": True},
+                "positionSamples": {"type": "array", "items": _OBJ},
+            },
+            "nullable": True,
+        },
+        "consumption": {
+            "type": "object",
+            "properties": {
+                "harvestOk": _INT,
+                "harvestFail": _INT,
+                "harvestAmount": _INT,
+                "depositOk": _INT,
+                "depositFail": _INT,
+                "depositAmount": _INT,
+                "cargoDropped": _INT,
+                "spawns": _INT,
+                "respawns": _INT,
+                "unitDestroyed": _INT,
+                "selfDestructs": _INT,
+                "destroyedByEnemy": _INT,
+                "coreDamageTaken": _INT,
+                "spends": {
+                    "type": "object",
+                    "properties": {
+                        "byKind": _INT_MAP,
+                        "byType": _INT_MAP,
+                        "total": _INT,
+                    },
+                },
+            },
+            "required": ["harvestOk", "harvestFail", "harvestAmount", "depositOk", "spends"],
+        },
+        "cachedAt": _STR,
+    },
+    "required": ["generatedAt", "tenant", "window", "units", "mines", "core", "consumption"],
+}
+
 # Minimal 200 response schemas for the main Command Center read endpoints.
 # Field names mirror the real payloads produced by the P5-4 projections and the
 # request pipeline; nested payload rows stay generic where a projection emits
@@ -168,6 +294,59 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
             "error": _STR,
         },
         "required": ["tenant", "generatedAt", "state", "caseFile"],
+    },
+    ("GET", "/api/survey"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenants": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                        "error": _STR,
+                        "resources": _OBJ_ROWS,
+                        "obstacles": _OBJ_ROWS,
+                        "coreHunts": _OBJ_ROWS,
+                        "caseCount": _INT,
+                        "tickMax": _INT,
+                        "lifecycle": {"type": "object", "nullable": True},
+                        "spendsTrend": _OBJ_ROWS,
+                        "unitsDetail": _OBJ_ROWS,
+                        "chunks": _OBJ_ROWS,
+                        "cachedAt": _STR,
+                    },
+                },
+            },
+            "colors": _STR_MAP,
+        },
+        "required": ["generatedAt", "tenants", "colors"],
+    },
+    ("GET", "/api/exploration"): {
+        "type": "object",
+        "properties": {
+            "tenant": _STR,
+            "generatedAt": _STR,
+            "survey": {
+                "type": "object",
+                "properties": {
+                    "obstacleCells": _OBJ_ROWS,
+                    "resourceCells": _OBJ_ROWS,
+                    "coreCells": _OBJ_ROWS,
+                    "unitCells": _OBJ_ROWS,
+                    "caseCount": _INT,
+                    "tickMax": _INT,
+                    "fromDb": {"type": "boolean"},
+                    "tenant": _STR,
+                    "runId": _STR,
+                    "chunks": _OBJ_ROWS,
+                },
+                "nullable": True,
+            },
+            "lifecycle": {"type": "object", "nullable": True},
+            "current": {"type": "object", "nullable": True},
+        },
+        "required": ["tenant", "generatedAt", "survey", "current"],
     },
     ("GET", "/api/survey/decision-input"): {
         "type": "object",
@@ -810,6 +989,12 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
             "cachedAt": _STR,
         },
         "required": ["generatedAt", "entries", "counts", "filters"],
+    },
+    ("GET", "/api/audit/lifecycle"): {
+        "oneOf": [
+            _LIFECYCLE_AUDIT_SHAPE,
+            {"type": "object", "additionalProperties": _LIFECYCLE_AUDIT_SHAPE},
+        ],
     },
     ("GET", "/api/audit/alignment"): {
         "type": "object",

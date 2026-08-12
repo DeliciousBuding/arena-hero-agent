@@ -49,7 +49,9 @@ from ..projections import (
     load_enemy_cores,
     load_enemy_heat,
     load_events,
+    load_exploration,
     load_human_conflict,
+    load_lifecycle_audit,
     load_mine_patterns,
     load_mine_utilization,
     load_mine_utilization_trend,
@@ -57,6 +59,7 @@ from ..projections import (
     load_plan,
     load_redeem_history,
     load_shop_history,
+    load_survey,
     load_survey_mine,
     load_worker_liveness_audit,
     load_world,
@@ -206,6 +209,7 @@ class CommandCenterApp:
             ("GET", "/api/audit/decisions"): self._handle_decision_audit,
             ("GET", "/api/audit/decisions/trend"): self._handle_decision_trend,
             ("GET", "/api/audit/alignment"): self._handle_audit_alignment,
+            ("GET", "/api/audit/lifecycle"): self._handle_audit_lifecycle,
             ("GET", "/api/audit/human/conflicts"): self._handle_human_conflict,
             ("GET", "/api/audit/mines"): self._handle_mine_utilization,
             ("GET", "/api/audit/mines/trend"): self._handle_mine_utilization_trend,
@@ -224,6 +228,8 @@ class CommandCenterApp:
             ("GET", "/api/events"): self._handle_events,
             ("GET", "/api/plan"): self._handle_plan,
             ("GET", "/api/world"): self._handle_world,
+            ("GET", "/api/survey"): self._handle_survey,
+            ("GET", "/api/exploration"): self._handle_tenant_exploration,
             ("GET", "/api/redeem/history"): self._handle_redeem_history,
         }
         if handlers:
@@ -586,6 +592,16 @@ class CommandCenterApp:
         del request, match, query, tenant
         return load_alignment_audit(self._data_root, now_ms=self._now_ms())
 
+    def _handle_audit_lifecycle(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query
+        return load_lifecycle_audit(self._data_root, tenant or "all", now_ms=self._now_ms())
+
     def _handle_audit_human(
         self,
         request: ApiRequest,
@@ -710,6 +726,31 @@ class CommandCenterApp:
     ) -> dict[str, Any]:
         del request, match, query
         return load_world(self._data_root, tenant or "t1", now_ms=self._now_ms())
+
+    def _handle_survey(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        states_raw = query.get("states")
+        if states_raw is None:
+            states = ["visible", "stale"]
+        else:
+            states = [part.strip() for part in states_raw.split(",") if part.strip()]
+        return load_survey(self._data_root, tenant or "all", states=states, now_ms=self._now_ms())
+
+    def _handle_tenant_exploration(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query
+        return load_exploration(self._data_root, tenant or "t1", now_ms=self._now_ms())
 
     def _handle_redeem_history(
         self,
