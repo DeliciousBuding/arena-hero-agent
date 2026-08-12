@@ -8,8 +8,12 @@
   main 门禁 1565 passed。
 - **director 端点仍 SKIP**：依赖外部 arena-agent supervisor Debug API
   `http://127.0.0.1:8120/alliance-director`（非投影移植项，运维接线，Python 部署无 8120）。
-- **W44 遗留**：三端点 Node golden 对拍（`run-arena-report` + `.golden.json`）待做；
-  现为纯 Python fixture 级验证（`fixtures/cc_wiring/`，W25-A now_ms 注入 + fail-open 钉死）。
+- **W44 遗留 → 已关闭（w44/cc-wave5，2026-08-12）**：wave-3/4 已接线投影核的 Node golden
+  对拍已完成——exploration coverage / mine-patterns predictions（5 个纯函数）/
+  consensus-mining / survey/mine（物化 survey-db 跑真实 `loadSurveyDb`+`loadResourceTimeline`）/
+  enemy-cores / decision-input，共 12 个新 fixture 全部 MATCH（现 35 个 golden case，
+  `tests/command_center/projections/test_golden_parity.py` 38 passed）。Oracle harness 在
+  `~/tmp/cc-oracle.mjs` / `~/tmp/cc-oracle-survey-mine.mjs`（仓外，TS checkout 保持只读）。
 - **W44 只读接线第三波（w44/cc-wave3，2026-08-12）**：详见下方第三波小节；
   本小节原 leaderboard / audit/human SKIP 已按 captain 预裁决更新。
   - `GET /api/audit/human` **已接线（w44/cc-wave3）**：按 Python manifest fail-closed 语义
@@ -29,6 +33,20 @@
   （P5-9 写门就绪但无实现），现在迁移会指向死 API；正确顺序 = 后端写端点落地 →
   抽 mapEngine I/O 边界 + 补测试 → 前端调用方换生成 client。
 
+
+## W44 第五波只读接线（w44/cc-wave5，2026-08-12）
+
+- `/api/audit/alignment` **501 → 200**（needs-new-projection 关闭）：输入投影已全齐
+  （decision-audit / mine-utilization(+trend) / mining-effectiveness / alliance snapshot），
+  新 port `alignment.py`（`aggregate_alignment` 纯函数 + `load_alignment_audit` loader），
+  grade/reasons 1:1 对齐 TS `alignment-audit.ts`（含 `(rate*100).toFixed(0)` 百分比渲染与
+  `Math.round` 速率四舍五入）；无 tenant 参数（manifest tenant_param=null，TS 默认行为）；
+  空根 fail-open 全租户 data_gap。OpenAPI 200 schema + 生成 TS client/types 已同步；
+  8 个 fixture 级测试 + alignment Node golden 对拍（MATCH）。
+- **wave-3/4 投影核 Node golden 对拍（W44 遗留关闭）**：见上方 SKIP 小节 W44 遗留条目——
+  6 个投影核（exploration coverage / mine-patterns predictions×5 / consensus-mining /
+  survey/mine / enemy-cores / decision-input）共 12 个新 fixture 全部 MATCH（35 个 golden case），
+  oracle harness 在 `~/tmp/cc-oracle.mjs` / `~/tmp/cc-oracle-survey-mine.mjs`（仓外）。
 
 ## W44 第四波只读接线（w44/cc-wave4，2026-08-12）
 
@@ -89,7 +107,7 @@ agents / survey / exploration / shop / me / orders / commands / director）维�
 | needs-small-loader | `/api/survey/enemy-cores` | （wave-4 已接线） `enemy-core-state.ts` 聚合（core_hunts → ACTIVE/RELOCATED/STALE + 威胁级）未移植；Python 有 core_hunts 表 + core_trails 投影，聚合逻辑 ~100 行待移植 |
 | needs-small-loader | `/api/redeem/history` | （wave-4 已接线，恒空 fail-open） `redeem-log.jsonl` 尾读极小 loader，但 Python 侧无 redeem 写路径（POST /api/redeem 501，属 shop 外部集成），接了恒空——等写路径落地再接 |
 | needs-new-projection | `/api/leaderboard` | `ours`（calibration 受控 CORE owner_username）小 loader 可补；`encountered` 需 `intel.ts loadAllianceIntel` 移植（enemies 形状未移植）→ 整体不接线（缺数据源，不硬凑），见上 SKIP 精确缺口 |
-| needs-new-projection | `/api/audit/alignment` | 输入全齐（decision-audit / mine-utilization / mining-effectiveness / trend / snapshot），但 alignment 聚合（grade/reasons）未移植 |
+| ~~needs-new-projection~~ → **已接线（w44/cc-wave5）** | `/api/audit/alignment` | `alignment.py` 移植完成（aggregate_alignment + load_alignment_audit），501→200；OpenAPI 200 + golden MATCH |
 | needs-new-projection | `/api/survey/decision-input` | （wave-4 已接线） `decision-input.ts`（矿刷新预测 dueInTicks + chunk 覆盖）——依赖 mine-patterns predictions（Python 恒空）+ chunks 表 |
 | needs-new-data-source | `/api/audit/lifecycle` | `loadLifecycleAudit` 依赖 survey-db `unit_lifecycle`/`core_spends`/`resource_events` 表——Python AGENT_SCHEMA 无这些表 |
 | needs-new-data-source | `/api/audit/overview` | 组合含 lifecycle + pipeline 两个未移植输入 |
