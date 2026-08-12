@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -261,6 +262,54 @@ def _write_survey_db(path: Path, tenant: str, rows_by_table: dict[str, Any]) -> 
         connection.close()
 
 
+REGISTRY_SCHEMA = """
+CREATE TABLE IF NOT EXISTS agents (
+  agent_id TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  mode TEXT NOT NULL CHECK(mode IN ('production','simulation')),
+  api_key_tail TEXT,
+  created_at TEXT NOT NULL,
+  revoked_at TEXT
+);
+CREATE TABLE IF NOT EXISTS keys (
+  key_id TEXT PRIMARY KEY,
+  agent_id TEXT NOT NULL,
+  mode TEXT NOT NULL CHECK(mode IN ('production','simulation')),
+  key_hash TEXT NOT NULL,
+  issued_at TEXT NOT NULL,
+  revoked_at TEXT
+);
+"""
+
+
+def _write_registry(
+    path: Path,
+    agents: Sequence[Mapping[str, Any]] | None = None,
+    keys: Sequence[Mapping[str, Any]] | None = None,
+) -> None:
+    """Create the agent registry database with the TS schema + fixture rows."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(path)
+    try:
+        connection.executescript(REGISTRY_SCHEMA)
+        if agents:
+            connection.executemany(
+                "INSERT INTO agents (agent_id, username, mode, api_key_tail, created_at,"
+                " revoked_at) VALUES (:agent_id, :username, :mode, :api_key_tail,"
+                " :created_at, :revoked_at)",
+                agents,
+            )
+        if keys:
+            connection.executemany(
+                "INSERT INTO keys (key_id, agent_id, mode, key_hash, issued_at, revoked_at)"
+                " VALUES (:key_id, :agent_id, :mode, :key_hash, :issued_at, :revoked_at)",
+                keys,
+            )
+        connection.commit()
+    finally:
+        connection.close()
+
+
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
@@ -348,4 +397,11 @@ def materialize_advice_data_root(fixture: dict[str, Any], root: Path) -> Path:
     shop_history = fixture.get("shopHistory") or ()
     if shop_history:
         _write_jsonl(root / "runtime" / "shop-history.jsonl", shop_history)
+    registry = fixture.get("registry")
+    if isinstance(registry, dict):
+        _write_registry(
+            root / "runtime" / "registry.db",
+            list(registry.get("agents") or ()),
+            list(registry.get("keys") or ()),
+        )
     return root

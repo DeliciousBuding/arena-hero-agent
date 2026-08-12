@@ -1,0 +1,37 @@
+{
+  "nowMs": 1752000000000,
+  "humanAudit": [
+    {
+      "at": "2025-07-08T18:00:01Z",
+      "tenant": "t1",
+      "kind": "command",
+      "unitId": "u1",
+      "action": "MOVE [1,1]"
+    },
+    {
+      "at": "2025-07-08T18:00:02Z",
+      "tenant": "t1",
+      "kind": "goal",
+      "unitId": "u2",
+      "action": "mine [5,5]"
+    },
+    {
+      "at": "2025-07-08T18:00:03Z",
+      "tenant": "t2",
+      "kind": "mode",
+      "action": "disabled"
+    },
+    {
+      "at": "2025-07-08T18:00:04Z",
+      "tenant": "t3",
+      "kind": "clear"
+    },
+    {
+      "at": "2025-07-08T18:00:05Z",
+      "tenant": "t2",
+      "kind": "delete",
+      "unitId": "u9",
+      "note": "stale"
+    }
+  ]
+}

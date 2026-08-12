@@ -1,0 +1,41 @@
+{
+  "nowMs": 1752000000000,
+  "registry": {
+    "agents": [
+      {
+        "agent_id": "ag-1",
+        "username": "t1-agent",
+        "mode": "production",
+        "api_key_tail": "abcd",
+        "created_at": "2025-07-08T18:00:00Z",
+        "revoked_at": null
+      },
+      {
+        "agent_id": "ag-2",
+        "username": "sim-agent",
+        "mode": "simulation",
+        "api_key_tail": null,
+        "created_at": "2025-07-08T18:05:00Z",
+        "revoked_at": null
+      }
+    ],
+    "keys": [
+      {
+        "key_id": "key-1",
+        "agent_id": "ag-1",
+        "mode": "production",
+        "key_hash": "h1",
+        "issued_at": "2025-07-08T18:00:00Z",
+        "revoked_at": null
+      },
+      {
+        "key_id": "key-2",
+        "agent_id": "ag-2",
+        "mode": "simulation",
+        "key_hash": "h2",
+        "issued_at": "2025-07-08T18:05:00Z",
+        "revoked_at": null
+      }
+    ]
+  }
+}

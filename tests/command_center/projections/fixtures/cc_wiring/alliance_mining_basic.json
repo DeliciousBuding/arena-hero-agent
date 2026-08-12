@@ -1,0 +1,207 @@
+{
+  "nowMs": 1752000000000,
+  "worlds": {
+    "t1": {
+      "tick": 5000,
+      "state": {
+        "objects": [
+          {
+            "id": "core-t1",
+            "kind": "CORE",
+            "controlled": true,
+            "position": [
+              0,
+              0
+            ],
+            "hp": 500,
+            "shield": 0
+          },
+          {
+            "id": "u-t1-w1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              1,
+              0
+            ],
+            "cargo": 0,
+            "hp": 20
+          },
+          {
+            "id": "u-t1-w2",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              0,
+              1
+            ],
+            "cargo": 0,
+            "hp": 20
+          }
+        ],
+        "status": "ACTIVE",
+        "resources": 10,
+        "population": 3
+      }
+    },
+    "t2": {
+      "tick": 5000,
+      "state": {
+        "objects": [
+          {
+            "id": "core-t2",
+            "kind": "CORE",
+            "controlled": true,
+            "position": [
+              160,
+              160
+            ],
+            "hp": 500,
+            "shield": 0
+          },
+          {
+            "id": "u-t2-w1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              161,
+              160
+            ],
+            "cargo": 0,
+            "hp": 20
+          },
+          {
+            "id": "u-t2-w2",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              160,
+              161
+            ],
+            "cargo": 0,
+            "hp": 20
+          }
+        ],
+        "status": "ACTIVE",
+        "resources": 10,
+        "population": 3
+      }
+    },
+    "t3": {},
+    "t4": {}
+  },
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {
+          "run_id": "r-t1",
+          "tenant": "t1",
+          "cases_synced": 1,
+          "last_tick": 5000,
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "agents": [
+        {
+          "tenant": "t1",
+          "instance": "a1",
+          "tick": 5000,
+          "resources": 8,
+          "population": 3,
+          "core_x": 0,
+          "core_y": 0,
+          "units": 3,
+          "visible_enemies": 0,
+          "status": "ACTIVE",
+          "sdk_version": "x",
+          "base_url": "http://x",
+          "pid": 1,
+          "platform": "test",
+          "mode": "production",
+          "connection_state": "up",
+          "first_seen": "2025-07-08T18:00:00Z",
+          "last_heartbeat": "2025-07-08T18:40:00Z",
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "10,10",
+          "x": 10,
+          "y": 10,
+          "first_seen_tick": 1000,
+          "last_seen_tick": 4900,
+          "state": "visible",
+          "last_state_tick": 4900,
+          "seen_count": 1
+        }
+      ],
+      "unitsSeen": [],
+      "resourceEvents": []
+    },
+    "t2": {
+      "syncMeta": [
+        {
+          "run_id": "r-t2",
+          "tenant": "t2",
+          "cases_synced": 1,
+          "last_tick": 5000,
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "agents": [
+        {
+          "tenant": "t2",
+          "instance": "a2",
+          "tick": 5000,
+          "resources": 8,
+          "population": 3,
+          "core_x": 160,
+          "core_y": 160,
+          "units": 3,
+          "visible_enemies": 0,
+          "status": "ACTIVE",
+          "sdk_version": "x",
+          "base_url": "http://x",
+          "pid": 1,
+          "platform": "test",
+          "mode": "production",
+          "connection_state": "up",
+          "first_seen": "2025-07-08T18:00:00Z",
+          "last_heartbeat": "2025-07-08T18:40:00Z",
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "10,10",
+          "x": 10,
+          "y": 10,
+          "first_seen_tick": 1000,
+          "last_seen_tick": 4900,
+          "state": "visible",
+          "last_state_tick": 4900,
+          "seen_count": 1
+        },
+        {
+          "cell": "170,170",
+          "x": 170,
+          "y": 170,
+          "first_seen_tick": 1000,
+          "last_seen_tick": 5000,
+          "state": "visible",
+          "last_state_tick": 5000,
+          "seen_count": 1
+        }
+      ],
+      "unitsSeen": [],
+      "resourceEvents": []
+    },
+    "t3": {},
+    "t4": {}
+  }
+}

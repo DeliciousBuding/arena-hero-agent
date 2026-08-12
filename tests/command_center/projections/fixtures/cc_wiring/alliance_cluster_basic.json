@@ -1,0 +1,245 @@
+{
+  "nowMs": 1752000000000,
+  "worlds": {
+    "t1": {
+      "tick": 5000,
+      "state": {
+        "objects": [
+          {
+            "id": "core-t1",
+            "kind": "CORE",
+            "controlled": true,
+            "position": [
+              0,
+              0
+            ],
+            "hp": 500,
+            "shield": 0
+          },
+          {
+            "id": "u-t1-w1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              1,
+              0
+            ],
+            "cargo": 0,
+            "hp": 20
+          },
+          {
+            "id": "u-t1-w2",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              0,
+              1
+            ],
+            "cargo": 0,
+            "hp": 20
+          },
+          {
+            "id": "u-t1-v1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "VANGUARD",
+            "position": [
+              2,
+              0
+            ],
+            "cargo": 0,
+            "hp": 20
+          },
+          {
+            "id": "u-t1-v2",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "VANGUARD",
+            "position": [
+              2,
+              1
+            ],
+            "cargo": 0,
+            "hp": 20
+          },
+          {
+            "id": "u-t1-r1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "RANGER",
+            "position": [
+              3,
+              0
+            ],
+            "cargo": 0,
+            "hp": 20
+          }
+        ],
+        "status": "ACTIVE",
+        "resources": 10,
+        "population": 3
+      }
+    },
+    "t2": {
+      "tick": 5000,
+      "state": {
+        "objects": [
+          {
+            "id": "core-t2",
+            "kind": "CORE",
+            "controlled": true,
+            "position": [
+              200,
+              200
+            ],
+            "hp": 500,
+            "shield": 0
+          },
+          {
+            "id": "u-t2-w1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              201,
+              200
+            ],
+            "cargo": 0,
+            "hp": 20
+          },
+          {
+            "id": "u-t2-w2",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              200,
+              201
+            ],
+            "cargo": 0,
+            "hp": 20
+          },
+          {
+            "id": "u-t2-w3",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              201,
+              201
+            ],
+            "cargo": 0,
+            "hp": 20
+          },
+          {
+            "id": "u-t2-v1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "VANGUARD",
+            "position": [
+              202,
+              200
+            ],
+            "cargo": 0,
+            "hp": 20
+          }
+        ],
+        "status": "ACTIVE",
+        "resources": 10,
+        "population": 3
+      }
+    },
+    "t3": {
+      "tick": 5000,
+      "state": {
+        "objects": [
+          {
+            "id": "core-t3",
+            "kind": "CORE",
+            "controlled": true,
+            "position": [
+              10,
+              10
+            ],
+            "hp": 500,
+            "shield": 0
+          },
+          {
+            "id": "u-t3-w1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              11,
+              10
+            ],
+            "cargo": 0,
+            "hp": 20
+          },
+          {
+            "id": "u-t3-w2",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              10,
+              11
+            ],
+            "cargo": 0,
+            "hp": 20
+          }
+        ],
+        "status": "ACTIVE",
+        "resources": 10,
+        "population": 3
+      }
+    },
+    "t4": {
+      "tick": 5000,
+      "state": {
+        "objects": [
+          {
+            "id": "core-t4",
+            "kind": "CORE",
+            "controlled": true,
+            "position": [
+              210,
+              210
+            ],
+            "hp": 500,
+            "shield": 0
+          },
+          {
+            "id": "u-t4-w1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              211,
+              210
+            ],
+            "cargo": 0,
+            "hp": 20
+          },
+          {
+            "id": "u-t4-v1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "VANGUARD",
+            "position": [
+              212,
+              210
+            ],
+            "cargo": 0,
+            "hp": 20
+          }
+        ],
+        "status": "ACTIVE",
+        "resources": 10,
+        "population": 3
+      }
+    }
+  }
+}
