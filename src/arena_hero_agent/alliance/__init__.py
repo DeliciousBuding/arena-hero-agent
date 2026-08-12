@@ -1,5 +1,25 @@
 """Cross-tenant read models and coordination logic without direct tenant writes."""
 
+from .advice import (
+    ADVICE_LIMIT,
+    APPROACH_EPS_CELLS,
+    DEFAULT_APPROACH_RADIUS,
+    DEFAULT_PROXIMITY_RADIUS,
+    DEFAULT_STALE_AFTER_TICKS,
+    HEAT_COMBAT_THRESHOLD,
+    HEAT_NEAR_CHUNKS,
+    LOW_RESOURCE_WARN,
+    MINE_OPPORTUNITY_RESOURCE,
+    NO_COMBAT_CORE_RADIUS,
+    PER_TENANT_THREAT_CAP,
+    AdviceCategory,
+    AdviceSeverity,
+    build_alliance_advice_payload,
+    build_gold_mine_advice,
+    build_resurvey_advice,
+    collect_core_threats,
+    compute_core_movement,
+)
 from .applier import CommandContext, CommandLeaseUnavailable, TenantCommandApplier
 from .commands import (
     COMMAND_SCHEMA_VERSION,
@@ -104,6 +124,24 @@ from .threat import (
 )
 
 __all__ = [
+    "ADVICE_LIMIT",
+    "APPROACH_EPS_CELLS",
+    "AdviceCategory",
+    "AdviceSeverity",
+    "DEFAULT_APPROACH_RADIUS",
+    "DEFAULT_PROXIMITY_RADIUS",
+    "DEFAULT_STALE_AFTER_TICKS",
+    "HEAT_COMBAT_THRESHOLD",
+    "HEAT_NEAR_CHUNKS",
+    "LOW_RESOURCE_WARN",
+    "MINE_OPPORTUNITY_RESOURCE",
+    "NO_COMBAT_CORE_RADIUS",
+    "PER_TENANT_THREAT_CAP",
+    "build_alliance_advice_payload",
+    "build_gold_mine_advice",
+    "build_resurvey_advice",
+    "collect_core_threats",
+    "compute_core_movement",
     "COMMAND_SCHEMA_VERSION",
     "AllianceForceCounts",
     "AllianceMemberState",

@@ -12,6 +12,7 @@ tests; where the P5-3 survey schema lacks a TS table (``sync_meta`` /
 difference is registered in the module docstring (fail-closed, never guessed).
 """
 
+from .alliance_advice import build_alliance_advice_payload, load_alliance_advice
 from .alliance_cluster import (
     CLUSTER_LINK_DIST,
     COHESION_MAX_DIST,
@@ -24,6 +25,7 @@ from .alliance_survey import TENANT_COLORS, aggregate_alliance_survey, load_alli
 from .arbitrations import arbitration_file, list_arbitrations, load_arbitrations
 from .conflicts import DEFAULT_WINDOW as CONFLICT_DEFAULT_WINDOW
 from .conflicts import aggregate_human_conflict, load_human_conflict
+from .core_trails import load_core_trails_from_survey_db
 from .decisions import (
     DECISION_TREND_STEPS,
     DECISION_TREND_WINDOW,
@@ -33,10 +35,20 @@ from .decisions import (
     load_decision_audit,
     load_decision_trend,
 )
+from .enemy_heat import load_enemy_heat
+from .exploration_coverage import (
+    CHUNK_SIZE,
+    RESURVEY_CAP,
+    RESURVEY_RADIUS_CHUNKS,
+    compute_exploration_stats,
+    load_alliance_exploration,
+)
 from .human import DEFAULT_LIMIT as HUMAN_AUDIT_DEFAULT_LIMIT
 from .human import MAX_KEEP as HUMAN_AUDIT_MAX_KEEP
 from .human import load_human_audit, read_human_audit
+from .leaderboard import SNAPSHOT_STALE_SECONDS, load_leaderboard_intel
 from .map_lod import MAP_LOD_CHUNK, aggregate_map_lod, load_map_lod
+from .mine_patterns import load_mine_patterns
 from .mines import (
     DEFAULT_TREND_STEPS,
     DEFAULT_TREND_WINDOW,
@@ -46,7 +58,11 @@ from .mines import (
     load_mine_utilization,
     load_mine_utilization_trend,
 )
-from .mining_effectiveness import FRESH_TICKS, aggregate_allocation_effectiveness
+from .mining_effectiveness import (
+    FRESH_TICKS,
+    aggregate_allocation_effectiveness,
+    load_mining_effectiveness,
+)
 from .shop_history import (
     aggregate_shop_history,
     load_shop_history,
@@ -110,6 +126,19 @@ __all__ = [
     "load_map_lod",
     "load_mine_utilization",
     "load_mine_utilization_trend",
+    "CHUNK_SIZE",
+    "RESURVEY_CAP",
+    "RESURVEY_RADIUS_CHUNKS",
+    "SNAPSHOT_STALE_SECONDS",
+    "build_alliance_advice_payload",
+    "compute_exploration_stats",
+    "load_alliance_advice",
+    "load_alliance_exploration",
+    "load_core_trails_from_survey_db",
+    "load_enemy_heat",
+    "load_leaderboard_intel",
+    "load_mine_patterns",
+    "load_mining_effectiveness",
     "load_shop_history",
     "load_shop_history_entries",
     "load_worker_liveness_audit",

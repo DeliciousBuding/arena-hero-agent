@@ -1,0 +1,287 @@
+{
+  "generatedAt": "2025-07-08T18:40:00.000Z",
+  "advice": [
+    {
+      "severity": "CRITICAL",
+      "category": "MILITARY",
+      "tenant": "t2",
+      "title": "t2 零战斗单位且敌核邻近",
+      "detail": "1 个敌核 ≤24 格（raider1）",
+      "action": "守家优先：产 Vanguard 或远端军事回援；worker 召回半径扩大",
+      "weight": -1,
+      "confidence": 0.85,
+      "evidence": [
+        {
+          "type": "sighting",
+          "tenant": "t2",
+          "ref": "raider1",
+          "ageTicks": 5
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "HIGH",
+      "category": "THREAT",
+      "tenant": "t3",
+      "title": "t3 核心附近敌情高浓度区",
+      "detail": "(chunk 12,12) 累计 51 条敌战斗目击（最近 50 tick 前）",
+      "action": "该区域敌方活动密集——守家 + 侦察，避免 worker 裸采经过",
+      "weight": -51,
+      "confidence": 0.69,
+      "evidence": [
+        {
+          "type": "heat",
+          "tenant": "t3",
+          "ref": "chunk 12,12",
+          "ageTicks": 50
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "HIGH",
+      "category": "ECONOMY",
+      "tenant": "t1",
+      "title": "t1 10 个可见矿从未开采",
+      "detail": "已发现未开采（分配缺口）——联盟分工已就近分配，见 audit/mines",
+      "action": "优先派 worker 采可见未开采矿（alliance/mining 候选格）",
+      "weight": -10,
+      "confidence": 0.85,
+      "evidence": [
+        {
+          "type": "audit",
+          "tenant": "t1",
+          "ref": "visibleNever=10"
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "HIGH",
+      "category": "THREAT",
+      "tenant": "t2",
+      "title": "t2 敌核近距目击（raider1 距 10 格）",
+      "detail": "敌核 raider1 最近目击距友核 10 格（方向待确认，建议侦察） @110,105",
+      "action": "就近侦察 + 预备防御；若再次目击确认逼近则升级拦截",
+      "weight": -10,
+      "confidence": 0.6,
+      "evidence": [
+        {
+          "type": "sighting",
+          "tenant": "t2",
+          "ref": "core_hunts raider1 @110,105 tick=4995"
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "HIGH",
+      "category": "ECONOMY",
+      "tenant": "t1",
+      "title": "t1 核心资源 8 濒危",
+      "detail": "人口 5（工2/锋2/射1），携带 8",
+      "action": "安排采集优先，暂停非必要 spawn",
+      "weight": -8,
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "type": "world",
+          "tenant": "t1",
+          "ref": "res=8 pop=5"
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "HIGH",
+      "category": "ECONOMY",
+      "tenant": "t4",
+      "title": "t4 核心资源 6 濒危",
+      "detail": "人口 4（工1/锋2/射0），携带 2",
+      "action": "安排采集优先，暂停非必要 spawn",
+      "weight": -6,
+      "confidence": 0.9,
+      "evidence": [
+        {
+          "type": "world",
+          "tenant": "t4",
+          "ref": "res=6 pop=4"
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "HIGH",
+      "category": "THREAT",
+      "tenant": "t1",
+      "title": "t1 敌核近距目击（elite1 距 5 格）",
+      "detail": "敌核 elite1 最近目击距友核 5 格（方向待确认，建议侦察） @0,5",
+      "action": "就近侦察 + 预备防御；若再次目击确认逼近则升级拦截",
+      "weight": -5,
+      "confidence": 0.6,
+      "evidence": [
+        {
+          "type": "sighting",
+          "tenant": "t1",
+          "ref": "core_hunts elite1 @0,5 tick=4996"
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "HIGH",
+      "category": "THREAT",
+      "tenant": "t4",
+      "title": "t4 敌核近距目击（aggr1 距 5 格）",
+      "detail": "敌核 aggr1 最近目击距友核 5 格（方向待确认，建议侦察） @305,300",
+      "action": "就近侦察 + 预备防御；若再次目击确认逼近则升级拦截",
+      "weight": -5,
+      "confidence": 0.6,
+      "evidence": [
+        {
+          "type": "sighting",
+          "tenant": "t4",
+          "ref": "core_hunts aggr1 @305,300 tick=4998"
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "HIGH",
+      "category": "INTEL",
+      "tenant": "t1",
+      "title": "猛攻蛆 elite1 核心目击（t4 tick 前）",
+      "detail": "由 t1 目击 @0,5",
+      "action": "提升戒备：守家 + 观察其动向",
+      "weight": 4,
+      "confidence": 0.94,
+      "evidence": [
+        {
+          "type": "sighting",
+          "tenant": "t1",
+          "ref": "elite1",
+          "ageTicks": 4
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "HIGH",
+      "category": "ECONOMY",
+      "tenant": "t1",
+      "title": "t1 最近窗口核心负增长 -250",
+      "detail": "t250 窗口 coreDelta -250（cargo 50%）",
+      "action": "检查满载率/交付失败/手操干扰；按 audit/decisions 归因",
+      "weight": 250,
+      "confidence": 0.8,
+      "evidence": [
+        {
+          "type": "audit",
+          "tenant": "t1",
+          "ref": "coreDelta=-250 tick=250"
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "INTEL",
+      "tenant": "t3",
+      "title": "t3 1 块旧观测区待补测（陈旧 5000 tick）",
+      "detail": "最旧 12,12（距核 0 chunk，t0）——refill 模型证伪后按陈旧度重测",
+      "action": "派 EXPLORE worker 定向补测旧观测区（地图记忆刷新，资源可能已变）",
+      "weight": -5000,
+      "confidence": 0.7,
+      "evidence": [
+        {
+          "type": "survey",
+          "tenant": "t3",
+          "ref": "resurvey=12,12 stale=5000"
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "INTEL",
+      "tenant": "t4",
+      "title": "t4 金牌矿 50,80（累计收益 20）",
+      "detail": "该矿累计采集 1 次——高价值矿脉，值得守/抢",
+      "action": "优先派 worker 守护并持续采集；观察敌人是否觊觎（高价值目标）",
+      "weight": -3000,
+      "confidence": 0.75,
+      "evidence": [
+        {
+          "type": "survey",
+          "tenant": "t4",
+          "ref": "gold=50,80 amount=20"
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "THREAT",
+      "tenant": "t4",
+      "title": "t4 威胁集中 E（总分 3.0）",
+      "detail": "单方向集中威胁",
+      "action": "面向高威胁扇区布防或撤离",
+      "weight": -2.984784,
+      "confidence": 0.8,
+      "evidence": [
+        {
+          "type": "sighting",
+          "tenant": "t4",
+          "ref": "dir=E"
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "THREAT",
+      "tenant": "t1",
+      "title": "t1 威胁集中 N（总分 2.9）",
+      "detail": "单方向集中威胁",
+      "action": "面向高威胁扇区布防或撤离",
+      "weight": -2.923244,
+      "confidence": 0.8,
+      "evidence": [
+        {
+          "type": "sighting",
+          "tenant": "t1",
+          "ref": "dir=N"
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    },
+    {
+      "severity": "MEDIUM",
+      "category": "THREAT",
+      "tenant": "t2",
+      "title": "t2 威胁集中 NE（总分 2.0）",
+      "detail": "单方向集中威胁",
+      "action": "面向高威胁扇区布防或撤离",
+      "weight": -1.959741,
+      "confidence": 0.8,
+      "evidence": [
+        {
+          "type": "sighting",
+          "tenant": "t2",
+          "ref": "dir=NE"
+        }
+      ],
+      "at": "2025-07-08T18:40:00.000Z"
+    }
+  ],
+  "dedupCount": 0,
+  "avgConfidence": 0.77,
+  "summary": {
+    "critical": 1,
+    "high": 9,
+    "medium": 10,
+    "info": 3
+  },
+  "cachedAt": "2025-07-08T18:40:00.000Z"
+}

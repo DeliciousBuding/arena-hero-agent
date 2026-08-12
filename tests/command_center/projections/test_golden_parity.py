@@ -38,6 +38,7 @@ from arena_hero_agent.command_center.projections import (
     assign_alliance_mining,
     build_alliance_cluster_view,
     build_alliance_defense_payload,
+    load_alliance_advice,
     load_arbitrations,
     load_human_audit,
     merge_audit_trails,
@@ -258,6 +259,16 @@ def _run_python(name: str, fixture: dict[str, Any]) -> object:
         rows = [dict(row) for row in fixture["lines"] if isinstance(row, dict)]
         tenant = fixture.get("tenant")
         return load_human_audit(rows, tenant=tenant, limit=int(fixture["limit"]))
+    if name in ("alliance_advice_basic", "alliance_advice_full"):
+        import tempfile
+        from pathlib import Path
+
+        from .tools.advice_fixture import materialize_advice_data_root
+
+        with tempfile.TemporaryDirectory(prefix="cc-advice-parity-") as root_dir:
+            root = Path(root_dir)
+            materialize_advice_data_root(fixture, root)
+            return load_alliance_advice(root, now_ms=int(fixture["nowMs"]))
     raise AssertionError(f"no Python runner registered for fixture {name}")
 
 
@@ -283,6 +294,8 @@ CASES = [
     "mining_effectiveness_basic",
     "arbitrations_basic",
     "human_audit_basic",
+    "alliance_advice_basic",
+    "alliance_advice_full",
 ]
 
 

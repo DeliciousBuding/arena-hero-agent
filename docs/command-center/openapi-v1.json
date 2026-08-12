@@ -51,6 +51,125 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "advice": {
+                      "items": {
+                        "properties": {
+                          "action": {
+                            "type": "string"
+                          },
+                          "at": {
+                            "type": "string"
+                          },
+                          "category": {
+                            "type": "string"
+                          },
+                          "confidence": {
+                            "type": "number"
+                          },
+                          "detail": {
+                            "type": "string"
+                          },
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "ageTicks": {
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "ref": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "tenant": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "type": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "type"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "severity": {
+                            "type": "string"
+                          },
+                          "tenant": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          },
+                          "weight": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "severity",
+                          "category",
+                          "tenant",
+                          "title",
+                          "detail",
+                          "action",
+                          "weight",
+                          "confidence",
+                          "evidence",
+                          "at"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "avgConfidence": {
+                      "type": "number"
+                    },
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "dedupCount": {
+                      "type": "integer"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "properties": {
+                        "critical": {
+                          "type": "integer"
+                        },
+                        "high": {
+                          "type": "integer"
+                        },
+                        "info": {
+                          "type": "integer"
+                        },
+                        "medium": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "critical",
+                        "high",
+                        "medium",
+                        "info"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "advice",
+                    "summary",
+                    "dedupCount",
+                    "avgConfidence",
+                    "cachedAt"
+                  ],
                   "type": "object"
                 }
               }

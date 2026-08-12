@@ -1,0 +1,1007 @@
+{
+  "nowMs": 1752000000000,
+  "worlds": {
+    "t1": {
+      "tick": 5000,
+      "state": {
+        "resources": 8,
+        "resource_capacity": 100,
+        "population": 5,
+        "status": "ACTIVE",
+        "objects": [
+          {
+            "id": "core-t1",
+            "kind": "CORE",
+            "controlled": true,
+            "position": [
+              0,
+              0
+            ],
+            "hp": 500,
+            "shield": 100,
+            "moving": false
+          },
+          {
+            "id": "worker-t1-0",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              1,
+              1
+            ],
+            "cargo": 3
+          },
+          {
+            "id": "worker-t1-1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              1,
+              2
+            ],
+            "cargo": 5
+          },
+          {
+            "id": "vanguard-t1-0",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "VANGUARD",
+            "position": [
+              2,
+              1
+            ],
+            "cargo": 0
+          },
+          {
+            "id": "vanguard-t1-1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "VANGUARD",
+            "position": [
+              2,
+              2
+            ],
+            "cargo": 0
+          },
+          {
+            "id": "ranger-t1-0",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "RANGER",
+            "position": [
+              3,
+              1
+            ],
+            "cargo": 0
+          }
+        ]
+      }
+    },
+    "t2": {
+      "tick": 5000,
+      "state": {
+        "resources": 40,
+        "resource_capacity": 100,
+        "population": 4,
+        "status": "ACTIVE",
+        "objects": [
+          {
+            "id": "core-t2",
+            "kind": "CORE",
+            "controlled": true,
+            "position": [
+              100,
+              100
+            ],
+            "hp": 500,
+            "shield": 100,
+            "moving": false
+          },
+          {
+            "id": "worker-t2-0",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              101,
+              101
+            ],
+            "cargo": 2
+          },
+          {
+            "id": "worker-t2-1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              101,
+              102
+            ],
+            "cargo": 4
+          },
+          {
+            "id": "worker-t2-2",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              102,
+              101
+            ],
+            "cargo": 0
+          }
+        ]
+      }
+    },
+    "t3": {
+      "tick": 5000,
+      "state": {
+        "resources": 50,
+        "resource_capacity": 100,
+        "population": 4,
+        "status": "ACTIVE",
+        "objects": [
+          {
+            "id": "core-t3",
+            "kind": "CORE",
+            "controlled": true,
+            "position": [
+              200,
+              200
+            ],
+            "hp": 500,
+            "shield": 100,
+            "moving": false
+          },
+          {
+            "id": "worker-t3-0",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              201,
+              200
+            ],
+            "cargo": 1
+          },
+          {
+            "id": "vanguard-t3-0",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "VANGUARD",
+            "position": [
+              202,
+              200
+            ],
+            "cargo": 0
+          },
+          {
+            "id": "vanguard-t3-1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "VANGUARD",
+            "position": [
+              203,
+              200
+            ],
+            "cargo": 0
+          }
+        ]
+      }
+    },
+    "t4": {
+      "tick": 5000,
+      "state": {
+        "resources": 6,
+        "resource_capacity": 100,
+        "population": 4,
+        "status": "ACTIVE",
+        "objects": [
+          {
+            "id": "core-t4",
+            "kind": "CORE",
+            "controlled": true,
+            "position": [
+              300,
+              300
+            ],
+            "hp": 500,
+            "shield": 100,
+            "moving": false
+          },
+          {
+            "id": "worker-t4-0",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "WORKER",
+            "position": [
+              301,
+              300
+            ],
+            "cargo": 2
+          },
+          {
+            "id": "vanguard-t4-0",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "VANGUARD",
+            "position": [
+              302,
+              300
+            ],
+            "cargo": 0
+          },
+          {
+            "id": "vanguard-t4-1",
+            "kind": "UNIT",
+            "controlled": true,
+            "unit_type": "VANGUARD",
+            "position": [
+              302,
+              301
+            ],
+            "cargo": 0
+          }
+        ]
+      }
+    }
+  },
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {
+          "run_id": "r1-t1",
+          "tenant": "t1",
+          "cases_synced": 1,
+          "last_tick": 5000,
+          "updated_at": "2025-07-08T18:40:00.000Z"
+        }
+      ],
+      "agents": [
+        {
+          "tenant": "t1",
+          "instance": "a1",
+          "tick": 5000,
+          "resources": 8,
+          "population": 5,
+          "core_x": 0,
+          "core_y": 0,
+          "units": 5,
+          "visible_enemies": 0,
+          "status": "ACTIVE",
+          "mode": "production",
+          "connection_state": "up",
+          "first_seen": "2025-07-08T18:40:00.000Z",
+          "last_heartbeat": "2025-07-08T18:40:00.000Z",
+          "updated_at": "2025-07-08T18:40:00.000Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "1,50",
+          "x": 1,
+          "y": 50,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 1
+        },
+        {
+          "cell": "2,50",
+          "x": 2,
+          "y": 50,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 1
+        },
+        {
+          "cell": "3,50",
+          "x": 3,
+          "y": 50,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 1
+        },
+        {
+          "cell": "4,50",
+          "x": 4,
+          "y": 50,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 1
+        },
+        {
+          "cell": "5,50",
+          "x": 5,
+          "y": 50,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 1
+        },
+        {
+          "cell": "6,50",
+          "x": 6,
+          "y": 50,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 1
+        },
+        {
+          "cell": "7,50",
+          "x": 7,
+          "y": 50,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 1
+        },
+        {
+          "cell": "8,50",
+          "x": 8,
+          "y": 50,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 1
+        },
+        {
+          "cell": "9,50",
+          "x": 9,
+          "y": 50,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 1
+        },
+        {
+          "cell": "10,50",
+          "x": 10,
+          "y": 50,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 1
+        }
+      ],
+      "coreHunts": [
+        {
+          "cell": "0,5",
+          "x": 0,
+          "y": 5,
+          "owner": "elite1",
+          "source": "CORE",
+          "first_seen_tick": 4946,
+          "last_seen_tick": 4996
+        }
+      ]
+    },
+    "t2": {
+      "syncMeta": [
+        {
+          "run_id": "r1-t2",
+          "tenant": "t2",
+          "cases_synced": 1,
+          "last_tick": 5000,
+          "updated_at": "2025-07-08T18:40:00.000Z"
+        }
+      ],
+      "agents": [
+        {
+          "tenant": "t2",
+          "instance": "a1",
+          "tick": 5000,
+          "resources": 40,
+          "population": 4,
+          "core_x": 100,
+          "core_y": 100,
+          "units": 4,
+          "visible_enemies": 0,
+          "status": "ACTIVE",
+          "mode": "production",
+          "connection_state": "up",
+          "first_seen": "2025-07-08T18:40:00.000Z",
+          "last_heartbeat": "2025-07-08T18:40:00.000Z",
+          "updated_at": "2025-07-08T18:40:00.000Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "10,10",
+          "x": 10,
+          "y": 10,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 5
+        },
+        {
+          "cell": "60,60",
+          "x": 60,
+          "y": 60,
+          "first_seen_tick": 4000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 3
+        }
+      ],
+      "resourceEvents": [
+        {
+          "cell": "60,60",
+          "tick": 4800,
+          "event_type": "HARVEST_SUCCEEDED",
+          "reason_code": null,
+          "amount": 25,
+          "actor_id": "w-t2-0"
+        },
+        {
+          "cell": "60,60",
+          "tick": 4900,
+          "event_type": "HARVEST_SUCCEEDED",
+          "reason_code": null,
+          "amount": 15,
+          "actor_id": "w-t2-1"
+        }
+      ],
+      "coreHunts": [
+        {
+          "cell": "110,105",
+          "x": 110,
+          "y": 105,
+          "owner": "raider1",
+          "source": "CORE",
+          "first_seen_tick": 4945,
+          "last_seen_tick": 4995
+        }
+      ]
+    },
+    "t3": {
+      "syncMeta": [
+        {
+          "run_id": "r1-t3",
+          "tenant": "t3",
+          "cases_synced": 1,
+          "last_tick": 5000,
+          "updated_at": "2025-07-08T18:40:00.000Z"
+        }
+      ],
+      "agents": [
+        {
+          "tenant": "t3",
+          "instance": "a1",
+          "tick": 5000,
+          "resources": 50,
+          "population": 4,
+          "core_x": 200,
+          "core_y": 200,
+          "units": 4,
+          "visible_enemies": 0,
+          "status": "ACTIVE",
+          "mode": "production",
+          "connection_state": "up",
+          "first_seen": "2025-07-08T18:40:00.000Z",
+          "last_heartbeat": "2025-07-08T18:40:00.000Z",
+          "updated_at": "2025-07-08T18:40:00.000Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "10,10",
+          "x": 10,
+          "y": 10,
+          "first_seen_tick": 3200,
+          "last_seen_tick": 4985,
+          "state": "visible",
+          "last_state_tick": 4985,
+          "seen_count": 3
+        }
+      ],
+      "chunks": [
+        {
+          "chunk_key": "12,12",
+          "last_seen_tick": 0
+        }
+      ],
+      "unitsSeen": [
+        {
+          "cell": "192,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4900,
+          "x": 192,
+          "y": 195
+        },
+        {
+          "cell": "193,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4901,
+          "x": 193,
+          "y": 195
+        },
+        {
+          "cell": "194,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4902,
+          "x": 194,
+          "y": 195
+        },
+        {
+          "cell": "195,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4903,
+          "x": 195,
+          "y": 195
+        },
+        {
+          "cell": "196,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4904,
+          "x": 196,
+          "y": 195
+        },
+        {
+          "cell": "197,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4905,
+          "x": 197,
+          "y": 195
+        },
+        {
+          "cell": "198,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4906,
+          "x": 198,
+          "y": 195
+        },
+        {
+          "cell": "199,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4907,
+          "x": 199,
+          "y": 195
+        },
+        {
+          "cell": "200,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4908,
+          "x": 200,
+          "y": 195
+        },
+        {
+          "cell": "201,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4909,
+          "x": 201,
+          "y": 195
+        },
+        {
+          "cell": "202,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4910,
+          "x": 202,
+          "y": 195
+        },
+        {
+          "cell": "203,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4911,
+          "x": 203,
+          "y": 195
+        },
+        {
+          "cell": "204,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4912,
+          "x": 204,
+          "y": 195
+        },
+        {
+          "cell": "205,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4913,
+          "x": 205,
+          "y": 195
+        },
+        {
+          "cell": "192,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4914,
+          "x": 192,
+          "y": 195
+        },
+        {
+          "cell": "193,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4915,
+          "x": 193,
+          "y": 195
+        },
+        {
+          "cell": "194,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4916,
+          "x": 194,
+          "y": 195
+        },
+        {
+          "cell": "195,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4917,
+          "x": 195,
+          "y": 195
+        },
+        {
+          "cell": "196,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4918,
+          "x": 196,
+          "y": 195
+        },
+        {
+          "cell": "197,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4919,
+          "x": 197,
+          "y": 195
+        },
+        {
+          "cell": "198,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4920,
+          "x": 198,
+          "y": 195
+        },
+        {
+          "cell": "199,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4921,
+          "x": 199,
+          "y": 195
+        },
+        {
+          "cell": "200,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4922,
+          "x": 200,
+          "y": 195
+        },
+        {
+          "cell": "201,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4923,
+          "x": 201,
+          "y": 195
+        },
+        {
+          "cell": "202,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4924,
+          "x": 202,
+          "y": 195
+        },
+        {
+          "cell": "203,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4925,
+          "x": 203,
+          "y": 195
+        },
+        {
+          "cell": "204,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4926,
+          "x": 204,
+          "y": 195
+        },
+        {
+          "cell": "205,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4927,
+          "x": 205,
+          "y": 195
+        },
+        {
+          "cell": "192,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4928,
+          "x": 192,
+          "y": 195
+        },
+        {
+          "cell": "193,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4929,
+          "x": 193,
+          "y": 195
+        },
+        {
+          "cell": "194,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4930,
+          "x": 194,
+          "y": 195
+        },
+        {
+          "cell": "195,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4931,
+          "x": 195,
+          "y": 195
+        },
+        {
+          "cell": "196,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4932,
+          "x": 196,
+          "y": 195
+        },
+        {
+          "cell": "197,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4933,
+          "x": 197,
+          "y": 195
+        },
+        {
+          "cell": "198,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4934,
+          "x": 198,
+          "y": 195
+        },
+        {
+          "cell": "199,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4935,
+          "x": 199,
+          "y": 195
+        },
+        {
+          "cell": "200,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4936,
+          "x": 200,
+          "y": 195
+        },
+        {
+          "cell": "201,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4937,
+          "x": 201,
+          "y": 195
+        },
+        {
+          "cell": "202,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4938,
+          "x": 202,
+          "y": 195
+        },
+        {
+          "cell": "203,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4939,
+          "x": 203,
+          "y": 195
+        },
+        {
+          "cell": "204,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4940,
+          "x": 204,
+          "y": 195
+        },
+        {
+          "cell": "205,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4941,
+          "x": 205,
+          "y": 195
+        },
+        {
+          "cell": "192,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4942,
+          "x": 192,
+          "y": 195
+        },
+        {
+          "cell": "193,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4943,
+          "x": 193,
+          "y": 195
+        },
+        {
+          "cell": "194,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4944,
+          "x": 194,
+          "y": 195
+        },
+        {
+          "cell": "195,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4945,
+          "x": 195,
+          "y": 195
+        },
+        {
+          "cell": "196,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4946,
+          "x": 196,
+          "y": 195
+        },
+        {
+          "cell": "197,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4947,
+          "x": 197,
+          "y": 195
+        },
+        {
+          "cell": "198,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4948,
+          "x": 198,
+          "y": 195
+        },
+        {
+          "cell": "199,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4949,
+          "x": 199,
+          "y": 195
+        },
+        {
+          "cell": "200,195",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4950,
+          "x": 200,
+          "y": 195
+        }
+      ]
+    },
+    "t4": {
+      "syncMeta": [
+        {
+          "run_id": "r1-t4",
+          "tenant": "t4",
+          "cases_synced": 1,
+          "last_tick": 5000,
+          "updated_at": "2025-07-08T18:40:00.000Z"
+        }
+      ],
+      "agents": [
+        {
+          "tenant": "t4",
+          "instance": "a1",
+          "tick": 5000,
+          "resources": 6,
+          "population": 4,
+          "core_x": 300,
+          "core_y": 300,
+          "units": 4,
+          "visible_enemies": 0,
+          "status": "ACTIVE",
+          "mode": "production",
+          "connection_state": "up",
+          "first_seen": "2025-07-08T18:40:00.000Z",
+          "last_heartbeat": "2025-07-08T18:40:00.000Z",
+          "updated_at": "2025-07-08T18:40:00.000Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "50,50",
+          "x": 50,
+          "y": 50,
+          "first_seen_tick": 4000,
+          "last_seen_tick": 4990,
+          "state": "visible",
+          "last_state_tick": 4990,
+          "seen_count": 2
+        }
+      ]
+    }
+  },
+  "leaderboard": {
+    "content": {
+      "damage_dealt": [
+        {
+          "rank": 1,
+          "username": "elite1",
+          "score": 5000
+        },
+        {
+          "rank": 5,
+          "username": "elite2",
+          "score": 4000
+        },
+        {
+          "rank": 20,
+          "username": "aggr1",
+          "score": 1200
+        },
+        {
+          "rank": 99,
+          "username": "standard1",
+          "score": 90
+        }
+      ]
+    },
+    "fileName": "leaderboard-2025-07-08-18-00-00.json",
+    "mtimeMs": 1751999940000
+  },
+  "telemetry": {},
+  "humanAudit": []
+}
