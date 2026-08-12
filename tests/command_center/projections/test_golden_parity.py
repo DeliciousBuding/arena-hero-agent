@@ -38,14 +38,26 @@ from arena_hero_agent.command_center.projections import (
     assign_alliance_mining,
     build_alliance_cluster_view,
     build_alliance_defense_payload,
+    build_decision_input,
+    build_enemy_core_states,
+    compute_exploration_stats,
+    enrich_consensus_mining,
     load_alliance_advice,
     load_arbitrations,
     load_human_audit,
+    load_survey_mine,
     merge_audit_trails,
     normalize_audit_trails,
     normalize_products,
     should_append,
     snapshot_signature,
+)
+from arena_hero_agent.command_center.projections.mine_patterns import (
+    compute_absent_stats,
+    compute_dead_mines,
+    compute_prediction_accuracy,
+    compute_refill_predictions,
+    compute_refill_predictions_from_absences,
 )
 from arena_hero_agent.command_center.projections._common import num
 from arena_hero_agent.command_center.projections.alliance_snapshot import (
@@ -269,6 +281,76 @@ def _run_python(name: str, fixture: dict[str, Any]) -> object:
             root = Path(root_dir)
             materialize_advice_data_root(fixture, root)
             return load_alliance_advice(root, now_ms=int(fixture["nowMs"]))
+    if name == "exploration_coverage_basic":
+        return compute_exploration_stats(
+            fixture["chunksByTenant"],
+            {
+                str(t): (tuple(core) if core is not None else None)
+                for t, core in fixture["coresByTenant"].items()
+            },
+            int(fixture["currentTick"]),
+        )
+    if name == "mine_patterns_predict_basic":
+        return compute_refill_predictions(
+            [dict(r) for r in fixture["rows"]],
+            [dict(r) for r in fixture["resources"]],
+            int(fixture["currentTick"]),
+        )
+    if name == "mine_patterns_predict_absences_basic":
+        return compute_refill_predictions_from_absences(
+            [dict(r) for r in fixture["absences"]],
+            [dict(r) for r in fixture["seenHistory"]],
+            [dict(r) for r in fixture["resources"]],
+            int(fixture["currentTick"]),
+        )
+    if name == "mine_patterns_absent_stats_basic":
+        return compute_absent_stats([dict(r) for r in fixture["absences"]])
+    if name == "mine_patterns_dead_mines_basic":
+        return compute_dead_mines(
+            [dict(r) for r in fixture["absences"]],
+            [dict(r) for r in fixture["resources"]],
+        )
+    if name == "mine_patterns_accuracy_basic":
+        return compute_prediction_accuracy(
+            [dict(r) for r in fixture["predictions"]],
+            [dict(r) for r in fixture["rows"]],
+            int(fixture["currentTick"]),
+        )
+    if name == "consensus_mining_basic":
+        return enrich_consensus_mining(
+            fixture["survey"],
+            fixture["effectiveness"],
+            fixture["mines"],
+            fixture["heatByBucket"],
+        )
+    if name in ("survey_mine_basic", "survey_mine_default_cell"):
+        import tempfile
+        from pathlib import Path
+
+        from .tools.advice_fixture import materialize_advice_data_root
+
+        with tempfile.TemporaryDirectory(prefix="cc-survey-mine-parity-") as root_dir:
+            root = Path(root_dir)
+            materialize_advice_data_root(fixture, root)
+            return load_survey_mine(root, str(fixture["tenant"]), fixture.get("cell"))
+    if name == "enemy_cores_basic":
+        return build_enemy_core_states(
+            [dict(r) for r in fixture["hunts"]],
+            int(fixture["currentTick"]),
+            [tuple(c) for c in fixture["friendlyCores"]],
+        )
+    if name == "decision_input_basic":
+        return build_decision_input(
+            str(fixture["tenant"]),
+            fixture["currentTick"],
+            [dict(p) for p in fixture["predictions"]],
+            [dict(c) for c in fixture["chunks"]],
+            {str(k): dict(v) for k, v in fixture["threatByCell"].items()},
+            [dict(r) for r in fixture["resurvey"]],
+            [dict(c) for c in fixture["coreThreats"]],
+            [dict(c) for c in fixture["miningCandidates"]],
+            now_ms=NOW_MS,
+        )
     raise AssertionError(f"no Python runner registered for fixture {name}")
 
 
@@ -296,6 +378,17 @@ CASES = [
     "human_audit_basic",
     "alliance_advice_basic",
     "alliance_advice_full",
+    "exploration_coverage_basic",
+    "mine_patterns_predict_basic",
+    "mine_patterns_predict_absences_basic",
+    "mine_patterns_absent_stats_basic",
+    "mine_patterns_dead_mines_basic",
+    "mine_patterns_accuracy_basic",
+    "consensus_mining_basic",
+    "survey_mine_basic",
+    "survey_mine_default_cell",
+    "enemy_cores_basic",
+    "decision_input_basic",
 ]
 
 

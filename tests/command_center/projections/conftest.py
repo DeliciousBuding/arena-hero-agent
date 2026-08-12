@@ -59,8 +59,10 @@ def json_equal(actual: object, expected: object) -> bool:
             and all(json_equal(actual[key], expected[key]) for key in expected)
         )
     if isinstance(expected, list):
+        # tuples and lists both serialize to JSON arrays; projections may
+        # return either and must compare equal (W44 wave 5 exploration parity)
         return (
-            isinstance(actual, list)
+            isinstance(actual, (list, tuple))
             and len(actual) == len(expected)
             and all(json_equal(a, b) for a, b in zip(actual, expected, strict=True))
         )

@@ -1,0 +1,149 @@
+{
+  "nowMs": 1752000000000,
+  "tenant": "t1",
+  "currentTick": 5000,
+  "predictions": [
+    {
+      "cell": "10,20",
+      "x": 10,
+      "y": 20,
+      "windows": 2,
+      "avgGapTicks": 300,
+      "lastSeenTick": 401,
+      "predictedNextTick": 700,
+      "dueInTicks": -4300
+    },
+    {
+      "cell": "30,40",
+      "x": 30,
+      "y": 40,
+      "windows": 2,
+      "avgGapTicks": 200,
+      "lastSeenTick": 300,
+      "predictedNextTick": 5200,
+      "dueInTicks": 200
+    },
+    {
+      "cell": "50,60",
+      "x": 50,
+      "y": 60,
+      "windows": 2,
+      "avgGapTicks": 50,
+      "lastSeenTick": 5100,
+      "predictedNextTick": 5200,
+      "dueInTicks": 200
+    },
+    {
+      "cell": null,
+      "x": 0,
+      "y": 0,
+      "windows": 1,
+      "avgGapTicks": null,
+      "lastSeenTick": 100,
+      "predictedNextTick": null,
+      "dueInTicks": null
+    }
+  ],
+  "chunks": [
+    {
+      "key": "3,4",
+      "cx": 3,
+      "cy": 4,
+      "lastSeenTick": 4900
+    },
+    {
+      "key": "5,6",
+      "cx": 5,
+      "cy": 6,
+      "lastSeenTick": null
+    },
+    {
+      "cx": 7,
+      "cy": 8,
+      "lastSeenTick": 100
+    }
+  ],
+  "threatByCell": {
+    "10,20": {
+      "threatLevel": 3,
+      "threatCombat": 15
+    },
+    "30,40": {
+      "threatLevel": 1,
+      "threatCombat": 2
+    }
+  },
+  "resurvey": [
+    {
+      "key": "0,0",
+      "cx": 0,
+      "cy": 0,
+      "lastSeenTick": 3000,
+      "stalenessTicks": 2000,
+      "distChunks": 1,
+      "threatLevel": 2,
+      "threatCombat": 9
+    },
+    {
+      "key": "1,1",
+      "cx": 1,
+      "cy": 1,
+      "lastSeenTick": 3100,
+      "stalenessTicks": 1900,
+      "distChunks": 3,
+      "threatLevel": 0,
+      "threatCombat": 0
+    },
+    {
+      "cx": 2,
+      "cy": 2,
+      "lastSeenTick": 3200,
+      "stalenessTicks": 1800,
+      "distChunks": 2,
+      "threatLevel": 4,
+      "threatCombat": 30
+    },
+    {
+      "key": "4,4",
+      "cx": 4,
+      "cy": 4,
+      "lastSeenTick": 3300,
+      "stalenessTicks": 1700,
+      "distChunks": 5,
+      "threatLevel": 1,
+      "threatCombat": 1
+    }
+  ],
+  "coreThreats": [
+    {
+      "coreOwner": "enemy-a",
+      "distance": 40,
+      "tick": 4900
+    },
+    {
+      "coreOwner": "enemy-c",
+      "distance": 200,
+      "tick": 200
+    }
+  ],
+  "miningCandidates": [
+    {
+      "cell": "10,20",
+      "x": 10,
+      "y": 20,
+      "lastSeenTick": 4900,
+      "gapAgeTicks": 100,
+      "harvestFail": 1,
+      "activity": 0.5
+    },
+    {
+      "cell": "30,40",
+      "x": 30,
+      "y": 40,
+      "lastSeenTick": 5100,
+      "gapAgeTicks": null,
+      "harvestFail": 0,
+      "activity": 0.2
+    }
+  ]
+}

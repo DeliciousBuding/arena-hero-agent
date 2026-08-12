@@ -1,0 +1,67 @@
+{
+  "nowMs": 1752000000000,
+  "tenant": "t1",
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {
+          "run_id": "run-1",
+          "tenant": "t1",
+          "cases_synced": 10,
+          "last_tick": 5000,
+          "updated_at": "2026-08-01T00:00:00Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "10,20",
+          "x": 10,
+          "y": 20,
+          "first_seen_tick": 100,
+          "last_seen_tick": 4900,
+          "state": "visible",
+          "last_state_tick": 4900,
+          "seen_count": 3
+        },
+        {
+          "cell": "30,40",
+          "x": 30,
+          "y": 40,
+          "first_seen_tick": 200,
+          "last_seen_tick": 5100,
+          "state": "visible",
+          "last_state_tick": 5100,
+          "seen_count": 5
+        },
+        {
+          "cell": "50,60",
+          "x": 50,
+          "y": 60,
+          "first_seen_tick": 300,
+          "last_seen_tick": 4800,
+          "state": "stale",
+          "last_state_tick": 4800,
+          "seen_count": 2
+        }
+      ],
+      "resourceEvents": [
+        {
+          "cell": "30,40",
+          "tick": 4000,
+          "event_type": "HARVEST_SUCCEEDED",
+          "reason_code": null,
+          "amount": 4,
+          "actor_id": "u3"
+        },
+        {
+          "cell": "30,40",
+          "tick": 4100,
+          "event_type": "HARVEST_FAILED",
+          "reason_code": "NO_WORKERS",
+          "amount": null,
+          "actor_id": "u4"
+        }
+      ]
+    }
+  }
+}

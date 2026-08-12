@@ -1,0 +1,61 @@
+{
+  "predictions": [
+    {
+      "cell": "10,20",
+      "x": 10,
+      "y": 20,
+      "windows": 2,
+      "avgGapTicks": 300,
+      "lastSeenTick": 401,
+      "predictedNextTick": 700,
+      "dueInTicks": -300
+    },
+    {
+      "cell": "30,40",
+      "x": 30,
+      "y": 40,
+      "windows": 2,
+      "avgGapTicks": 200,
+      "lastSeenTick": 300,
+      "predictedNextTick": 500,
+      "dueInTicks": -500
+    },
+    {
+      "cell": "50,60",
+      "x": 50,
+      "y": 60,
+      "windows": 2,
+      "avgGapTicks": 50,
+      "lastSeenTick": 900,
+      "predictedNextTick": 950,
+      "dueInTicks": 50
+    }
+  ],
+  "rows": [
+    {
+      "cell": "10,20",
+      "tick": 100
+    },
+    {
+      "cell": "10,20",
+      "tick": 400
+    },
+    {
+      "cell": "10,20",
+      "tick": 701
+    },
+    {
+      "cell": "30,40",
+      "tick": 100
+    },
+    {
+      "cell": "30,40",
+      "tick": 300
+    },
+    {
+      "cell": "50,60",
+      "tick": 900
+    }
+  ],
+  "currentTick": 1000
+}

@@ -1,0 +1,1 @@
+{"tenant":"t1","mine":{"x":30,"y":40,"tick":5100,"firstSeenTick":200,"state":"visible","seenCount":5,"ageTicks":0,"fresh":true,"harvestCount":1,"lastHarvestTick":4000},"cell":"30,40","timeline":[{"tick":4000,"eventType":"HARVEST_SUCCEEDED","reason":null,"amount":4,"actorId":"u3"},{"tick":4100,"eventType":"HARVEST_FAILED","reason":"NO_WORKERS","amount":null,"actorId":"u4"}]}

@@ -29,6 +29,8 @@ FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 ORACLE_HARNESS = Path.home() / "tmp" / "cc-oracle.mjs"
 # advice fixtures need a materialized data root, not the raw fixture JSON
 ORACLE_ADVICE_HARNESS = Path.home() / "tmp" / "cc-oracle-advice.mjs"
+# survey/mine fixtures need a materialized survey-db data root (W44 wave 5)
+ORACLE_SURVEY_MINE_HARNESS = Path.home() / "tmp" / "cc-oracle-survey-mine.mjs"
 
 # fixture base name -> oracle dispatch kind (see cc-oracle.mjs)
 KIND_BY_FIXTURE: dict[str, str] = {
@@ -55,6 +57,17 @@ KIND_BY_FIXTURE: dict[str, str] = {
     "human_audit_basic": "humanAudit",
     "alliance_advice_basic": "advice",
     "alliance_advice_full": "advice",
+    "exploration_coverage_basic": "explorationCoverage",
+    "mine_patterns_predict_basic": "minePatternsPredict",
+    "mine_patterns_predict_absences_basic": "minePatternsPredictAbsences",
+    "mine_patterns_absent_stats_basic": "minePatternsAbsentStats",
+    "mine_patterns_dead_mines_basic": "minePatternsDeadMines",
+    "mine_patterns_accuracy_basic": "minePatternsAccuracy",
+    "consensus_mining_basic": "consensusMining",
+    "survey_mine_basic": "surveyMine",
+    "survey_mine_default_cell": "surveyMine",
+    "enemy_cores_basic": "enemyCores",
+    "decision_input_basic": "decisionInput",
 }
 
 
@@ -85,6 +98,30 @@ def main() -> int:
                 advice_fixture.materialize_advice_data_root(spec, root)
                 result = subprocess.run(
                     ["node", str(ORACLE_ADVICE_HARNESS), str(root), str(spec["nowMs"])],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                )
+        elif kind == "surveyMine":
+            # survey/mine oracle reads a materialized survey-db data root
+            import json as _json
+            import tempfile
+
+            import advice_fixture
+
+            spec = _json.loads(fixture.read_text(encoding="utf-8"))
+            with tempfile.TemporaryDirectory(prefix="cc-survey-mine-regen-") as root_dir:
+                root = Path(root_dir)
+                advice_fixture.materialize_advice_data_root(spec, root)
+                result = subprocess.run(
+                    [
+                        "node",
+                        str(ORACLE_SURVEY_MINE_HARNESS),
+                        str(root),
+                        str(spec.get("tenant", "t1")),
+                        str(spec.get("cell", "")),
+                    ],
                     capture_output=True,
                     text=True,
                     encoding="utf-8",

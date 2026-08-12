@@ -1,0 +1,55 @@
+{
+  "hunts": [
+    {
+      "owner": "enemy-a",
+      "x": 50,
+      "y": 60,
+      "firstSeenTick": 100,
+      "lastSeenTick": 4800,
+      "source": "CORE"
+    },
+    {
+      "owner": "enemy-a",
+      "x": 120,
+      "y": 130,
+      "firstSeenTick": 400,
+      "lastSeenTick": 4900,
+      "source": "WORKER_INFER"
+    },
+    {
+      "owner": "enemy-b",
+      "x": 700,
+      "y": 800,
+      "firstSeenTick": 50,
+      "lastSeenTick": 900,
+      "source": "CORE"
+    },
+    {
+      "owner": "enemy-c",
+      "x": 5,
+      "y": 5,
+      "firstSeenTick": 10,
+      "lastSeenTick": 200,
+      "source": "CORE"
+    },
+    {
+      "owner": "enemy-d",
+      "x": 1000,
+      "y": 1000,
+      "firstSeenTick": 500,
+      "lastSeenTick": 5000,
+      "source": "CORE"
+    }
+  ],
+  "currentTick": 5100,
+  "friendlyCores": [
+    [
+      100,
+      110
+    ],
+    [
+      5,
+      8
+    ]
+  ]
+}

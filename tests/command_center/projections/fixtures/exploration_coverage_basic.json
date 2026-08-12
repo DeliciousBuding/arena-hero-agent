@@ -1,0 +1,46 @@
+{
+  "chunksByTenant": {
+    "t1": [
+      {
+        "key": "0,0",
+        "lastSeenTick": 4000
+      },
+      {
+        "key": "0,1",
+        "lastSeenTick": 3500
+      },
+      {
+        "key": "1,0",
+        "lastSeenTick": 4200
+      },
+      {
+        "key": "bad-key",
+        "lastSeenTick": 9999
+      }
+    ],
+    "t2": [
+      {
+        "key": "0,0",
+        "lastSeenTick": 3800
+      },
+      {
+        "key": "1,1",
+        "lastSeenTick": 500
+      }
+    ],
+    "t3": []
+  },
+  "coresByTenant": {
+    "t1": [
+      120,
+      130
+    ],
+    "t2": [
+      -5,
+      -10
+    ],
+    "t3": null,
+    "t4": null
+  },
+  "currentTick": 5000
+}

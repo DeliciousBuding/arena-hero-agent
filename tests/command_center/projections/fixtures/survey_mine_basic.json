@@ -1,0 +1,84 @@
+{
+  "nowMs": 1752000000000,
+  "tenant": "t1",
+  "cell": "10,20",
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {
+          "run_id": "run-1",
+          "tenant": "t1",
+          "cases_synced": 10,
+          "last_tick": 5000,
+          "updated_at": "2026-08-01T00:00:00Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "10,20",
+          "x": 10,
+          "y": 20,
+          "first_seen_tick": 100,
+          "last_seen_tick": 4900,
+          "state": "visible",
+          "last_state_tick": 4900,
+          "seen_count": 3
+        },
+        {
+          "cell": "30,40",
+          "x": 30,
+          "y": 40,
+          "first_seen_tick": 200,
+          "last_seen_tick": 1000,
+          "state": "visible",
+          "last_state_tick": 1000,
+          "seen_count": 5
+        },
+        {
+          "cell": "50,60",
+          "x": 50,
+          "y": 60,
+          "first_seen_tick": 300,
+          "last_seen_tick": 4800,
+          "state": "harvested",
+          "last_state_tick": 4800,
+          "seen_count": 2
+        }
+      ],
+      "resourceEvents": [
+        {
+          "cell": "10,20",
+          "tick": 2000,
+          "event_type": "HARVEST_SUCCEEDED",
+          "reason_code": null,
+          "amount": 5,
+          "actor_id": "u1"
+        },
+        {
+          "cell": "10,20",
+          "tick": 2500,
+          "event_type": "HARVEST_FAILED",
+          "reason_code": "MINE_EMPTY",
+          "amount": null,
+          "actor_id": "u2"
+        },
+        {
+          "cell": "10,20",
+          "tick": 3000,
+          "event_type": "HARVEST_SUCCEEDED",
+          "reason_code": null,
+          "amount": 3,
+          "actor_id": "u1"
+        },
+        {
+          "cell": "30,40",
+          "tick": 1500,
+          "event_type": "HARVEST_SUCCEEDED",
+          "reason_code": null,
+          "amount": 4,
+          "actor_id": "u3"
+        }
+      ]
+    }
+  }
+}
