@@ -1,0 +1,96 @@
+{
+  "nowMs": 1752000000000,
+  "telemetry": {
+    "t1": {
+      "decision": [
+        {
+          "tick": 10,
+          "decisionSource": "ai",
+          "moveCount": 2,
+          "waitCount": 0,
+          "harvestCount": 1,
+          "depositCount": 0,
+          "repairCount": 0,
+          "planHash": "p1",
+          "intent": "harvest"
+        },
+        {
+          "tick": 11,
+          "decisionSource": "ai",
+          "moveCount": 0,
+          "waitCount": 3,
+          "harvestCount": 0,
+          "depositCount": 0,
+          "repairCount": 0,
+          "planHash": "p2",
+          "intent": "wait"
+        }
+      ],
+      "outcome": [
+        {
+          "tick": 10,
+          "coreResourceDelta": 4,
+          "workerCount": 2,
+          "workersWithCargo": 1,
+          "humanOverride": {
+            "applied": [
+              "a1"
+            ],
+            "rejected": []
+          }
+        },
+        {
+          "tick": 11,
+          "coreResourceDelta": -1,
+          "workerCount": 2,
+          "workersWithCargo": 2,
+          "humanOverride": {
+            "applied": [],
+            "rejected": [
+              {
+                "reason": "Core is already moving"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "t2": {
+      "decision": [
+        {
+          "tick": 20,
+          "decisionSource": "human",
+          "moveCount": 1,
+          "waitCount": 0,
+          "harvestCount": 0,
+          "depositCount": 0,
+          "repairCount": 0,
+          "planHash": "h1",
+          "intent": "mine"
+        }
+      ],
+      "outcome": [
+        {
+          "tick": 20,
+          "coreResourceDelta": 2,
+          "workerCount": 3,
+          "workersWithCargo": 0
+        }
+      ]
+    }
+  },
+  "humanAudit": [
+    {
+      "at": "2026-08-08T00:00:00Z",
+      "tenant": "t1",
+      "kind": "goal",
+      "unitId": "u1",
+      "action": "mine [3,4]"
+    },
+    {
+      "at": "2026-08-08T00:00:01Z",
+      "tenant": "t1",
+      "kind": "delete"
+    }
+  ]
+}

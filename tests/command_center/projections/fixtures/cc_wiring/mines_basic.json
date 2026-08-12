@@ -1,0 +1,128 @@
+{
+  "nowMs": 1752000000000,
+  "worlds": {
+    "t1": {
+      "tick": 5000,
+      "state": {
+        "objects": [
+          {
+            "kind": "CORE",
+            "controlled": true,
+            "position": [
+              0,
+              0
+            ]
+          },
+          {
+            "kind": "UNIT",
+            "controlled": true,
+            "position": [
+              1,
+              1
+            ],
+            "unitType": "WORKER"
+          },
+          {
+            "kind": "UNIT",
+            "controlled": true,
+            "position": [
+              2,
+              1
+            ],
+            "unitType": "WORKER"
+          }
+        ]
+      }
+    }
+  },
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {
+          "run_id": "r1",
+          "tenant": "t1",
+          "cases_synced": 1,
+          "last_tick": 5000,
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "agents": [
+        {
+          "tenant": "t1",
+          "instance": "i1",
+          "tick": 5000,
+          "resources": 10,
+          "population": 3,
+          "core_x": 0,
+          "core_y": 0,
+          "units": 3,
+          "visible_enemies": 1,
+          "status": "ok",
+          "sdk_version": "0.3.0a4",
+          "base_url": "http://localhost",
+          "pid": 1,
+          "platform": "win",
+          "mode": "production",
+          "connection_state": "up",
+          "first_seen": "2025-07-08T18:00:00Z",
+          "last_heartbeat": "2025-07-08T18:40:00Z",
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "5,5",
+          "x": 5,
+          "y": 5,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4800,
+          "state": "visible",
+          "last_state_tick": 4800,
+          "seen_count": 3
+        },
+        {
+          "cell": "6,5",
+          "x": 6,
+          "y": 5,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 2000,
+          "state": "stale",
+          "last_state_tick": 2000,
+          "seen_count": 2
+        },
+        {
+          "cell": "7,5",
+          "x": 7,
+          "y": 5,
+          "first_seen_tick": 3500,
+          "last_seen_tick": 4900,
+          "state": "visible",
+          "last_state_tick": 4700,
+          "seen_count": 2
+        }
+      ],
+      "resourceEvents": [
+        {
+          "cell": "5,5",
+          "tick": 4000,
+          "event_type": "HARVEST_SUCCEEDED",
+          "reason_code": null,
+          "amount": 5,
+          "actor_id": null
+        }
+      ]
+    },
+    "t2": {
+      "syncMeta": [],
+      "resources": []
+    },
+    "t3": {
+      "syncMeta": [],
+      "resources": []
+    },
+    "t4": {
+      "syncMeta": [],
+      "resources": []
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "nowMs": 1752000000000,
+  "humanAudit": [
+    {
+      "at": "2026-08-08T00:00:00Z",
+      "tenant": "t1",
+      "kind": "goal",
+      "unitId": "u1",
+      "action": "mine [3,4]"
+    }
+  ],
+  "commandAudit": {
+    "t1": [
+      {
+        "at": "2026-08-08T00:00:01Z",
+        "kind": "worker_mine",
+        "action": "MINE",
+        "evidence": {
+          "target": [
+            3,
+            4
+          ]
+        }
+      }
+    ]
+  },
+  "arbitration": [
+    {
+      "createdAt": "2026-08-08T00:00:02Z",
+      "cell": "5,5",
+      "winnerTenant": "t2"
+    }
+  ],
+  "supervisor": [
+    {
+      "ts": "2026-08-08T00:00:03Z",
+      "type": "exited",
+      "pid": 7,
+      "exitCode": 1,
+      "tenantId": "t1"
+    }
+  ]
+}

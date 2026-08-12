@@ -1,0 +1,25 @@
+{
+  "nowMs": 1752000000000,
+  "runtimeJsonl": {
+    "t1": [
+      {
+        "tick": 5,
+        "telemetryType": "worker_liveness",
+        "unitId": "u1",
+        "workerLivenessKind": "stuck",
+        "streak": 2,
+        "recoveryCount": 0,
+        "recoveryApplied": false
+      },
+      {
+        "tick": 6,
+        "telemetryType": "worker_liveness",
+        "unitId": "u1",
+        "workerLivenessKind": "stuck",
+        "streak": 3,
+        "recoveryCount": 1,
+        "recoveryApplied": true
+      }
+    ]
+  }
+}
