@@ -10,4 +10,9 @@
   （X-Shop-Cookie / localStorage，`web/src/lib/shopApi.ts`）且实际提交 I/O 仍在
   mapEngine（~4300 行）内、无单测覆盖，迁移前需先建测试与 I/O 边界。
 
+## P3 观察（release-004 待修，2026-08-12）
+
+- telemetry `processRunId` 恒 "unknown"（sink 默认值，offline/live 两路径一致；
+  health 快照有真实 run id）——不影响数据完整性，随 release-004 修复。
+
 其余：无。
