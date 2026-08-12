@@ -62,3 +62,43 @@
 
 - W19–W21 未单独写 delivery docs（PROGRESS/BLOCKED 停留在 W18 状态），本次为文档收口。
 - 明确 SKIP 的遗留项见 `BLOCKED.md`。
+## W25 — live writer 接线（branch `w25/live`）
+
+- Commits：`1f56c30`（组合决策栈）、`272c2a3`（live 适配器 + observed lease）、
+  `8b07525`（live 子命令 + fake-client E2E）。
+- 内容要点（P4-21 live 关键路径，t4 canary 已授权）：
+  - `cli/main.py` 新增 `live` 子命令：
+    `arena-hero-agent live --tenant ID --data-root PATH [--base-url URL]
+    [--tick-budget-ms N] [--max-reconnects N]`；api key 从环境
+    `ARENA_HERO_API_KEY` 读取（不落仓/日志）。流程：acquire/replace fenced
+    writer lease（P4-15）→ `create_sdk_game_client(api_key, base_url)` →
+    `LiveTurnSource`（events() 流 → `adapt_async_turn`）→ `TenantRuntime`
+    tick loop（decide=composed，submit=`LiveSubmitter`，DecisionId 幂等键）→
+    复用 recorder/telemetry/health 观察器 → SIGTERM/SIGINT 优雅关闭
+    （release lease + close client）。lease renew 失败 → fail-closed 停止。
+  - `strategies/composition.py`：`compose_decider()` 组合根。
+    组合顺序 = SafetyPlanner baseline → `assign_worker_tasks` override →
+    task→action 转换 → `Plan`→`Decision`；显式持有跨 tick claims/previous
+    assignments，`snapshot_from_turn` 用固定 zero seed 派生 EconomyState。
+  - `adapters/sdk/live.py`：`LiveTurnSource`（可重开流，非 turn 事件跳过）、
+    `LiveSubmitter`（SDK 错误 → rejected outcome，fail-closed）。
+  - `adapters/runtime/process_leases.py`：新增 `WriterLeaseRecord` +
+    `observed_writer_lease`（读取 fencing 记录供接管，fence 单调）。
+- 对拍证据：composed decider 的 worker 动作转换对
+  `known_answers_v1.json`（8cf5cbb）worker_assignments fixture——
+  single_worker_single_cell / cargo_worker_forced_deposit /
+  worker_on_visible_cell_forced_harvest / beacon_on_worker_cell_forced_pickup /
+  two_workers_one_cell / no_candidate_cells_all_workers_wait /
+  claim_keeps_cell_two_ticks / survey_burst_pre_reserve 共 8 例；底层
+  `assign_worker_tasks` fixture 33 cases + safety_helpers 差分测试既有。
+  组合/转换本身注册为 `planner_composition` ALLOWED_DIFFERENCE
+  （docs/planning-differences.md，措辞已覆盖 live composition）。
+- 门禁（w25/live 复跑验证）：`pytest -q` = **1499 passed**（基线 1469 + 30 新增：
+  composition 9 + sdk/live 8 + lease observed 4 + cli/live 9），skipped 0；
+  ruff format/check、ty check、`git diff --check` 全 PASS；
+  `arena-hero-agent live --help` 可用。
+- 遗留：
+  - 未部署、未换 writer、未做 canary——t4 canary 阶梯需用户授权后另起
+    （24h soak 后台运行中，勿碰）。
+  - `arena-hero-agent-ts` 只读 oracle（有 WIP 未碰）；sdk-py / Lab / 根仓 /
+    production 未动。
