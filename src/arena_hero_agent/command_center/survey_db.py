@@ -6,7 +6,11 @@ schema is the command-center's ``AGENT_SCHEMA`` contract: the ``agents`` /
 ``agent_events`` ledger plus the python-mapping telemetry tables
 (``resources``, ``obstacles``, ``core_hunts``, ``units_seen``,
 ``resource_seen_history``) whose SQL semantics match the arena-agent
-``survey-db.ts`` upserts.
+``survey-db.ts`` upserts, plus the remaining legacy survey-db tables
+(``sync_meta``, ``heat_archive``, ``resource_absences``, ``resource_events``,
+``unit_lifecycle``, ``core_spends``, ``chunks``, ``notable_events``) with the
+exact TS column types/defaults (W44 wave 6; these tables have no Python
+writer yet and are read by the survey / lifecycle / exploration projections).
 
 Registered differences from the TS oracle:
 
@@ -128,6 +132,83 @@ CREATE TABLE IF NOT EXISTS resource_seen_history (
 );
 CREATE INDEX IF NOT EXISTS idx_resource_seen_history_cell ON resource_seen_history(cell, tick);
 CREATE INDEX IF NOT EXISTS idx_resource_seen_history_tick ON resource_seen_history(tick);
+-- W44 wave 6: the remaining legacy survey-db tables (arena-agent survey-db.ts,
+-- exact TS column types/defaults mirrored by tests/.../advice_fixture.py
+-- SURVEY_SCHEMA). Additive only; existing databases open fine because every
+-- CREATE TABLE is IF NOT EXISTS and none of these tables has a Python writer
+-- yet (they are populated by the TS survey-sync CLI / future Python ingest).
+CREATE TABLE IF NOT EXISTS sync_meta (
+  run_id TEXT PRIMARY KEY,
+  tenant TEXT NOT NULL,
+  cases_synced INTEGER NOT NULL DEFAULT 0,
+  last_tick INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_units_seen_controlled_tick ON units_seen(controlled, tick);
+CREATE TABLE IF NOT EXISTS heat_archive (
+  x INTEGER NOT NULL,
+  y INTEGER NOT NULL,
+  unit_type TEXT NOT NULL,
+  count INTEGER NOT NULL,
+  first_tick INTEGER NOT NULL,
+  last_tick INTEGER NOT NULL,
+  PRIMARY KEY (x, y, unit_type)
+);
+CREATE TABLE IF NOT EXISTS resource_absences (
+  cell TEXT NOT NULL,
+  tick INTEGER NOT NULL,
+  PRIMARY KEY (cell, tick)
+);
+CREATE TABLE IF NOT EXISTS resource_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cell TEXT NOT NULL,
+  tick INTEGER NOT NULL,
+  event_type TEXT NOT NULL,
+  reason_code TEXT,
+  amount INTEGER,
+  actor_id TEXT,
+  UNIQUE(cell, tick, event_type, actor_id)
+);
+CREATE TABLE IF NOT EXISTS unit_lifecycle (
+  unit_id TEXT PRIMARY KEY,
+  unit_type TEXT NOT NULL,
+  birth_tick INTEGER,
+  birth_pos TEXT,
+  death_tick INTEGER,
+  death_pos TEXT,
+  death_reason TEXT,
+  last_seen_tick INTEGER NOT NULL,
+  last_seen_pos TEXT,
+  current_state TEXT NOT NULL DEFAULT 'alive'
+);
+CREATE TABLE IF NOT EXISTS core_spends (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL,
+  tick INTEGER NOT NULL,
+  amount INTEGER NOT NULL,
+  unit_type TEXT,
+  unit_id TEXT
+);
+CREATE TABLE IF NOT EXISTS chunks (
+  chunk_key TEXT PRIMARY KEY,
+  last_seen_tick INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS notable_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tenant TEXT NOT NULL,
+  tick INTEGER NOT NULL,
+  event_type TEXT NOT NULL,
+  actor_id TEXT,
+  target_id TEXT,
+  x INTEGER,
+  y INTEGER,
+  amount INTEGER,
+  unit_type TEXT,
+  reason_code TEXT,
+  destroyed_by TEXT,
+  is_our_core INTEGER,
+  UNIQUE(tenant, tick, event_type, actor_id, target_id)
+);
 """
 
 _AGENT_UPSERT = """

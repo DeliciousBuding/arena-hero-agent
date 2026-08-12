@@ -9,6 +9,7 @@ from typing import cast
 import pytest
 
 from arena_hero_agent.command_center import (
+    SURVEY_DB_SCHEMA,
     AgentEventKind,
     AgentIngestEvent,
     CommandCenterError,
@@ -66,6 +67,14 @@ def test_write_open_creates_schema_tables(tmp_path: Path) -> None:
                 "core_hunts",
                 "units_seen",
                 "resource_seen_history",
+                "sync_meta",
+                "heat_archive",
+                "resource_absences",
+                "resource_events",
+                "unit_lifecycle",
+                "core_spends",
+                "chunks",
+                "notable_events",
             } <= tables
             pk = [
                 row[2]
@@ -220,3 +229,78 @@ def test_sim_tenant_namespace(tmp_path: Path) -> None:
 def test_invalid_survey_tenant_raises(tmp_path: Path) -> None:
     with pytest.raises(CommandCenterError, match="not a survey tenant"):
         SurveyDb(tmp_path, "bogus", write=True)
+
+
+def _column_map(connection: sqlite3.Connection, table: str) -> dict[str, tuple]:
+    """Column name -> (name, type, notnull, default, pk) for one table."""
+    return {
+        row[1]: (row[1], str(row[2]), row[3], row[4], row[5])
+        for row in connection.execute(f"PRAGMA table_info({table})")
+    }
+
+
+def test_schema_matches_ts_snapshot_for_new_tables() -> None:
+    """The W44 wave-6 tables match the TS survey-db snapshot column-for-column.
+
+    The authoritative legacy schema is mirrored by
+    ``tests/command_center/projections/tools/advice_fixture.py``
+    (``SURVEY_SCHEMA``). Every TS table must exist in the Python schema, and
+    the eight tables added in wave-6 (sync_meta, unit_lifecycle, core_spends,
+    resource_events, chunks, heat_archive, resource_absences, notable_events)
+    must match exactly: name, declared type, NOT NULL, default, and PK.
+    """
+    from tests.command_center.projections.tools.advice_fixture import SURVEY_SCHEMA
+
+    python_db = sqlite3.connect(":memory:")
+    ts_db = sqlite3.connect(":memory:")
+    try:
+        python_db.executescript(SURVEY_DB_SCHEMA)
+        ts_db.executescript(SURVEY_SCHEMA)
+        python_tables = {
+            row[0] for row in python_db.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        ts_tables = {
+            row[0] for row in ts_db.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        assert ts_tables <= python_tables, sorted(ts_tables - python_tables)
+        new_tables = (
+            "sync_meta",
+            "unit_lifecycle",
+            "core_spends",
+            "resource_events",
+            "chunks",
+            "heat_archive",
+            "resource_absences",
+            "notable_events",
+        )
+        for table in new_tables:
+            assert table in ts_tables, table
+            assert _column_map(python_db, table) == _column_map(ts_db, table), table
+    finally:
+        python_db.close()
+        ts_db.close()
+
+
+def test_write_open_creates_ts_snapshot_tables(tmp_path: Path) -> None:
+    """A write open creates every table the TS survey-db snapshot declares."""
+    from tests.command_center.projections.tools.advice_fixture import SURVEY_SCHEMA
+
+    with SurveyDb(tmp_path, "t1", write=True) as db:
+        connection = sqlite3.connect(db.path)
+        try:
+            ts_db = sqlite3.connect(":memory:")
+            try:
+                ts_db.executescript(SURVEY_SCHEMA)
+                ts_tables = {
+                    row[0]
+                    for row in ts_db.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                }
+            finally:
+                ts_db.close()
+            tables = {
+                row[0]
+                for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            }
+            assert ts_tables <= tables, sorted(ts_tables - tables)
+        finally:
+            connection.close()
