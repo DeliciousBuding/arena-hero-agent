@@ -30,6 +30,40 @@
   抽 mapEngine I/O 边界 + 补测试 → 前端调用方换生成 client。
 
 
+## W44 第四波只读接线（w44/cc-wave4，2026-08-12）
+
+wave-3 标为 needs-small-loader 的 6 条 + decision-input 全部接线（501→200，7 条），
+并移植 mine-patterns predictions（wave-3 注册缺口关闭）。
+
+### 已接线（501 → 200，7 条）
+
+| 路由 | 数据源 | 说明 |
+|---|---|---|
+| `GET /api/events` | 最新 run calibration cases `after.state.events`（before 恒空，2026-08-08 修复）+ EVENT_KINDS 过滤 | `events.py:load_events`；n clamp 1..200、tick 倒序、扫最近 20 case；空根 fail-open 200 `{tenant, generatedAt, events: []}` |
+| `GET /api/plan` | 最新 case 顶层 `plan` + `parse_tick` | `snapshots.py:load_plan`；无 run/case → plan null；解析失败带 `error` 字段（TS parity） |
+| `GET /api/world` | 最新 case `after.state ?? before.state` + tick | `snapshots.py:load_world`；无 run/case → state null、caseFile null |
+| `GET /api/survey/mine` | survey-db `resources`（TS loadSurveyDb shape：derived fresh/stale + persisted harvested/empty 负态优先 + harvest 聚合）+ `resource_events` timeline（tick 升序 cap 500） | `survey_mine.py:load_survey_mine`；cell=x,y，缺省取最近活跃矿；缺库 → 200 `{tenant, error: "survey db missing"}`（TS parity）；P5-3 无 resource_events → timeline 空（注册 divergence） |
+| `GET /api/survey/enemy-cores` | 跨租户 `core_hunts` → `build_enemy_core_states`（ACTIVE/RELOCATED/STALE + threat high≤60/medium≤200，STALE 不高威胁）+ alliance_snapshot 友核 | `enemy_cores.py`；无 tenant 参数（TS parity）；currentTick = max last_seen；空根 fail-open 200 |
+| `GET /api/redeem/history` | `runtime/redeem-log.jsonl` 尾读（MAX_KEEP 200） | `redeem.py:load_redeem_history`；Python 无 redeem 写路径（POST /api/redeem 501）恒空 fail-open；`count=len(records)` 为注册 divergence（TS count=进程内数组长度） |
+| `GET /api/survey/decision-input` | mine-patterns predictions + survey-db chunks + exploration resurveyTargets + core-threats（core_trails × 友核）+ mine-utilization candidates + consensus-mining threat | `decision_input.py:load_decision_input`；tenant fail-closed tN（all/非法→400）；各输入 fail-open（TS try/catch parity），不阻断 refill/chunk |
+
+### mine-patterns predictions 已移植（wave-3 注册缺口关闭）
+
+- `mine_patterns.py` 完整移植 TS A15/A16 refill 模型：`compute_refill_stats(_from_absences)`、
+  `compute_refill_predictions(_from_absences)`、`compute_absent_stats`、`compute_dead_mines`、
+  `compute_prediction_accuracy`（REFILL_GAP_TICKS=5、DEAD_ABSENT_TICKS=200；缺席段→重见优先于出现窗口）。
+- `alliance/mining` 的 `predictedNextTick`/`dueInTicks` 现在从 predictions 填充（wave-3 恒 null 缺口关闭）。
+- P5-3 watermark fallback：`sync_meta MAX(last_tick)` → `agents MAX(tick)`；缺表逐表降级空输入。
+
+### 跳过的（wave-4 范围内）
+
+无。6 条 needs-small-loader + decision-input 全部接线。其余 SKIP（leaderboard / audit-alignment /
+deeds / journal / audit-lifecycle / audit-overview / intel / health-pipeline / replay / tenants /
+agents / survey / exploration / shop / me / orders / commands / director）维持 wave-3 分类不变
+（缺数据源/契约裁决，见第三波小节）。
+
+
+
 ## W44 第三波只读接线（w44/cc-wave3，2026-08-12）
 
 30 条 GET 路由逐一 triage（TS oracle `server.ts` + `lib/*.ts` vs Python 现有投影）。接线 4 条，
@@ -41,22 +75,22 @@
 |---|---|---|
 | `GET /api/audit/human` | `runtime/human-command-audit.jsonl`（`human.py:read_human_audit`） | captain 裁决 fail-closed tN（默认 t1，all/非法→400）；envelope `{generatedAt, tenant, count, records}`，limit clamp 1..500 |
 | `GET /api/alliance/cluster` | `alliance_snapshot` members → `build_alliance_cluster_view`（新 loader `cluster_input_of_members`） | 纯组合小 loader；空根 fail-open 200（0 members/0 groups） |
-| `GET /api/alliance/mining` | snapshot(cores/workers) + alliance_survey(observers/conflicts) + mine_utilization(candidates) + mine_patterns(预测；Python 目前恒空) + enemy_heat(16×16 桶) | 新 loader `load_alliance_mining`；`predictedNextTick`/`dueInTicks` 恒 null 为已注册缺口（mine-patterns predictions 未移植），fail-open |
+| `GET /api/alliance/mining` | snapshot(cores/workers) + alliance_survey(observers/conflicts) + mine_utilization(candidates) + mine_patterns(预测；Python 目前恒空) + enemy_heat(16×16 桶) | 新 loader `load_alliance_mining`；`predictedNextTick`/`dueInTicks` 恒 null 为已注册缺口（mine-patterns predictions 未移植），fail-open——**wave-4 已补 predictions（缺口关闭）** |
 | `GET /api/registry/agents` | `runtime/registry.db`（`registry.py:RegistryStore.list_agents`，已有 store 移植） | 小 loader；key 序列化（asdict）；空根 fail-open 200（空 agents）；TS 同样 open 即建库 |
 
 ### Triage 分类（未接线 26 条）
 
 | 分类 | 路由 | 缺口/说明 |
 |---|---|---|
-| needs-small-loader | `/api/events` | calibration case `after.state.events` + EVENT_KINDS 过滤；Python jsonl 基座齐备，未在本波接线（新 loader + 大 payload） |
-| needs-small-loader | `/api/plan` | 最新 case `plan` 字段直读；极小 loader，未接线 |
-| needs-small-loader | `/api/world` | 最新 case `before/after.state` 直读；极小 loader，未接线（world state payload 大，需先契约） |
-| needs-small-loader | `/api/survey/mine` | survey-db resources + `resource_events` timeline；Python schema 无 resource_events 时 timeline 空（同 mines.py ALLOWED divergence），可接但需新 loader |
-| needs-small-loader | `/api/survey/enemy-cores` | `enemy-core-state.ts` 聚合（core_hunts → ACTIVE/RELOCATED/STALE + 威胁级）未移植；Python 有 core_hunts 表 + core_trails 投影，聚合逻辑 ~100 行待移植 |
-| needs-small-loader | `/api/redeem/history` | `redeem-log.jsonl` 尾读极小 loader，但 Python 侧无 redeem 写路径（POST /api/redeem 501，属 shop 外部集成），接了恒空——等写路径落地再接 |
+| needs-small-loader | `/api/events` | （wave-4 已接线） calibration case `after.state.events` + EVENT_KINDS 过滤；Python jsonl 基座齐备，未在本波接线（新 loader + 大 payload） |
+| needs-small-loader | `/api/plan` | （wave-4 已接线） 最新 case `plan` 字段直读；极小 loader，未接线 |
+| needs-small-loader | `/api/world` | （wave-4 已接线） 最新 case `before/after.state` 直读；极小 loader，未接线（world state payload 大，需先契约） |
+| needs-small-loader | `/api/survey/mine` | （wave-4 已接线） survey-db resources + `resource_events` timeline；Python schema 无 resource_events 时 timeline 空（同 mines.py ALLOWED divergence），可接但需新 loader |
+| needs-small-loader | `/api/survey/enemy-cores` | （wave-4 已接线） `enemy-core-state.ts` 聚合（core_hunts → ACTIVE/RELOCATED/STALE + 威胁级）未移植；Python 有 core_hunts 表 + core_trails 投影，聚合逻辑 ~100 行待移植 |
+| needs-small-loader | `/api/redeem/history` | （wave-4 已接线，恒空 fail-open） `redeem-log.jsonl` 尾读极小 loader，但 Python 侧无 redeem 写路径（POST /api/redeem 501，属 shop 外部集成），接了恒空——等写路径落地再接 |
 | needs-new-projection | `/api/leaderboard` | `ours`（calibration 受控 CORE owner_username）小 loader 可补；`encountered` 需 `intel.ts loadAllianceIntel` 移植（enemies 形状未移植）→ 整体不接线（缺数据源，不硬凑），见上 SKIP 精确缺口 |
 | needs-new-projection | `/api/audit/alignment` | 输入全齐（decision-audit / mine-utilization / mining-effectiveness / trend / snapshot），但 alignment 聚合（grade/reasons）未移植 |
-| needs-new-projection | `/api/survey/decision-input` | `decision-input.ts`（矿刷新预测 dueInTicks + chunk 覆盖）——依赖 mine-patterns predictions（Python 恒空）+ chunks 表 |
+| needs-new-projection | `/api/survey/decision-input` | （wave-4 已接线） `decision-input.ts`（矿刷新预测 dueInTicks + chunk 覆盖）——依赖 mine-patterns predictions（Python 恒空）+ chunks 表 |
 | needs-new-data-source | `/api/audit/lifecycle` | `loadLifecycleAudit` 依赖 survey-db `unit_lifecycle`/`core_spends`/`resource_events` 表——Python AGENT_SCHEMA 无这些表 |
 | needs-new-data-source | `/api/audit/overview` | 组合含 lifecycle + pipeline 两个未移植输入 |
 | needs-new-data-source | `/api/deeds` | 事迹扫描（★3-4 稀有 + ★2 survey-db 里程碑 + 联盟事迹）+ 45s 缓存，全新产品能力 |
