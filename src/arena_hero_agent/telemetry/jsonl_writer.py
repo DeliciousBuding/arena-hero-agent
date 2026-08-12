@@ -465,7 +465,10 @@ class JsonlWriter:
         """Explicitly fsync the active file.
 
         Regular writes are append-only like TypeScript; call ``flush`` when a
-        caller needs a durable boundary (for example before a handoff).
+        caller needs a durable boundary (for example before a handoff). A
+        flush IO failure increments ``dropped_count`` and records
+        ``last_error`` and still re-raises so the caller can detect a failed
+        durability boundary (``dropped_count`` alone would silently mask it).
         """
         with self._lock:
             if self._closed:
@@ -473,9 +476,14 @@ class JsonlWriter:
             self._ensure_open()
             if not self._path.exists():
                 return
-            with self._path.open("ab") as handle:
-                handle.flush()
-                os.fsync(handle.fileno())
+            try:
+                with self._path.open("ab") as handle:
+                    handle.flush()
+                    os.fsync(handle.fileno())
+            except (OSError, JsonlWriterError) as exc:
+                self._error_count += 1
+                self._last_error = exc
+                raise
 
     def close(self) -> None:
         if self._closed:

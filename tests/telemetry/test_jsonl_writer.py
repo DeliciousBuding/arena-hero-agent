@@ -445,6 +445,37 @@ def test_flush_smoke(tmp_path: Path) -> None:
     assert len(_read_rows(path)) == 1
 
 
+def test_flush_io_failure_counts_dropped_and_reraises(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = str(tmp_path / "flush-fail.jsonl")
+    writer = JsonlWriter(path)
+    writer.write(runtime_trace(RT))
+    assert writer.dropped_count == 0
+
+    def _fail_fsync(_fd: int) -> None:
+        raise OSError("simulated fsync failure")
+
+    monkeypatch.setattr("os.fsync", _fail_fsync)
+    with pytest.raises(OSError, match="simulated fsync failure"):
+        writer.flush()
+    # The failed durable flush is counted as dropped and remembered, and the
+    # caller still sees the error so the durability boundary is not masked.
+    assert writer.dropped_count == 1
+    assert writer.last_error is not None
+    writer.close()
+
+
+def test_flush_after_io_failure_still_writes(tmp_path: Path) -> None:
+    path = str(tmp_path / "flush-recover.jsonl")
+    writer = JsonlWriter(path)
+    writer.write(runtime_trace(RT))
+    writer.flush()
+    assert writer.dropped_count == 0
+    writer.close()
+    assert len(_read_rows(path)) == 1
+
+
 def test_default_rotation_is_bounded() -> None:
     assert DEFAULT_JSONL_ROTATION.max_bytes == 16 * 1024 * 1024
     assert DEFAULT_JSONL_ROTATION.max_backups == 4
