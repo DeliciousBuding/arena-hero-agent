@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import os
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any
 from urllib.parse import parse_qs
 
@@ -34,8 +34,10 @@ from ..projections import (
     AUDIT_SOURCES,
     list_arbitrations,
     load_alliance_advice,
+    load_alliance_cluster,
     load_alliance_defense,
     load_alliance_exploration,
+    load_alliance_mining,
     load_alliance_snapshot,
     load_alliance_survey,
     load_audit_trail,
@@ -50,9 +52,11 @@ from ..projections import (
     load_mining_effectiveness,
     load_shop_history,
     load_worker_liveness_audit,
+    read_human_audit,
 )
 from ..projections._common import current_epoch_ms
 from ..projections.map_lod import load_map_lod
+from ..registry import RegistryStore
 from .map import load_merged_map
 from .routes import (
     ETAG_PREFIX,
@@ -201,6 +205,10 @@ class CommandCenterApp:
             ("GET", "/api/audit/workers"): self._handle_worker_liveness_audit,
             ("GET", "/api/intel/heat"): self._handle_enemy_heat,
             ("GET", "/api/shop/history"): self._handle_shop_history,
+            ("GET", "/api/audit/human"): self._handle_audit_human,
+            ("GET", "/api/alliance/cluster"): self._handle_alliance_cluster,
+            ("GET", "/api/alliance/mining"): self._handle_alliance_mining,
+            ("GET", "/api/registry/agents"): self._handle_registry_agents,
         }
         if handlers:
             self._handlers.update(handlers)
@@ -551,6 +559,66 @@ class CommandCenterApp:
     ) -> dict[str, Any]:
         del request, match, query, tenant
         return load_shop_history(self._data_root)
+
+    def _handle_audit_human(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        tenant_value = tenant or "t1"
+        limit = _clamp_int(query, "limit", 100, 1, 500, round_value=True)
+        records = read_human_audit(self._data_root, tenant=tenant_value, limit=limit)
+        return {
+            "generatedAt": iso_utc(self._now_ms()),
+            "tenant": tenant_value,
+            "count": len(records),
+            "records": records,
+        }
+
+    def _handle_alliance_cluster(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        return load_alliance_cluster(self._data_root, now_ms=self._now_ms())
+
+    def _handle_alliance_mining(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        return load_alliance_mining(self._data_root, now_ms=self._now_ms())
+
+    def _handle_registry_agents(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        store = RegistryStore(self._data_root)
+        try:
+            agents = store.list_agents()
+        finally:
+            store.close()
+        serialized = []
+        for entry in agents:
+            item = dict(entry)
+            raw_keys = entry["keys"]
+            assert isinstance(raw_keys, list)
+            item["keys"] = [asdict(key) for key in raw_keys]
+            serialized.append(item)
+        return {"generatedAt": iso_utc(self._now_ms()), "agents": serialized}
 
 
 __all__ = [

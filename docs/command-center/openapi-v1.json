@@ -1819,6 +1819,29 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "records": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenant",
+                    "count",
+                    "records"
+                  ],
                   "type": "object"
                 }
               }
@@ -3828,6 +3851,21 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "agents": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "agents"
+                  ],
                   "type": "object"
                 }
               }

@@ -675,6 +675,16 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
         },
         "required": ["generatedAt", "entries", "counts", "filters"],
     },
+    ("GET", "/api/audit/human"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenant": _STR,
+            "count": _INT,
+            "records": _OBJ_ROWS,
+        },
+        "required": ["generatedAt", "tenant", "count", "records"],
+    },
     ("GET", "/api/audit/human/conflicts"): {
         "oneOf": [
             _HUMAN_CONFLICT_SHAPE,
@@ -797,6 +807,14 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
             "summary",
             "cachedAt",
         ],
+    },
+    ("GET", "/api/registry/agents"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "agents": _OBJ_ROWS,
+        },
+        "required": ["generatedAt", "agents"],
     },
 }
 

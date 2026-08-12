@@ -86,7 +86,7 @@ export interface GetAuditHumanParams {
   tenant?: Tenant;
   limit?: number;
 }
-export type GetAuditHumanResponse = Record<string, unknown>;
+export type GetAuditHumanResponse = {count: number; generatedAt: string; records: Array<Record<string, unknown>>; tenant: string};
 
 /** GET /api/audit/human/conflicts - window 200..20000 */
 export interface GetAuditHumanConflictsParams {
@@ -250,7 +250,7 @@ export type GetRedeemHistoryResponse = Record<string, unknown>;
 
 /** GET /api/registry/agents - lists agents + key hashes only; no plaintext */
 export interface GetRegistryAgentsParams {}
-export type GetRegistryAgentsResponse = Record<string, unknown>;
+export type GetRegistryAgentsResponse = {agents: Array<Record<string, unknown>>; generatedAt: string};
 
 /** POST /api/registry/agents - mode production|simulation; production requires api_key_tail; simulation issues plaintext simkey once (SHA-256 at rest) */
 export interface PostRegistryAgentsParams {}
