@@ -4629,6 +4629,55 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "cores": {
+                      "items": {
+                        "properties": {
+                          "distToFriendly": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "firstSeenTick": {
+                            "type": "integer"
+                          },
+                          "lastSeenTick": {
+                            "type": "integer"
+                          },
+                          "locationCount": {
+                            "type": "integer"
+                          },
+                          "owner": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "threat": {
+                            "type": "string"
+                          },
+                          "x": {
+                            "type": "integer"
+                          },
+                          "y": {
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "currentTick": {
+                      "type": "integer"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "currentTick",
+                    "cores"
+                  ],
                   "type": "object"
                 }
               }
@@ -4688,6 +4737,63 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "cell": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "mine": {
+                      "nullable": true,
+                      "properties": {
+                        "ageTicks": {
+                          "type": "integer"
+                        },
+                        "firstSeenTick": {
+                          "type": "integer"
+                        },
+                        "fresh": {
+                          "type": "boolean"
+                        },
+                        "harvestCount": {
+                          "type": "integer"
+                        },
+                        "lastHarvestTick": {
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "seenCount": {
+                          "type": "integer"
+                        },
+                        "state": {
+                          "type": "string"
+                        },
+                        "tick": {
+                          "type": "integer"
+                        },
+                        "x": {
+                          "type": "integer"
+                        },
+                        "y": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    },
+                    "timeline": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "tenant"
+                  ],
                   "type": "object"
                 }
               }

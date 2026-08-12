@@ -44,6 +44,7 @@ from ..projections import (
     load_consensus_mining,
     load_decision_audit,
     load_decision_trend,
+    load_enemy_cores,
     load_enemy_heat,
     load_events,
     load_human_conflict,
@@ -54,6 +55,7 @@ from ..projections import (
     load_plan,
     load_redeem_history,
     load_shop_history,
+    load_survey_mine,
     load_worker_liveness_audit,
     load_world,
     read_human_audit,
@@ -213,6 +215,8 @@ class CommandCenterApp:
             ("GET", "/api/alliance/cluster"): self._handle_alliance_cluster,
             ("GET", "/api/alliance/mining"): self._handle_alliance_mining,
             ("GET", "/api/registry/agents"): self._handle_registry_agents,
+            ("GET", "/api/survey/mine"): self._handle_survey_mine,
+            ("GET", "/api/survey/enemy-cores"): self._handle_enemy_cores,
             ("GET", "/api/events"): self._handle_events,
             ("GET", "/api/plan"): self._handle_plan,
             ("GET", "/api/world"): self._handle_world,
@@ -627,6 +631,29 @@ class CommandCenterApp:
             item["keys"] = [asdict(key) for key in raw_keys]
             serialized.append(item)
         return {"generatedAt": iso_utc(self._now_ms()), "agents": serialized}
+
+    def _handle_survey_mine(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        tenant_value = tenant or "t1"
+        return load_survey_mine(
+            self._data_root, tenant_value, query.get("cell"), now_ms=self._now_ms()
+        )
+
+    def _handle_enemy_cores(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        return load_enemy_cores(self._data_root, now_ms=self._now_ms())
 
     def _handle_events(
         self,

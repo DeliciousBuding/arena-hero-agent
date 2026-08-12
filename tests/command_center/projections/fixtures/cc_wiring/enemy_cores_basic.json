@@ -1,0 +1,44 @@
+{
+  "nowMs": 1752000000000,
+  "worlds": {
+    "t1": {
+      "tick": 5950,
+      "state": {
+        "objects": [
+          {"id": "core-t1", "kind": "CORE", "controlled": true, "position": [0, 0], "hp": 500, "shield": 0}
+        ],
+        "status": "ACTIVE",
+        "resources": 10,
+        "population": 1
+      }
+    },
+    "t2": {
+      "tick": 5950,
+      "state": {
+        "objects": [
+          {"id": "core-t2", "kind": "CORE", "controlled": true, "position": [200, 200], "hp": 500, "shield": 0}
+        ],
+        "status": "ACTIVE",
+        "resources": 10,
+        "population": 1
+      }
+    }
+  },
+  "survey": {
+    "t1": {
+      "coreHunts": [
+        {"cell": "10,10", "x": 10, "y": 10, "owner": "enemyA", "source": "CORE", "first_seen_tick": 1000, "last_seen_tick": 5800},
+        {"cell": "20,10", "x": 20, "y": 10, "owner": "enemyA", "source": "CORE", "first_seen_tick": 5800, "last_seen_tick": 5950},
+        {"cell": "50,0", "x": 50, "y": 0, "owner": "enemyB", "source": "CORE", "first_seen_tick": 500, "last_seen_tick": 5900}
+      ]
+    },
+    "t2": {
+      "coreHunts": [
+        {"cell": "150,150", "x": 150, "y": 150, "owner": "enemyC", "source": "WORKER_INFER", "first_seen_tick": 2000, "last_seen_tick": 5000},
+        {"cell": "0,0", "x": 0, "y": 0, "owner": "enemyD", "source": "CORE", "first_seen_tick": 100, "last_seen_tick": 100}
+      ]
+    },
+    "t3": {"coreHunts": []},
+    "t4": {"coreHunts": []}
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "nowMs": 1752000000000,
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {"run_id": "r1", "tenant": "t1", "cases_synced": 3, "last_tick": 5000, "updated_at": "2025-07-08T18:40:00Z"}
+      ],
+      "resources": [
+        {"cell": "10,10", "x": 10, "y": 10, "first_seen_tick": 3000, "last_seen_tick": 4950, "state": "visible", "last_state_tick": 4950, "seen_count": 3},
+        {"cell": "50,50", "x": 50, "y": 50, "first_seen_tick": 1000, "last_seen_tick": 4000, "state": "stale", "last_state_tick": 4000, "seen_count": 5},
+        {"cell": "70,70", "x": 70, "y": 70, "first_seen_tick": 2000, "last_seen_tick": 4800, "state": "harvested", "last_state_tick": 4800, "seen_count": 2}
+      ],
+      "resourceEvents": [
+        {"cell": "10,10", "tick": 4000, "event_type": "HARVEST_SUCCEEDED", "reason_code": null, "amount": 5, "actor_id": "w1"},
+        {"cell": "10,10", "tick": 4100, "event_type": "HARVEST_FAILED", "reason_code": "no_cargo", "amount": null, "actor_id": "w1"},
+        {"cell": "50,50", "tick": 4200, "event_type": "HARVEST_SUCCEEDED", "reason_code": null, "amount": 7, "actor_id": "w2"}
+      ]
+    },
+    "t2": {"syncMeta": [], "resources": [], "resourceEvents": []},
+    "t3": {"syncMeta": [], "resources": [], "resourceEvents": []},
+    "t4": {"syncMeta": [], "resources": [], "resourceEvents": []}
+  }
+}

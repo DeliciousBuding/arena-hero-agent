@@ -169,6 +169,57 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
         },
         "required": ["tenant", "generatedAt", "state", "caseFile"],
     },
+    ("GET", "/api/survey/mine"): {
+        "type": "object",
+        "properties": {
+            "tenant": _STR,
+            "error": _STR,
+            "mine": {
+                "type": "object",
+                "properties": {
+                    "x": _INT,
+                    "y": _INT,
+                    "tick": _INT,
+                    "firstSeenTick": _INT,
+                    "state": _STR,
+                    "seenCount": _INT,
+                    "ageTicks": _INT,
+                    "fresh": {"type": "boolean"},
+                    "harvestCount": _INT,
+                    "lastHarvestTick": _NULLABLE_INT,
+                },
+                "nullable": True,
+            },
+            "cell": _STR,
+            "timeline": {"type": "array", "items": _OBJ},
+        },
+        "required": ["tenant"],
+    },
+    ("GET", "/api/survey/enemy-cores"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "currentTick": _INT,
+            "cores": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "owner": _STR,
+                        "status": _STR,
+                        "x": _INT,
+                        "y": _INT,
+                        "firstSeenTick": _INT,
+                        "lastSeenTick": _INT,
+                        "locationCount": _INT,
+                        "distToFriendly": _NULLABLE_NUM,
+                        "threat": _STR,
+                    },
+                },
+            },
+        },
+        "required": ["generatedAt", "currentTick", "cores"],
+    },
     ("GET", "/api/redeem/history"): {
         "type": "object",
         "properties": {

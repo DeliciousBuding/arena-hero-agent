@@ -38,6 +38,11 @@ from .decisions import (
     load_decision_audit,
     load_decision_trend,
 )
+from .enemy_cores import (
+    DEFAULT_ENEMY_CORE_OPTS,
+    build_enemy_core_states,
+    load_enemy_cores,
+)
 from .enemy_heat import load_enemy_heat
 from .events import EVENT_KINDS, load_events
 from .exploration_coverage import (
@@ -78,6 +83,7 @@ from .shop_history import (
     snapshot_signature,
 )
 from .snapshots import load_plan, load_world
+from .survey_mine import load_survey_mine
 from .trail import DEFAULT_LIMIT as TRAIL_DEFAULT_LIMIT
 from .trail import SOURCES as AUDIT_SOURCES
 from .trail import load_audit_trail, merge_audit_trails, normalize_audit_trails
@@ -93,6 +99,7 @@ __all__ = [
     "COHESION_MAX_DIST",
     "CONFLICT_DEFAULT_WINDOW",
     "DECISION_TREND_STEPS",
+    "DEFAULT_ENEMY_CORE_OPTS",
     "EVENT_KINDS",
     "DECISION_TREND_WINDOW",
     "DEFAULT_RECORDS",
@@ -106,6 +113,8 @@ __all__ = [
     "RESOURCE_FRESH_WINDOW_TICKS",
     "TENANT_COLORS",
     "TRAIL_DEFAULT_LIMIT",
+    "TRAIL_DEFAULT_LIMIT",
+    "build_enemy_core_states",
     "WORKERS_DEFAULT_WINDOW",
     "WORKERS_RECENT_TICKS",
     "aggregate_allocation_effectiveness",
@@ -151,11 +160,15 @@ __all__ = [
     "load_consensus_mining",
     "load_core_trails_from_survey_db",
     "load_enemy_heat",
+    "load_enemy_heat",
+    "load_enemy_cores",
     "load_leaderboard_intel",
     "load_mine_patterns",
     "load_mining_effectiveness",
     "load_plan",
     "load_shop_history",
+    "load_shop_history",
+    "load_survey_mine",
     "load_redeem_history",
     "load_shop_history_entries",
     "load_worker_liveness_audit",

@@ -318,14 +318,14 @@ export type GetSurveyDecisionInputResponse = Record<string, unknown>;
 
 /** GET /api/survey/enemy-cores - core_hunts readOnly per tenant + alliance snapshot */
 export interface GetSurveyEnemyCoresParams {}
-export type GetSurveyEnemyCoresResponse = Record<string, unknown>;
+export type GetSurveyEnemyCoresResponse = {cores: Array<{distToFriendly?: number | null; firstSeenTick?: number; lastSeenTick?: number; locationCount?: number; owner?: string; status?: string; threat?: string; x?: number; y?: number}>; currentTick: number; generatedAt: string};
 
 /** GET /api/survey/mine - mine cell + resource timeline */
 export interface GetSurveyMineParams {
   tenant?: Tenant;
   cell?: string;
 }
-export type GetSurveyMineResponse = Record<string, unknown>;
+export type GetSurveyMineResponse = {cell?: string; error?: string; mine?: {ageTicks?: number; firstSeenTick?: number; fresh?: boolean; harvestCount?: number; lastHarvestTick?: number | null; seenCount?: number; state?: string; tick?: number; x?: number; y?: number} | null; tenant: string; timeline?: Array<Record<string, unknown>>};
 
 /** GET /api/survey/mine-patterns - tenant validated */
 export interface GetSurveyMinePatternsParams {
