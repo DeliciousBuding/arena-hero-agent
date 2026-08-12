@@ -31,7 +31,9 @@ ORACLE_HARNESS = Path.home() / "tmp" / "cc-oracle.mjs"
 # fixture base name -> oracle dispatch kind (see cc-oracle.mjs)
 KIND_BY_FIXTURE: dict[str, str] = {
     "alliance_cluster_basic": "cluster",
+    "alliance_intel_basic": "allianceIntel",
     "alliance_mining_basic": "mining",
+    "alliance_snapshot_basic": "allianceSnapshot",
     "decisions_audit_basic": "decisionAudit",
     "decisions_trend_basic": "decisionTrend",
     "workers_basic": "workerLiveness",

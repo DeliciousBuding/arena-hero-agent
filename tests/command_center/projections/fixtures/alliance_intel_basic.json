@@ -1,0 +1,11 @@
+{
+  "currentTick": 100,
+  "allyEntityIds": ["ally-unit-1"],
+  "sightings": [
+    {"key": "UNIT:enemy-v1", "kind": "UNIT", "unitType": "VANGUARD", "entityId": "enemy-v1", "position": [10, 10], "sourceTenant": "t1", "firstSeenTick": 90, "lastSeenTick": 100, "currentlyVisible": true, "confidence": 0.9, "evidence": "LIVE"},
+    {"key": "UNIT:enemy-v1", "kind": "UNIT", "unitType": "VANGUARD", "entityId": "enemy-v1", "position": [12, 12], "sourceTenant": "t2", "firstSeenTick": 80, "lastSeenTick": 95, "currentlyVisible": false, "confidence": 0.7, "evidence": "CALIBRATION"},
+    {"key": "UNIT:enemy-w1", "kind": "UNIT", "unitType": "WORKER", "entityId": "enemy-w1", "position": [5, 5], "sourceTenant": "t1", "firstSeenTick": 100, "lastSeenTick": 100, "currentlyVisible": true, "confidence": 1.0, "evidence": "LIVE"},
+    {"key": "CORE:enemy-c1", "kind": "CORE", "entityId": "enemy-c1", "ownerUsername": "enemy-c1", "position": [40, 40], "sourceTenant": "t3", "firstSeenTick": 60, "lastSeenTick": 80, "currentlyVisible": false, "confidence": 0.6, "evidence": "CALIBRATION"},
+    {"key": "UNIT:ally-unit-1", "kind": "UNIT", "unitType": "RANGER", "entityId": "ally-unit-1", "position": [7, 7], "sourceTenant": "t1", "firstSeenTick": 99, "lastSeenTick": 100, "currentlyVisible": true, "confidence": 1.0, "evidence": "LIVE"}
+  ]
+}

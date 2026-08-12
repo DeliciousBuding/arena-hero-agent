@@ -15,6 +15,16 @@ from typing import Any
 
 import pytest
 
+from arena_hero_agent.alliance.shared_intel import aggregate_alliance_intel
+from arena_hero_agent.alliance.snapshot import (
+    AllianceMemberState,
+    CoreRef,
+    EntitySighting,
+    EvidenceKind,
+    MemberStatus,
+    SightingKind,
+    UnitType,
+)
 from arena_hero_agent.command_center.projections import (
     aggregate_allocation_effectiveness,
     aggregate_decision_audit,
@@ -36,6 +46,11 @@ from arena_hero_agent.command_center.projections import (
     snapshot_signature,
 )
 from arena_hero_agent.command_center.projections._common import num
+from arena_hero_agent.command_center.projections.alliance_snapshot import (
+    _intel_payload,
+    build_alliance_snapshot_payload,
+)
+from arena_hero_agent.domain import Coordinate, TenantId
 
 from .conftest import assert_matches, load_fixture, load_golden
 
@@ -56,7 +71,76 @@ def _parse_lines(raw_lines: list[object]) -> list[dict[str, Any]]:
     return rows
 
 
+def _sighting_from_fixture(item: dict[str, Any]) -> EntitySighting:
+    return EntitySighting(
+        key=str(item["key"]),
+        kind=SightingKind(str(item["kind"])),
+        unit_type=UnitType(str(item["unitType"])) if item.get("unitType") else None,
+        entity_id=item.get("entityId"),
+        owner_username=item.get("ownerUsername"),
+        position=Coordinate(int(item["position"][0]), int(item["position"][1])),
+        source_tenant=TenantId(str(item["sourceTenant"])),
+        first_seen_tick=int(item["firstSeenTick"]),
+        last_seen_tick=int(item["lastSeenTick"]),
+        currently_visible=bool(item["currentlyVisible"]),
+        confidence=float(item["confidence"]),
+        evidence=EvidenceKind(str(item["evidence"])),
+    )
+
+
+def _member_from_fixture(item: dict[str, Any]) -> AllianceMemberState:
+    raw_core = item["core"]
+    core = (
+        CoreRef(
+            id=str(raw_core["id"]),
+            position=Coordinate(int(raw_core["position"][0]), int(raw_core["position"][1])),
+            hp=int(raw_core["hp"]),
+            shield=int(raw_core["shield"]),
+            moving=bool(raw_core["moving"]),
+        )
+        if raw_core is not None
+        else None
+    )
+    return AllianceMemberState(
+        tenant_id=TenantId(str(item["tenantId"])),
+        tick=int(item["tick"]),
+        observed_at_ms=int(item["observedAtMs"]),
+        core=core,
+        resources=int(item["resources"]),
+        resource_capacity=int(item["resourceCapacity"]),
+        population=int(item["population"]),
+        workers=int(item["workers"]),
+        vanguards=int(item["vanguards"]),
+        rangers=int(item["rangers"]),
+        carried_resources=int(item["carriedResources"]),
+        active_fleet_ids=tuple(str(v) for v in item.get("activeFleetIds") or ()),
+        local_threat=float(item.get("localThreat", 0)),
+        local_harvest_rate=float(item.get("localHarvestRate", 0)),
+        status=MemberStatus(str(item["status"])),
+    )
+
+
 def _run_python(name: str, fixture: dict[str, Any]) -> object:
+    if name == "alliance_intel_basic":
+        return _intel_payload(
+            aggregate_alliance_intel(
+                sightings=[_sighting_from_fixture(item) for item in fixture["sightings"]],
+                ally_entity_ids=list(fixture.get("allyEntityIds") or ()),
+                current_tick=int(fixture["currentTick"]),
+            )
+        )
+    if name == "alliance_snapshot_basic":
+        treasury = fixture.get("treasuryTenant")
+        return build_alliance_snapshot_payload(
+            revision=int(fixture.get("revision", 1)),
+            members=[_member_from_fixture(item) for item in fixture["members"]],
+            sightings=[_sighting_from_fixture(item) for item in fixture["sightings"]],
+            ally_entity_ids=list(fixture.get("allyEntityIds") or ()),
+            now_tick=int(fixture["currentTick"]),
+            generated_at_ms=int(fixture.get("generatedAtMs", 0)),
+            leaderboard_aggression=dict(fixture.get("leaderboardAggression") or {}),
+            treasury_tenant=TenantId(str(treasury)) if treasury else None,
+        )
     if name == "alliance_cluster_basic":
         return build_alliance_cluster_view(
             [dict(item) for item in fixture["input"]], int(fixture["nowMs"])
@@ -171,7 +255,9 @@ def _run_python(name: str, fixture: dict[str, Any]) -> object:
 
 CASES = [
     "alliance_cluster_basic",
+    "alliance_intel_basic",
     "alliance_mining_basic",
+    "alliance_snapshot_basic",
     "decisions_audit_basic",
     "decisions_trend_basic",
     "workers_basic",

@@ -1,0 +1,18 @@
+{
+  "revision": 1,
+  "currentTick": 100,
+  "generatedAtMs": 1752000000000,
+  "treasuryTenant": "t1",
+  "allyEntityIds": ["ally-unit-1"],
+  "leaderboardAggression": {},
+  "members": [
+    {"tenantId": "t1", "tick": 100, "observedAtMs": 1752000000000, "core": {"id": "core-t1", "position": [0, 0], "hp": 500, "shield": 100, "moving": false}, "resources": 50, "resourceCapacity": 100, "population": 6, "workers": 3, "vanguards": 2, "rangers": 1, "carriedResources": 4, "activeFleetIds": [], "localThreat": 0, "localHarvestRate": 0, "status": "READY"},
+    {"tenantId": "t2", "tick": 100, "observedAtMs": 1752000000000, "core": {"id": "core-t2", "position": [200, 200], "hp": 480, "shield": 50, "moving": false}, "resources": 12, "resourceCapacity": 100, "population": 1, "workers": 1, "vanguards": 0, "rangers": 0, "carriedResources": 0, "activeFleetIds": [], "localThreat": 0, "localHarvestRate": 0, "status": "DEGRADED"}
+  ],
+  "sightings": [
+    {"key": "UNIT:enemy-v1", "kind": "UNIT", "unitType": "VANGUARD", "entityId": "enemy-v1", "position": [10, 10], "sourceTenant": "t1", "firstSeenTick": 90, "lastSeenTick": 100, "currentlyVisible": true, "confidence": 0.9, "evidence": "LIVE"},
+    {"key": "UNIT:enemy-v2", "kind": "UNIT", "unitType": "VANGUARD", "entityId": "enemy-v2", "position": [60, 60], "sourceTenant": "t2", "firstSeenTick": 88, "lastSeenTick": 95, "currentlyVisible": false, "confidence": 0.8, "evidence": "CALIBRATION"},
+    {"key": "CORE:enemy-c1", "kind": "CORE", "entityId": "enemy-c1", "ownerUsername": "enemy-c1", "position": [30, 30], "sourceTenant": "t3", "firstSeenTick": 85, "lastSeenTick": 98, "currentlyVisible": false, "confidence": 0.7, "evidence": "CALIBRATION"},
+    {"key": "UNIT:ally-unit-1", "kind": "UNIT", "unitType": "RANGER", "entityId": "ally-unit-1", "position": [7, 7], "sourceTenant": "t1", "firstSeenTick": 99, "lastSeenTick": 100, "currentlyVisible": true, "confidence": 1.0, "evidence": "LIVE"}
+  ]
+}

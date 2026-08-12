@@ -186,6 +186,40 @@ def test_main_endpoint_response_schemas_have_real_fields() -> None:
     ]["schema"]
     assert set(trail["properties"]) == {"generatedAt", "entries", "counts", "filters", "cachedAt"}
 
+    snapshot = DOC["paths"]["/api/alliance/snapshot"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
+    assert set(snapshot["properties"]) == {
+        "generatedAt",
+        "cachedAt",
+        "currentTick",
+        "revision",
+        "members",
+        "sightings",
+        "counts",
+        "intel",
+        "threat",
+        "threatSummaries",
+        "treasuryTenant",
+        "leaderboardAggression",
+    }
+    assert snapshot["required"] == [
+        "generatedAt",
+        "cachedAt",
+        "currentTick",
+        "revision",
+        "members",
+        "sightings",
+        "counts",
+        "intel",
+        "threat",
+        "threatSummaries",
+        "treasuryTenant",
+        "leaderboardAggression",
+    ]
+    assert "maxDirect" in snapshot["properties"]["threat"]["properties"]
+    assert snapshot["properties"]["threat"]["properties"]["maxDirect"]["nullable"] is True
+
 
 def test_committed_document_is_valid_json_object() -> None:
     parsed = json.loads(OPENAPI_PATH.read_text(encoding="utf-8"))
