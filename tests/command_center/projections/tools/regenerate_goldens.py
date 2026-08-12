@@ -27,6 +27,8 @@ from pathlib import Path
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 ORACLE_HARNESS = Path.home() / "tmp" / "cc-oracle.mjs"
+# advice fixtures need a materialized data root, not the raw fixture JSON
+ORACLE_ADVICE_HARNESS = Path.home() / "tmp" / "cc-oracle-advice.mjs"
 
 # fixture base name -> oracle dispatch kind (see cc-oracle.mjs)
 KIND_BY_FIXTURE: dict[str, str] = {
@@ -51,6 +53,8 @@ KIND_BY_FIXTURE: dict[str, str] = {
     "mining_effectiveness_basic": "miningEffectiveness",
     "arbitrations_basic": "arbitrations",
     "human_audit_basic": "humanAudit",
+    "alliance_advice_basic": "advice",
+    "alliance_advice_full": "advice",
 }
 
 
@@ -68,11 +72,32 @@ def main() -> int:
         if not fixture.exists():
             print(f"missing fixture: {fixture}", file=sys.stderr)
             return 1
-        result = subprocess.run(
-            ["node", str(ORACLE_HARNESS), str(fixture), kind],
-            capture_output=True,
-            text=True,
-        )
+        if kind == "advice":
+            # advice oracle reads a materialized Command Center data root
+            import json as _json
+            import tempfile
+
+            import advice_fixture
+
+            spec = _json.loads(fixture.read_text(encoding="utf-8"))
+            with tempfile.TemporaryDirectory(prefix="cc-advice-regen-") as root_dir:
+                root = Path(root_dir)
+                advice_fixture.materialize_advice_data_root(spec, root)
+                result = subprocess.run(
+                    ["node", str(ORACLE_ADVICE_HARNESS), str(root), str(spec["nowMs"])],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                )
+        else:
+            result = subprocess.run(
+                ["node", str(ORACLE_HARNESS), str(fixture), kind],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
         if result.returncode != 0:
             print(f"oracle failed for {base}: {result.stderr}", file=sys.stderr)
             return 1

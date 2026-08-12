@@ -29,7 +29,7 @@ from arena_hero_agent.command_center.api.tsgen import (
 TABLE = RouteTable()
 DOC = build_openapi(TABLE)
 
-GOLDEN_SHA256 = "4b23d80a8cd3730a5d80bd1496f6eb59a8be791adc4a8544c3ad75d621d7bebb"
+GOLDEN_SHA256 = "fe1a9c865dc2c1eba655b0bf82765d8394fe0bf743d6be112819ebc1b0d63b5a"
 
 
 def _artifact_hash(artifacts: dict[str, str]) -> str:
@@ -118,6 +118,7 @@ def test_typed_client_functions_present() -> None:
         "export async function postCommand<T = PostCommandResponse>(body: unknown = undefined",  # noqa: E501 - emitted TS line
         "export async function deleteRegistryAgentsId<T = DeleteRegistryAgentsIdResponse>(params: DeleteRegistryAgentsIdParams",  # noqa: E501 - emitted TS line
         "export async function getShopMe<T = GetShopMeResponse>(opts: CcRequestOptions = {}",  # noqa: E501 - emitted TS line
+        "export async function getAllianceAdvice<T = GetAllianceAdviceResponse>(opts: CcRequestOptions = {}",  # noqa: E501 - emitted TS line
     ):
         assert fn in client_ts
 

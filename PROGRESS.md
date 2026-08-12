@@ -1,8 +1,9 @@
-# PROGRESS — W18–W21 收口（main@b85cd81）
+# PROGRESS — W18–W25 收口（w25/advice 基线 main@f4ba3eb）
 
-> 状态：W18–W21 已全部合入 main 并 push（2026-08-12，origin/main 与本地同步）。
-> 本文档为收口摘要；各 wave 明细见 `git log main`。范围仅 `arena-hero-agent` 本仓，
-> 未动根仓 docs / Lab / SDK / production / 真实数据 / secrets。
+> 状态：W18–W21 已合入 main 并 push；W25-A alliance advice 读模型移植在
+> `.worktrees/w25-advice`（分支 `w25/advice`）完成，待合入。本文档为收口摘要；
+> 各 wave 明细见 `git log main`。范围仅 `arena-hero-agent` 本仓，未动根仓 docs /
+> Lab / SDK / production / 真实数据 / secrets。
 
 ## W18 — P4-20 deterministic offline contestant seam（branch `w18/p4-20`）
 
@@ -57,6 +58,38 @@
 - 门禁（main@b85cd81 复跑验证）：`uv sync --locked --all-groups` PASS；
   `ruff format --check .` PASS（251 files）；`ruff check .` PASS；`ty check` PASS；
   `pytest -q` = **1469 passed**，skipped 0。
+
+## W25-A — alliance advice 读模型移植（branch `w25/advice`，基线 main@f4ba3eb）
+
+> BLOCKED.md 原 SKIP 项 "alliance advice" 端点 → **DONE**（本 wave）。exploration /
+> director / survey-mining 仍 SKIP，未动。
+
+- Commits：`275e881`（feat(alliance)）、`2b5f13a`（feat(cc)）、`cef2436`（test(cc)）。
+- 内容要点：
+  - `alliance/advice.py`：legacy TS `lib/alliance-advice.ts`（`loadAllianceAdvice`）
+    完整移植——11 段建议（经济濒危 / 零战斗敌核邻近 / 敌情热区近核 / 威胁扇区 /
+    排行榜高威胁目击 / 抢矿冲突 / 排行榜基线 / 数据层审计（visibleNever /
+    决策负增长 / 决策空转 / 手操拒绝率 / 分工兑现）/ 补测 / 金牌矿 / 敌核逼近与近距），
+    纯领域无 IO，`now_ms` 注入，JS `String(number)` / `toFixed` / `Math.round`
+    半入语义逐项保留；severity+weight 稳定排序、`(category, tenant|all, title)`
+    去重、15 条切片、avgConfidence。
+  - `command_center/projections/` 新增薄投影：`leaderboard`（mtime 龄/stale）、
+    `enemy_heat`（units_seen + heat_archive 16×16）、`mine_patterns`（visible /
+    topActive）、`exploration_coverage`（chunks + 世界核 → resurveyTargets）、
+    `core_trails`（core_hunts 轨迹）、`alliance_advice`（组合 loader）、
+    `mining_effectiveness` 补 `load_mining_effectiveness`（snapshot+survey+mines+
+    patterns+heat → assign → aggregate）。
+  - `/api/alliance/advice` 端点 + OpenAPI 200 schema + generated TS
+    （`GetAllianceAdviceResponse`）；golden parity 测试（真实 Node TS oracle
+    生成，逐字段 MATCH）。
+- ALLOWED 明细（域文档已注册，golden 逐字段一致，无 strip）：
+  - `generatedAt`/`cachedAt` 与每条建议 `at` 由 `now_ms` 注入；oracle 侧用固定
+    Date 子类使 `new Date().toISOString()` 确定，golden 可逐位比较。
+  - mine-pattern refill 预测字段非 advice 消费项，loader 返回 TS 空数据默认值。
+  - 分工兑现审计的 stale / harvested 分支需"分配后时间演进"（静态快照不可达），
+    open 分支已在 golden 覆盖；与 TS oracle 行为一致。
+- 门禁：`pytest -q` = **1493 passed**（基线 1469 + 24）；ruff format/check、
+  ty check、前端 `tsc --noEmit`、前端 `test:unit` **52/52**、`git diff --check` 全 PASS。
 
 ## 说明
 
