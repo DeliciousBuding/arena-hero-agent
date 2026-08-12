@@ -59,6 +59,7 @@ from .tactical_squads import (
     rally_slot_for_squad,
     reconcile_tactical_squads,
 )
+from .stuck_guard import detect_stuck_unit_ids
 from .variant_registry import (
     VARIANT_PRODUCTION,
     VARIANT_SAFETY_CONFIG,
@@ -115,6 +116,7 @@ __all__ = [
     "threat_weighted_direction",
     "tier_of_damage_rank",
     "worker_dense_direction",
+    "detect_stuck_unit_ids",
     "ComposedDecider",
     "ComposedDeciderConfig",
     "compose_decider",

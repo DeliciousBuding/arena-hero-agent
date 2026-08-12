@@ -282,6 +282,7 @@ def assign_worker_tasks(
     config: WorkerTaskPlannerConfig = DEFAULT_WORKER_TASK_PLANNER_CONFIG,
     survey_burst_active: bool = False,
     claims: frozenset[WorkerClaim] = frozenset(),
+    blocked_cells: frozenset[str] = frozenset(),
     refill_predictions: Mapping[str, int] | None = None,
 ) -> WorkerAssignmentResult:
     """Deterministically assign tasks to every worker for one observed tick.
@@ -291,7 +292,8 @@ def assign_worker_tasks(
     against the available resource cells with the rectangular Hungarian cost
     matrix.  Workers that reach no real task are routed to EXPLORE (surveyor
     role arbitration) or WAIT.  Cross-tick claim leases are pruned against the
-    current facts and returned as the next state.
+    current facts and returned as the next state.  ``blocked_cells`` are
+    excluded from the matrix (research stuck-guard reassignment hook).
     """
 
     if not isinstance(snapshot, PlanningSnapshot):
@@ -302,6 +304,10 @@ def assign_worker_tasks(
         raise TypeError("survey_burst_active must be a boolean")
     if not isinstance(claims, frozenset):
         raise TypeError("claims must be a frozenset of WorkerClaim")
+    if not isinstance(blocked_cells, frozenset) or any(
+        not isinstance(key, str) for key in blocked_cells
+    ):
+        raise TypeError("blocked_cells must be a frozenset of cell key strings")
     if refill_predictions is not None and not isinstance(refill_predictions, Mapping):
         raise TypeError("refill_predictions must be a Mapping or None")
 
@@ -335,6 +341,7 @@ def assign_worker_tasks(
         key
         for key in snapshot.resource_cells
         if key not in claimed_cells
+        and key not in blocked_cells
         and not (snapshot.resource_cells[key].visible is False and key in occupied_by_worker)
     )
     pool = sorted(unassigned, key=lambda unit: unit.id.value)

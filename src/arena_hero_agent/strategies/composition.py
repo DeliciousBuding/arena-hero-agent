@@ -45,6 +45,7 @@ from arena_hero_agent.application import (
 )
 from arena_hero_agent.application.tick_loop import DeadlineBudget, Decider
 from arena_hero_agent.domain import (
+    Coordinate,
     Direction,
     EconomyState,
     EconomyTurnInput,
@@ -72,6 +73,11 @@ from arena_hero_agent.planning import (
 
 from .safety_planner import SafetyPlanner, step_toward, worker_dense_direction
 from .safety_planner_config import DEFAULT_SAFETY_CONFIG, SafetyPlannerConfig
+from .stuck_guard import (
+    DEFAULT_STUCK_GUARD_RADIUS,
+    DEFAULT_STUCK_GUARD_TICKS,
+    detect_stuck_unit_ids,
+)
 from .variant_registry import apply_variant_overrides
 
 # Legacy TS DENSE_DELTAS table (safety-planner.ts): 16 dense scan slots. The
@@ -134,6 +140,9 @@ class ComposedDeciderConfig:
     variants: tuple[str, ...] = ()
     worker_config: WorkerTaskPlannerConfig = WorkerTaskPlannerConfig()
     survey_burst_active: bool = False
+    stuck_guard_enabled: bool = False
+    stuck_guard_ticks: int = DEFAULT_STUCK_GUARD_TICKS
+    stuck_guard_radius: int = DEFAULT_STUCK_GUARD_RADIUS
 
     def __post_init__(self) -> None:
         if not isinstance(self.safety_config, SafetyPlannerConfig):
@@ -146,6 +155,16 @@ class ComposedDeciderConfig:
             raise TypeError("worker_config must be a WorkerTaskPlannerConfig")
         if not isinstance(self.survey_burst_active, bool):
             raise TypeError("survey_burst_active must be a boolean")
+        if not isinstance(self.stuck_guard_enabled, bool):
+            raise TypeError("stuck_guard_enabled must be a boolean")
+        if isinstance(self.stuck_guard_ticks, bool) or not isinstance(self.stuck_guard_ticks, int):
+            raise TypeError("stuck_guard_ticks must be an integer")
+        if self.stuck_guard_ticks < 1:
+            raise ValueError("stuck_guard_ticks must be at least 1")
+        if isinstance(self.stuck_guard_radius, bool) or not isinstance(self.stuck_guard_radius, int):
+            raise TypeError("stuck_guard_radius must be an integer")
+        if self.stuck_guard_radius < 1:
+            raise ValueError("stuck_guard_radius must be at least 1")
 
 
 def snapshot_from_turn(observation: TurnObservation) -> PlanningSnapshot:
@@ -318,6 +337,7 @@ class ComposedDecider:
         self._safety = SafetyPlanner(effective)
         self._previous_assignments: tuple[Assignment, ...] = ()
         self._claims: frozenset[WorkerClaim] = frozenset()
+        self._position_history: dict[str, tuple[Coordinate, ...]] = {}
 
     @property
     def config(self) -> ComposedDeciderConfig:
@@ -338,16 +358,57 @@ class ComposedDecider:
         snapshot = snapshot_from_turn(observation)
         return plan_to_decision(self.decide_snapshot(snapshot))
 
+    def _stuck_blocked_cells(self, snapshot: PlanningSnapshot) -> frozenset[str]:
+        """Return resource targets to block for workers that look stuck this tick."""
+
+        n_ticks = self._config.stuck_guard_ticks
+        k_cells = self._config.stuck_guard_radius
+        current_positions = {
+            unit.id.value: unit.position
+            for unit in snapshot.units
+            if unit.unit_role is UnitRole.WORKER
+        }
+        positions_by_unit: dict[str, tuple[Coordinate, ...]] = {}
+        for unit_id, position in current_positions.items():
+            recent = (self._position_history.get(unit_id, ()) + (position,))[-n_ticks:]
+            positions_by_unit[unit_id] = recent
+
+        stuck_ids = detect_stuck_unit_ids(
+            positions_by_unit,
+            n_ticks=n_ticks,
+            k_cells=k_cells,
+        )
+        blocked: set[str] = set()
+        for assignment in self._previous_assignments:
+            if assignment.unit_id not in stuck_ids:
+                continue
+            if assignment.task.type is not TaskType.GO_RESOURCE:
+                continue
+            key = assignment.task.target_cell_key
+            if key is None and assignment.task.target is not None:
+                key = assignment.task.target.cell_key
+            if key is not None:
+                blocked.add(key)
+
+        self._position_history = positions_by_unit
+        return frozenset(blocked)
+
     def decide_snapshot(self, snapshot: PlanningSnapshot) -> Plan:
         """Produce one merged plan for a planning snapshot (pure aside from state)."""
 
         baseline = self._safety.decide(snapshot).plan
+        blocked_cells = (
+            self._stuck_blocked_cells(snapshot)
+            if self._config.stuck_guard_enabled
+            else frozenset()
+        )
         result = assign_worker_tasks(
             snapshot,
             self._previous_assignments,
             config=self._config.worker_config,
             survey_burst_active=self._config.survey_burst_active,
             claims=self._claims,
+            blocked_cells=blocked_cells,
         )
         self._previous_assignments = result.plan.assignments
         self._claims = result.claims
