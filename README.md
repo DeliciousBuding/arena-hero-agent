@@ -44,10 +44,28 @@ arena-hero-agent run --tenant tenant-a --input replay.json --data-root ./data
 
 # Print the persisted health snapshot; exit code 0 = ready, 1 = not ready.
 arena-hero-agent health --tenant tenant-a --data-root ./data
+
+# Replay every file in a directory as one scenario with a stable
+# scenario-<name>-seed-<n> run id; each scenario gets its own output
+# directory under the data root.
+arena-hero-agent batch --tenant tenant-a --input-dir ./scenarios --data-root ./data --seed 0
 ```
 
 `run` accepts a JSON array/object or JSON Lines file of canonical turn
-observations. See `arena-hero-agent run --help` for all options.
+observations. See `arena-hero-agent run --help` and
+`arena-hero-agent batch --help` for all options.
+
+### Deterministic offline records
+
+Every successful `run` (and every batch scenario) also writes
+`manifest.json` next to the health snapshot: per-artifact and combined SHA-256
+digests over health, telemetry, and ticks with non-semantic timestamps
+(`recordedAtNs`, `updatedAtNs`, `startedAtNs`) stripped. Identical input plus
+run id therefore produce identical digests; a different run id changes the
+combined `run` digest (run id is carried by health and telemetry) while the
+per-record decision content (`ticks`) digest stays identical. Re-using an
+explicit run id inside the same tenant directory fails closed with a clear
+error instead of appending ambiguous records.
 
 ## Planned capabilities
 
