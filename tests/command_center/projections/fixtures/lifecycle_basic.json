@@ -1,0 +1,123 @@
+{
+  "worlds": {
+    "t1": {
+      "cases": [
+        {
+          "tick": 100,
+          "state": {
+            "events": [
+              {
+                "event_type": "UNIT_MOVE_SUCCEEDED",
+                "actor_id": "u1",
+                "tick": 100,
+                "position": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "event_type": "HARVEST_SUCCEEDED",
+                "actor_id": "u1",
+                "tick": 101,
+                "position": [
+                  5,
+                  5
+                ],
+                "values": {
+                  "amount": 4
+                }
+              },
+              {
+                "event_type": "UNIT_DESTROYED",
+                "actor_id": "u1",
+                "tick": 102,
+                "values": {
+                  "destroyed_by": "enemy-1"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "tick": 200,
+          "state": {
+            "events": [
+              {
+                "event_type": "CORE_DAMAGED",
+                "actor_id": "core-1",
+                "tick": 200,
+                "values": {
+                  "damage": 7
+                }
+              },
+              {
+                "event_type": "CORE_HEAL_SUCCEEDED",
+                "actor_id": "core-1",
+                "tick": 201
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "survey": {
+    "t1": {
+      "unitLifecycle": [
+        {
+          "unit_id": "u1",
+          "unit_type": "WORKER",
+          "birth_tick": 50,
+          "birth_pos": "1,1",
+          "death_tick": 102,
+          "death_pos": "2,2",
+          "death_reason": "enemy-1",
+          "last_seen_tick": 102,
+          "last_seen_pos": "2,2",
+          "current_state": "dead"
+        },
+        {
+          "unit_id": "u2",
+          "unit_type": "RANGER",
+          "birth_tick": 20,
+          "birth_pos": null,
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 90,
+          "last_seen_pos": null,
+          "current_state": "alive"
+        }
+      ],
+      "coreSpends": [
+        {
+          "kind": "spawn",
+          "tick": 10,
+          "amount": 5,
+          "unit_type": "WORKER",
+          "unit_id": "u1"
+        },
+        {
+          "kind": "spawn",
+          "tick": 20,
+          "amount": 8,
+          "unit_type": "RANGER",
+          "unit_id": "u2"
+        }
+      ],
+      "notableEvents": [
+        {
+          "tenant": "t1",
+          "tick": 300,
+          "event_type": "CORE_RESOURCES_CAPTURED",
+          "amount": 12
+        },
+        {
+          "tenant": "t1",
+          "tick": 400,
+          "event_type": "CORE_DESTROYED"
+        }
+      ]
+    }
+  }
+}

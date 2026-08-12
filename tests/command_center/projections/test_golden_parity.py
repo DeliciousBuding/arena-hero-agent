@@ -45,7 +45,10 @@ from arena_hero_agent.command_center.projections import (
     enrich_consensus_mining,
     load_alliance_advice,
     load_arbitrations,
+    load_exploration,
     load_human_audit,
+    load_lifecycle_audit,
+    load_survey,
     load_survey_mine,
     merge_audit_trails,
     normalize_audit_trails,
@@ -343,6 +346,20 @@ def _run_python(name: str, fixture: dict[str, Any]) -> object:
             root = Path(root_dir)
             materialize_advice_data_root(fixture, root)
             return load_survey_mine(root, str(fixture["tenant"]), fixture.get("cell"))
+    if name in ("lifecycle_basic", "survey_basic", "exploration_basic"):
+        import tempfile
+        from pathlib import Path
+
+        from .tools.advice_fixture import materialize_advice_data_root
+
+        with tempfile.TemporaryDirectory(prefix="cc-wave6-parity-") as root_dir:
+            root = Path(root_dir)
+            materialize_advice_data_root(fixture, root)
+            if name == "lifecycle_basic":
+                return load_lifecycle_audit(root, str(fixture.get("tenant", "t1")), now_ms=NOW_MS)
+            if name == "survey_basic":
+                return load_survey(root, str(fixture.get("tenant", "all")), now_ms=NOW_MS)
+            return load_exploration(root, str(fixture.get("tenant", "t1")), now_ms=NOW_MS)
     if name == "enemy_cores_basic":
         return build_enemy_core_states(
             [dict(r) for r in fixture["hunts"]],
@@ -400,6 +417,9 @@ CASES = [
     "survey_mine_default_cell",
     "enemy_cores_basic",
     "decision_input_basic",
+    "lifecycle_basic",
+    "survey_basic",
+    "exploration_basic",
 ]
 
 

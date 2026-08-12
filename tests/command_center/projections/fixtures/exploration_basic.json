@@ -1,0 +1,191 @@
+{
+  "worlds": {
+    "t1": {
+      "cases": [
+        {
+          "tick": 5000,
+          "state": {
+            "objects": [
+              {
+                "kind": "CORE",
+                "position": [
+                  0,
+                  0
+                ],
+                "hp": 90,
+                "shield": 10
+              }
+            ],
+            "resources": 3,
+            "population": 2,
+            "champion_beacon": {
+              "x": 10,
+              "y": 10
+            }
+          }
+        }
+      ]
+    }
+  },
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {
+          "run_id": "r1",
+          "tenant": "t1",
+          "cases_synced": 3,
+          "last_tick": 5000,
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "5,5",
+          "x": 5,
+          "y": 5,
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4900,
+          "state": "visible",
+          "last_state_tick": 4900,
+          "seen_count": 3
+        },
+        {
+          "cell": "7,5",
+          "x": 7,
+          "y": 5,
+          "first_seen_tick": 3500,
+          "last_seen_tick": 4700,
+          "state": "harvested",
+          "last_state_tick": 4700,
+          "seen_count": 2
+        },
+        {
+          "cell": "9,9",
+          "x": 9,
+          "y": 9,
+          "first_seen_tick": 1000,
+          "last_seen_tick": 1100,
+          "state": "visible",
+          "last_state_tick": 1100,
+          "seen_count": 1
+        }
+      ],
+      "resourceEvents": [
+        {
+          "cell": "5,5",
+          "tick": 4000,
+          "event_type": "HARVEST_SUCCEEDED",
+          "reason_code": null,
+          "amount": 5,
+          "actor_id": null
+        },
+        {
+          "cell": "5,5",
+          "tick": 4200,
+          "event_type": "HARVEST_SUCCEEDED",
+          "reason_code": null,
+          "amount": 3,
+          "actor_id": null
+        },
+        {
+          "cell": "9,9",
+          "tick": 1200,
+          "event_type": "HARVEST_FAILED",
+          "reason_code": null,
+          "amount": null,
+          "actor_id": null
+        }
+      ],
+      "obstacles": [
+        {
+          "cell": "3,3",
+          "x": 3,
+          "y": 3,
+          "first_seen_tick": 2000,
+          "last_seen_tick": 4000
+        }
+      ],
+      "coreHunts": [
+        {
+          "cell": "10,10",
+          "x": 10,
+          "y": 10,
+          "owner": "other",
+          "source": "CORE",
+          "first_seen_tick": 3000,
+          "last_seen_tick": 4000
+        },
+        {
+          "cell": "11,11",
+          "x": 11,
+          "y": 11,
+          "owner": "other",
+          "source": "CORE",
+          "first_seen_tick": 3500,
+          "last_seen_tick": 4500
+        },
+        {
+          "cell": "20,20",
+          "x": 20,
+          "y": 20,
+          "owner": null,
+          "source": "CORE",
+          "first_seen_tick": 4000,
+          "last_seen_tick": 4600
+        }
+      ],
+      "chunks": [
+        {
+          "chunk_key": "0,0",
+          "last_seen_tick": 4000
+        },
+        {
+          "chunk_key": "0,1",
+          "last_seen_tick": 3800
+        }
+      ],
+      "unitLifecycle": [
+        {
+          "unit_id": "u1",
+          "unit_type": "WORKER",
+          "birth_tick": 100,
+          "birth_pos": "1,1",
+          "death_tick": 900,
+          "death_pos": "2,2",
+          "death_reason": "enemy",
+          "last_seen_tick": 900,
+          "last_seen_pos": "2,2",
+          "current_state": "dead"
+        },
+        {
+          "unit_id": "u2",
+          "unit_type": "RANGER",
+          "birth_tick": 200,
+          "birth_pos": null,
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 4800,
+          "last_seen_pos": "4,4",
+          "current_state": "alive"
+        }
+      ],
+      "coreSpends": [
+        {
+          "kind": "spawn",
+          "tick": 100,
+          "amount": 5,
+          "unit_type": "WORKER",
+          "unit_id": "u1"
+        },
+        {
+          "kind": "spawn",
+          "tick": 2100,
+          "amount": 8,
+          "unit_type": "RANGER",
+          "unit_id": "u2"
+        }
+      ]
+    }
+  }
+}

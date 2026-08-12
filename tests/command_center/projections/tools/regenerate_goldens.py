@@ -31,6 +31,12 @@ ORACLE_HARNESS = Path.home() / "tmp" / "cc-oracle.mjs"
 ORACLE_ADVICE_HARNESS = Path.home() / "tmp" / "cc-oracle-advice.mjs"
 # survey/mine fixtures need a materialized survey-db data root (W44 wave 5)
 ORACLE_SURVEY_MINE_HARNESS = Path.home() / "tmp" / "cc-oracle-survey-mine.mjs"
+# lifecycle/survey/exploration fixtures need a materialized survey-db data
+# root (W44 wave 6): the real TS loadLifecycleAudit / /api/survey route /
+# /api/exploration route read calibration cases + the survey database.
+ORACLE_LIFECYCLE_HARNESS = Path.home() / "tmp" / "cc-oracle-lifecycle.mjs"
+ORACLE_SURVEY_HARNESS = Path.home() / "tmp" / "cc-oracle-survey.mjs"
+ORACLE_EXPLORATION_HARNESS = Path.home() / "tmp" / "cc-oracle-exploration.mjs"
 
 # fixture base name -> oracle dispatch kind (see cc-oracle.mjs)
 KIND_BY_FIXTURE: dict[str, str] = {
@@ -69,6 +75,9 @@ KIND_BY_FIXTURE: dict[str, str] = {
     "survey_mine_default_cell": "surveyMine",
     "enemy_cores_basic": "enemyCores",
     "decision_input_basic": "decisionInput",
+    "lifecycle_basic": "lifecycle",
+    "survey_basic": "survey",
+    "exploration_basic": "exploration",
 }
 
 
@@ -99,6 +108,33 @@ def main() -> int:
                 advice_fixture.materialize_advice_data_root(spec, root)
                 result = subprocess.run(
                     ["node", str(ORACLE_ADVICE_HARNESS), str(root), str(spec["nowMs"])],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                )
+        elif kind in ("lifecycle", "survey", "exploration"):
+            # wave-6 oracles read a materialized survey-db data root
+            import json as _json
+            import tempfile
+
+            import advice_fixture
+
+            spec = _json.loads(fixture.read_text(encoding="utf-8"))
+            with tempfile.TemporaryDirectory(prefix="cc-wave6-regen-") as root_dir:
+                root = Path(root_dir)
+                advice_fixture.materialize_advice_data_root(spec, root)
+                if kind == "lifecycle":
+                    harness = ORACLE_LIFECYCLE_HARNESS
+                    args = [str(root), str(spec.get("tenant", "t1"))]
+                elif kind == "survey":
+                    harness = ORACLE_SURVEY_HARNESS
+                    args = [str(root), str(spec.get("tenant", "all"))]
+                else:
+                    harness = ORACLE_EXPLORATION_HARNESS
+                    args = [str(root), str(spec.get("tenant", "t1"))]
+                result = subprocess.run(
+                    ["node", str(harness), *args],
                     capture_output=True,
                     text=True,
                     encoding="utf-8",

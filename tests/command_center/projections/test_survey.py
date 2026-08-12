@@ -237,10 +237,11 @@ def test_load_lifecycle_db_shape(tmp_path: Path) -> None:
 def test_load_spend_trend_and_unit_detail(tmp_path: Path) -> None:
     root = materialize_advice_data_root(_survey_fixture(), tmp_path)
     trend = load_spend_trend(root, "t1")
-    # tick 100 -> bucket 0, tick 2100 -> bucket 2000.
+    # TS binds the bucket width as a REAL divisor, so (tick/N)*N == tick
+    # (verified against the live oracle golden).
     assert trend == [
-        {"bucketStart": 0, "kind": "spawn", "count": 1, "total": 5},
-        {"bucketStart": 2000, "kind": "spawn", "count": 1, "total": 8},
+        {"bucketStart": 100, "kind": "spawn", "count": 1, "total": 5},
+        {"bucketStart": 2100, "kind": "spawn", "count": 1, "total": 8},
     ]
     detail = load_unit_lifecycle_db(root, "t1")
     assert [u["unitId"] for u in detail] == ["u2", "u1"]  # last_seen desc

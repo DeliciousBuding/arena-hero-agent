@@ -14,6 +14,9 @@ projections to Python on top of the P5-3 data base (`paths` / `jsonl` /
 | Module | Endpoint family | Source artifacts |
 |--------|-----------------|------------------|
 | `alignment.py` | `/api/audit/alignment` | decision-audit + mine-utilization (+ trend) + mining-effectiveness + alliance snapshot |
+| `lifecycle.py` | `/api/audit/lifecycle` | calibration case events + survey-db `unit_lifecycle` / `core_spends` / `notable_events` |
+| `survey.py` | `/api/survey` | survey-db `resources` / `obstacles` / `core_hunts` / `chunks` / `sync_meta` / `unit_lifecycle` / `core_spends` / `resource_events` |
+| `exploration.py` | `/api/exploration` | `survey.py` survey cache + `snapshots.py` world (`loadTenantSurveyCached` + `loadWorld` subset) |
 | `decisions.py` | `/api/audit/decisions` (+ trend) | `telemetry/<t>/decision.jsonl`, `outcome.jsonl` |
 | `workers.py` | `/api/audit/workers` | `telemetry/<t>/runtime.jsonl` |
 | `human.py` | `/api/audit/human` | `runtime/human-command-audit.jsonl` |
@@ -41,9 +44,14 @@ P5-2 snapshot commit `8cf5cbb`). Every case must classify:
 - **MATCH** — Python aggregation equals the TS oracle output field-for-field
   (after stripping injectable wall-clock timestamps).
 - **ALLOWED** — a registered, documented divergence (see `conftest.py`
-  `ALLOWED_DIFFERENCES`): injectable timestamps, parsed-rows input, missing
-  TS survey tables (`sync_meta` / `resource_events` / `chunks`) degrading to
-  empty inputs, explicit `refreshedAt`, ordered arbitration pairs.
+  `ALLOWED_DIFFERENCES`): injectable timestamps, parsed-rows input, legacy
+  survey databases without the wave-6 tables degrading to empty inputs,
+  explicit `refreshedAt`, ordered arbitration pairs.
+- W44 wave 6 added the remaining TS survey-db tables (`sync_meta` /
+  `resource_events` / `chunks` / `unit_lifecycle` / `core_spends` /
+  `notable_events` / `heat_archive` / `resource_absences`) to `AGENT_SCHEMA`,
+  so the survey/lifecycle/exploration loaders read the real tables; legacy
+  databases created before the extension still degrade gracefully.
 - **UNKNOWN** — anything else; fails the suite (fail-closed).
 
 Regenerate goldens with

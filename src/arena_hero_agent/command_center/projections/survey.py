@@ -294,11 +294,14 @@ def load_spend_trend(
     if connection is None:
         return []
     try:
+        # TS binds the bucket width as a JS number -> SQLite REAL divisor, so
+        # ``(tick / N) * N`` is float division and bucketStart equals the tick
+        # (verified against the live oracle golden; keep the divisor REAL).
         rows = connection.execute(
             "SELECT (tick / ?) * ? AS bucketStart, kind, COUNT(*) AS count,"
             " SUM(amount) AS total FROM core_spends GROUP BY bucketStart, kind"
             " ORDER BY bucketStart ASC, kind",
-            (bucket_ticks, bucket_ticks),
+            (float(bucket_ticks), bucket_ticks),
         ).fetchall()
         return [
             {
