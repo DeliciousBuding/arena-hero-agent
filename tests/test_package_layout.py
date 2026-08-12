@@ -14,7 +14,6 @@ MODULES = (
     "planning",
     "alliance",
     "migration",
-    "intelligence",
     "learning.runtime",
     "control",
     "telemetry",
