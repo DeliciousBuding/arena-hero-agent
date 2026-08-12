@@ -1,0 +1,20 @@
+{
+  "nowMs": 1752000000000,
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {"run_id": "r1", "tenant": "t1", "cases_synced": 1, "last_tick": 5000, "updated_at": "2025-07-08T18:40:00Z"}
+      ],
+      "resources": [
+        {"cell": "1,50", "x": 1, "y": 50, "first_seen_tick": 3000, "last_seen_tick": 4900, "state": "visible", "last_state_tick": 4900, "seen_count": 2},
+        {"cell": "2,50", "x": 2, "y": 50, "first_seen_tick": 3000, "last_seen_tick": 2000, "state": "stale", "last_state_tick": 2000, "seen_count": 3}
+      ],
+      "resourceEvents": [
+        {"cell": "1,50", "tick": 4000, "event_type": "HARVEST_SUCCEEDED", "reason_code": null, "amount": 5, "actor_id": null}
+      ]
+    },
+    "t2": {"syncMeta": [], "resources": [], "resourceEvents": []},
+    "t3": {"syncMeta": [], "resources": [], "resourceEvents": []},
+    "t4": {"syncMeta": [], "resources": [], "resourceEvents": []}
+  }
+}

@@ -4196,6 +4196,96 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "modelCaveat": {
+                      "type": "string"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    },
+                    "tenants": {
+                      "additionalProperties": {
+                        "properties": {
+                          "absentStats": {
+                            "nullable": true,
+                            "type": "object"
+                          },
+                          "avgAgeTicks": {
+                            "type": "integer"
+                          },
+                          "deadMines": {
+                            "items": {
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "harvestFailed": {
+                            "type": "integer"
+                          },
+                          "harvestSucceeded": {
+                            "type": "integer"
+                          },
+                          "harvestSuccessRate": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "medianSeenCount": {
+                            "type": "integer"
+                          },
+                          "predictionAccuracy": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "predictions": {
+                            "items": {
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "refill": {
+                            "nullable": true,
+                            "type": "object"
+                          },
+                          "refillSource": {
+                            "type": "string"
+                          },
+                          "stale": {
+                            "type": "integer"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          },
+                          "topActive": {
+                            "items": {
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "total": {
+                            "type": "integer"
+                          },
+                          "visible": {
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenant",
+                    "tenants",
+                    "modelCaveat",
+                    "cachedAt"
+                  ],
                   "type": "object"
                 }
               }

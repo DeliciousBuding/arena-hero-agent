@@ -35,6 +35,7 @@ from ..projections import (
     load_alliance_defense,
     load_alliance_exploration,
     load_alliance_snapshot,
+    load_mine_patterns,
 )
 from ..projections._common import current_epoch_ms
 from ..projections.map_lod import load_map_lod
@@ -145,6 +146,7 @@ class CommandCenterApp:
             ("GET", "/api/alliance/defense"): self._handle_alliance_defense,
             ("GET", "/api/alliance/advice"): self._handle_alliance_advice,
             ("GET", "/api/exploration"): self._handle_exploration,
+            ("GET", "/api/survey/mine-patterns"): self._handle_mine_patterns,
         }
         if handlers:
             self._handlers.update(handlers)
@@ -318,6 +320,16 @@ class CommandCenterApp:
     ) -> dict[str, Any]:
         del request, match, query, tenant
         return load_alliance_exploration(self._data_root, now_ms=self._now_ms())
+
+    def _handle_mine_patterns(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query
+        return load_mine_patterns(self._data_root, tenant or "all", now_ms=self._now_ms())
 
 
 __all__ = [

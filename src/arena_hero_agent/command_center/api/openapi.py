@@ -406,6 +406,40 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
             "cachedAt",
         ],
     },
+    ("GET", "/api/survey/mine-patterns"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenant": _STR,
+            "tenants": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                        "tenant": _STR,
+                        "total": _INT,
+                        "visible": _INT,
+                        "stale": _INT,
+                        "avgAgeTicks": _INT,
+                        "medianSeenCount": _INT,
+                        "harvestSuccessRate": _NULLABLE_NUM,
+                        "harvestSucceeded": _INT,
+                        "harvestFailed": _INT,
+                        "topActive": _OBJ_ROWS,
+                        "refill": {"type": "object", "nullable": True},
+                        "refillSource": _STR,
+                        "absentStats": {"type": "object", "nullable": True},
+                        "deadMines": _OBJ_ROWS,
+                        "predictions": _OBJ_ROWS,
+                        "predictionAccuracy": _NULLABLE_NUM,
+                    },
+                },
+            },
+            "modelCaveat": _STR,
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt", "tenant", "tenants", "modelCaveat", "cachedAt"],
+    },
     ("GET", "/api/alliance/cluster"): {
         "type": "object",
         "properties": {
