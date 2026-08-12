@@ -23,7 +23,9 @@ NOW_MS = 1_752_000_000_000
 
 
 def _empty_decision() -> dict:
-    return {"decision": {"actionMix": {"move": 0, "harvest": 0, "deposit": 0, "wait": 0, "repair": 0}}}
+    return {
+        "decision": {"actionMix": {"move": 0, "harvest": 0, "deposit": 0, "wait": 0, "repair": 0}}
+    }
 
 
 def _base_inputs() -> dict:
@@ -43,14 +45,21 @@ def _base_inputs() -> dict:
 
 
 def _harvest_heavy() -> dict:
-    return {"decision": {"actionMix": {"move": 2, "harvest": 5, "deposit": 1, "wait": 2, "repair": 0}}}
+    return {
+        "decision": {"actionMix": {"move": 2, "harvest": 5, "deposit": 1, "wait": 2, "repair": 0}}
+    }
 
 
 def test_aggregate_alignment_grade_aligned() -> None:
     inputs = _base_inputs()
     inputs["decisions"]["t1"] = _harvest_heavy()
     inputs["mines"]["t1"] = {"visibleNever": 5}
-    inputs["effectiveness"]["perTenant"]["t1"] = {"assigned": 3, "open": 1, "stale": 0, "harvested": 2}
+    inputs["effectiveness"]["perTenant"]["t1"] = {
+        "assigned": 3,
+        "open": 1,
+        "stale": 0,
+        "harvested": 2,
+    }
     inputs["workers_by_tenant"]["t1"] = 8
     payload = aggregate_alignment(**inputs, now_ms=NOW_MS)
     tenant = payload["tenants"]["t1"]
@@ -63,9 +72,16 @@ def test_aggregate_alignment_grade_aligned() -> None:
 
 def test_aggregate_alignment_grade_allocation_unfulfilled() -> None:
     inputs = _base_inputs()
-    inputs["decisions"]["t2"] = {"decision": {"actionMix": {"move": 3, "harvest": 0, "deposit": 0, "wait": 0, "repair": 0}}}
+    inputs["decisions"]["t2"] = {
+        "decision": {"actionMix": {"move": 3, "harvest": 0, "deposit": 0, "wait": 0, "repair": 0}}
+    }
     inputs["mines"]["t2"] = {"visibleNever": 2}
-    inputs["effectiveness"]["perTenant"]["t2"] = {"assigned": 4, "open": 2, "stale": 1, "harvested": 0}
+    inputs["effectiveness"]["perTenant"]["t2"] = {
+        "assigned": 4,
+        "open": 2,
+        "stale": 1,
+        "harvested": 0,
+    }
     payload = aggregate_alignment(**inputs, now_ms=NOW_MS)
     tenant = payload["tenants"]["t2"]
     assert tenant["grade"] == "allocation_unfulfilled"
@@ -76,7 +92,9 @@ def test_aggregate_alignment_grade_allocation_unfulfilled() -> None:
 
 def test_aggregate_alignment_grade_gap_widening_with_idle_workers() -> None:
     inputs = _base_inputs()
-    inputs["decisions"]["t3"] = {"decision": {"actionMix": {"move": 20, "harvest": 0, "deposit": 0, "wait": 1, "repair": 0}}}
+    inputs["decisions"]["t3"] = {
+        "decision": {"actionMix": {"move": 20, "harvest": 0, "deposit": 0, "wait": 1, "repair": 0}}
+    }
     inputs["mines"]["t3"] = {"visibleNever": 15}
     inputs["trends"]["t3"] = {"visibleNever": 15, "visibleNeverPrev": 8}
     inputs["workers_by_tenant"]["t3"] = 6
@@ -100,22 +118,46 @@ def test_aggregate_alignment_grade_data_gap() -> None:
     for t in ("t1", "t2", "t3", "t4"):
         assert payload["tenants"][t]["grade"] == "data_gap"
         assert payload["tenants"][t]["reasons"] == []
-    assert payload["global"] == {"aligned": 0, "misaligned": 0, "dataGap": 4, "unfulfilledAssignments": 0}
+    assert payload["global"] == {
+        "aligned": 0,
+        "misaligned": 0,
+        "dataGap": 4,
+        "unfulfilledAssignments": 0,
+    }
 
 
 def test_aggregate_alignment_global_totals() -> None:
     inputs = _base_inputs()
     inputs["decisions"]["t1"] = _harvest_heavy()
     inputs["mines"]["t1"] = {"visibleNever": 5}
-    inputs["effectiveness"]["perTenant"]["t1"] = {"assigned": 3, "open": 1, "stale": 0, "harvested": 2}
-    inputs["decisions"]["t2"] = {"decision": {"actionMix": {"move": 3, "harvest": 0, "deposit": 0, "wait": 0, "repair": 0}}}
-    inputs["effectiveness"]["perTenant"]["t2"] = {"assigned": 4, "open": 2, "stale": 1, "harvested": 0}
-    inputs["decisions"]["t3"] = {"decision": {"actionMix": {"move": 20, "harvest": 0, "deposit": 0, "wait": 1, "repair": 0}}}
+    inputs["effectiveness"]["perTenant"]["t1"] = {
+        "assigned": 3,
+        "open": 1,
+        "stale": 0,
+        "harvested": 2,
+    }
+    inputs["decisions"]["t2"] = {
+        "decision": {"actionMix": {"move": 3, "harvest": 0, "deposit": 0, "wait": 0, "repair": 0}}
+    }
+    inputs["effectiveness"]["perTenant"]["t2"] = {
+        "assigned": 4,
+        "open": 2,
+        "stale": 1,
+        "harvested": 0,
+    }
+    inputs["decisions"]["t3"] = {
+        "decision": {"actionMix": {"move": 20, "harvest": 0, "deposit": 0, "wait": 1, "repair": 0}}
+    }
     inputs["mines"]["t3"] = {"visibleNever": 15}
     inputs["trends"]["t3"] = {"visibleNever": 15, "visibleNeverPrev": 8}
     inputs["workers_by_tenant"]["t3"] = 6
     payload = aggregate_alignment(**inputs, now_ms=NOW_MS)
-    assert payload["global"] == {"aligned": 1, "misaligned": 2, "dataGap": 1, "unfulfilledAssignments": 1}
+    assert payload["global"] == {
+        "aligned": 1,
+        "misaligned": 2,
+        "dataGap": 1,
+        "unfulfilledAssignments": 1,
+    }
 
 
 def _loader_fixture() -> dict:
@@ -124,36 +166,115 @@ def _loader_fixture() -> dict:
         "telemetry": {
             "t1": {
                 "decision": [
-                    {"tick": 10, "decisionSource": "ai", "moveCount": 2, "waitCount": 0, "harvestCount": 1, "depositCount": 0, "repairCount": 0, "planHash": "p1", "intent": "harvest"},
-                    {"tick": 11, "decisionSource": "ai", "moveCount": 0, "waitCount": 3, "harvestCount": 0, "depositCount": 0, "repairCount": 0, "planHash": "p2", "intent": "wait"},
+                    {
+                        "tick": 10,
+                        "decisionSource": "ai",
+                        "moveCount": 2,
+                        "waitCount": 0,
+                        "harvestCount": 1,
+                        "depositCount": 0,
+                        "repairCount": 0,
+                        "planHash": "p1",
+                        "intent": "harvest",
+                    },
+                    {
+                        "tick": 11,
+                        "decisionSource": "ai",
+                        "moveCount": 0,
+                        "waitCount": 3,
+                        "harvestCount": 0,
+                        "depositCount": 0,
+                        "repairCount": 0,
+                        "planHash": "p2",
+                        "intent": "wait",
+                    },
                 ],
                 "outcome": [
-                    {"tick": 10, "coreResourceDelta": 4, "workerCount": 2, "workersWithCargo": 1, "humanOverride": {"applied": ["a1"], "rejected": []}},
-                    {"tick": 11, "coreResourceDelta": -1, "workerCount": 2, "workersWithCargo": 2, "humanOverride": {"applied": [], "rejected": [{"reason": "Core is already moving"}]}},
+                    {
+                        "tick": 10,
+                        "coreResourceDelta": 4,
+                        "workerCount": 2,
+                        "workersWithCargo": 1,
+                        "humanOverride": {"applied": ["a1"], "rejected": []},
+                    },
+                    {
+                        "tick": 11,
+                        "coreResourceDelta": -1,
+                        "workerCount": 2,
+                        "workersWithCargo": 2,
+                        "humanOverride": {
+                            "applied": [],
+                            "rejected": [{"reason": "Core is already moving"}],
+                        },
+                    },
                 ],
             }
         },
         "survey": {
             "t1": {
-                "syncMeta": [{"run_id": "r1", "tenant": "t1", "cases_synced": 1, "last_tick": 5000, "updated_at": "2025-07-08T18:40:00Z"}],
+                "syncMeta": [
+                    {
+                        "run_id": "r1",
+                        "tenant": "t1",
+                        "cases_synced": 1,
+                        "last_tick": 5000,
+                        "updated_at": "2025-07-08T18:40:00Z",
+                    }
+                ],
                 "agents": [
                     {
-                        "tenant": "t1", "instance": "i1", "tick": 5000, "resources": 10,
-                        "population": 3, "core_x": 0, "core_y": 0, "units": 3,
-                        "visible_enemies": 0, "status": "ok", "sdk_version": "0.3.0a4",
-                        "base_url": "http://localhost", "pid": 1, "platform": "win",
-                        "mode": "production", "connection_state": "up",
+                        "tenant": "t1",
+                        "instance": "i1",
+                        "tick": 5000,
+                        "resources": 10,
+                        "population": 3,
+                        "core_x": 0,
+                        "core_y": 0,
+                        "units": 3,
+                        "visible_enemies": 0,
+                        "status": "ok",
+                        "sdk_version": "0.3.0a4",
+                        "base_url": "http://localhost",
+                        "pid": 1,
+                        "platform": "win",
+                        "mode": "production",
+                        "connection_state": "up",
                         "first_seen": "2025-07-08T18:00:00Z",
                         "last_heartbeat": "2025-07-08T18:40:00Z",
                         "updated_at": "2025-07-08T18:40:00Z",
                     }
                 ],
                 "resources": [
-                    {"cell": "5,5", "x": 5, "y": 5, "first_seen_tick": 3000, "last_seen_tick": 4800, "state": "visible", "last_state_tick": 4800, "seen_count": 3},
-                    {"cell": "7,5", "x": 7, "y": 5, "first_seen_tick": 3500, "last_seen_tick": 4900, "state": "visible", "last_state_tick": 4700, "seen_count": 2},
+                    {
+                        "cell": "5,5",
+                        "x": 5,
+                        "y": 5,
+                        "first_seen_tick": 3000,
+                        "last_seen_tick": 4800,
+                        "state": "visible",
+                        "last_state_tick": 4800,
+                        "seen_count": 3,
+                    },
+                    {
+                        "cell": "7,5",
+                        "x": 7,
+                        "y": 5,
+                        "first_seen_tick": 3500,
+                        "last_seen_tick": 4900,
+                        "state": "visible",
+                        "last_state_tick": 4700,
+                        "seen_count": 2,
+                    },
                 ],
                 "resourceEvents": [
-                    {"cell": "5,5", "tick": 4000, "event_type": "HARVEST_SUCCEEDED", "reason_code": None, "amount": 5, "actor_id": None},
+                    {
+                        "cell": "5,5",
+                        "tick": 4000,
+                        "event_type": "HARVEST_SUCCEEDED",
+                        "reason_code": None,
+                        "amount": 5,
+                        "actor_id": None,
+                    },
                 ],
             }
         },

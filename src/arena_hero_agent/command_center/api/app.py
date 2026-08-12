@@ -33,6 +33,7 @@ from ..paths import resolve_data_root, telemetry_dir, validate_tenant, write_api
 from ..projections import (
     AUDIT_SOURCES,
     list_arbitrations,
+    load_alignment_audit,
     load_alliance_advice,
     load_alliance_cluster,
     load_alliance_defense,
@@ -41,7 +42,6 @@ from ..projections import (
     load_alliance_snapshot,
     load_alliance_survey,
     load_audit_trail,
-    load_alignment_audit,
     load_consensus_mining,
     load_decision_audit,
     load_decision_input,

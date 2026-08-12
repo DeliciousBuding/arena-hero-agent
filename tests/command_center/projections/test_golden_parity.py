@@ -26,6 +26,7 @@ from arena_hero_agent.alliance.snapshot import (
     UnitType,
 )
 from arena_hero_agent.command_center.projections import (
+    aggregate_alignment,
     aggregate_allocation_effectiveness,
     aggregate_decision_audit,
     aggregate_decision_trend,
@@ -33,7 +34,6 @@ from arena_hero_agent.command_center.projections import (
     aggregate_map_lod,
     aggregate_mine_utilization,
     aggregate_mine_utilization_trend,
-    aggregate_alignment,
     aggregate_shop_history,
     aggregate_worker_liveness,
     assign_alliance_mining,
@@ -53,17 +53,17 @@ from arena_hero_agent.command_center.projections import (
     should_append,
     snapshot_signature,
 )
+from arena_hero_agent.command_center.projections._common import num
+from arena_hero_agent.command_center.projections.alliance_snapshot import (
+    _intel_payload,
+    build_alliance_snapshot_payload,
+)
 from arena_hero_agent.command_center.projections.mine_patterns import (
     compute_absent_stats,
     compute_dead_mines,
     compute_prediction_accuracy,
     compute_refill_predictions,
     compute_refill_predictions_from_absences,
-)
-from arena_hero_agent.command_center.projections._common import num
-from arena_hero_agent.command_center.projections.alliance_snapshot import (
-    _intel_payload,
-    build_alliance_snapshot_payload,
 )
 from arena_hero_agent.domain import Coordinate, TenantId
 

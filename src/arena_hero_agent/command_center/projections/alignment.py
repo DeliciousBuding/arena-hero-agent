@@ -97,7 +97,9 @@ def aggregate_alignment(
         harvest_rate = num(action_mix.get("harvest")) / total if total > 0 else None
         deposit_rate = num(action_mix.get("deposit")) / total if total > 0 else None
         tenant_mines = mines.get(t) if isinstance(mines, Mapping) else None
-        visible_never = num(tenant_mines.get("visibleNever")) if isinstance(tenant_mines, Mapping) else 0
+        visible_never = (
+            num(tenant_mines.get("visibleNever")) if isinstance(tenant_mines, Mapping) else 0
+        )
         eff: Any = None
         if isinstance(effectiveness, Mapping):
             per_tenant = effectiveness.get("perTenant")
@@ -133,16 +135,16 @@ def aggregate_alignment(
                 if grade == "aligned":
                     grade = "gap_widening"
                 share = _pct0(harvest_rate) if harvest_rate is not None else "-"
-                reasons.append(
-                    f"缺口 {visible_never} 但采集动作占比 {share}%——决策未对齐矿分配"
-                )
+                reasons.append(f"缺口 {visible_never} 但采集动作占比 {share}%——决策未对齐矿分配")
             if gap_trend_delta is not None and gap_trend_delta > 0:
                 reasons.append(f"缺口较上窗口 +{gap_trend_delta}")
-            if workers is not None and workers > 0 and (harvest_rate if harvest_rate is not None else 0) < 0.05:
+            if (
+                workers is not None
+                and workers > 0
+                and (harvest_rate if harvest_rate is not None else 0) < 0.05
+            ):
                 share = _pct0(harvest_rate) if harvest_rate is not None else "-"
-                reasons.append(
-                    f"有 {workers} 个 worker 但采集占比 {share}%——worker 空闲/在移动"
-                )
+                reasons.append(f"有 {workers} 个 worker 但采集占比 {share}%——worker 空闲/在移动")
             if grade == "aligned" and not reasons and harvest_rate is not None:
                 reasons.append(f"采集占比 {_pct0(harvest_rate)}%，缺口 {visible_never}——对齐")
             if grade == "aligned":
@@ -205,18 +207,18 @@ def load_alignment_audit(
     for t in TENANTS:
         member = members.get(t)
         raw_workers = member.get("workers") if isinstance(member, Mapping) else None
-        workers_by_tenant[t] = (
-            num(raw_workers) if _is_number(raw_workers) else None
-        )
+        workers_by_tenant[t] = num(raw_workers) if _is_number(raw_workers) else None
     trends: dict[str, dict[str, Any]] = {}
     for t in TENANTS:
         try:
             trend_payload = load_mine_utilization_trend(root, t, TREND_WINDOW, TREND_STEPS)
         except Exception:  # noqa: BLE001 - TS try/catch parity: trend optional
             continue
-        trend = trend_payload.get("trend") or ()
-        last = trend[-1] if trend else None
-        prev = trend[-2] if len(trend) >= 2 else None
+        trend_rows = list(trend_payload.get("trend") or ())
+        if not trend_rows:
+            continue
+        last = trend_rows[-1]
+        prev = trend_rows[-2] if len(trend_rows) >= 2 else None
         if last is not None:
             trends[t] = {
                 "visibleNever": num(last.get("visibleNever")),
