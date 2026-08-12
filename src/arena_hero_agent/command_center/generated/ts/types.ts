@@ -14,7 +14,7 @@ export type GetAgentsResponse = Record<string, unknown>;
 
 /** GET /api/alliance/advice - GET /api/alliance/advice */
 export interface GetAllianceAdviceParams {}
-export type GetAllianceAdviceResponse = Record<string, unknown>;
+export type GetAllianceAdviceResponse = {advice: Array<{action: string; at: string; category: string; confidence: number; detail: string; evidence: Array<{ageTicks?: number | null; ref?: string | null; tenant?: string | null; type: string}>; severity: string; tenant: string | null; title: string; weight: number}>; avgConfidence: number; cachedAt: string; dedupCount: number; generatedAt: string; summary: {critical: number; high: number; info: number; medium: number}};
 
 /** GET /api/alliance/cluster - GET /api/alliance/cluster */
 export interface GetAllianceClusterParams {}

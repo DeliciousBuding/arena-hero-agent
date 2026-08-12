@@ -269,6 +269,75 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
         },
         "required": ["generatedAtMs", "advice", "endangered", "pockets"],
     },
+    ("GET", "/api/alliance/advice"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "advice": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "severity": _STR,
+                        "category": _STR,
+                        "tenant": {"type": "string", "nullable": True},
+                        "title": _STR,
+                        "detail": _STR,
+                        "action": _STR,
+                        "weight": _NUM,
+                        "confidence": _NUM,
+                        "evidence": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "type": _STR,
+                                    "tenant": {"type": "string", "nullable": True},
+                                    "ref": {"type": "string", "nullable": True},
+                                    "ageTicks": {"type": "integer", "nullable": True},
+                                },
+                                "required": ["type"],
+                            },
+                        },
+                        "at": _STR,
+                    },
+                    "required": [
+                        "severity",
+                        "category",
+                        "tenant",
+                        "title",
+                        "detail",
+                        "action",
+                        "weight",
+                        "confidence",
+                        "evidence",
+                        "at",
+                    ],
+                },
+            },
+            "summary": {
+                "type": "object",
+                "properties": {
+                    "critical": _INT,
+                    "high": _INT,
+                    "medium": _INT,
+                    "info": _INT,
+                },
+                "required": ["critical", "high", "medium", "info"],
+            },
+            "dedupCount": _INT,
+            "avgConfidence": _NUM,
+            "cachedAt": _STR,
+        },
+        "required": [
+            "generatedAt",
+            "advice",
+            "summary",
+            "dedupCount",
+            "avgConfidence",
+            "cachedAt",
+        ],
+    },
     ("GET", "/api/alliance/survey"): {
         "type": "object",
         "properties": {
