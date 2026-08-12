@@ -32,6 +32,75 @@ _OBJ_ROWS = {"type": "array", "items": {"type": "object"}}
 _INT_MAP = {"type": "object", "additionalProperties": {"type": "integer"}}
 _STR_MAP = {"type": "object", "additionalProperties": {"type": "string"}}
 
+# Shared per-tenant audit shapes. The tenant=all responses for the audit
+# endpoints are maps keyed by tenant; single-tenant responses are the shape
+# itself, so those operations document both via oneOf.
+_DECISION_AUDIT_SHAPE: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "generatedAt": _STR,
+        "tenant": _STR,
+        "window": _INT,
+        "currentTick": _NULLABLE_INT,
+        "decision": {
+            "type": "object",
+            "properties": {
+                "records": _INT,
+                "actionMix": _INT_MAP,
+                "intentTop": {"type": "array", "items": _STR},
+                "sourceMix": _INT_MAP,
+                "planChurn": {"type": "object", "nullable": True},
+                "stallTicks": _INT,
+            },
+            "required": ["records", "actionMix", "intentTop", "sourceMix", "stallTicks"],
+        },
+        "outcome": {
+            "type": "object",
+            "properties": {
+                "records": _INT,
+                "coreDeltaSum": _NUM,
+                "coreDeltaPositiveTicks": _INT,
+                "depositSucceeded": _INT,
+                "depositFailed": _INT,
+                "harvestSucceeded": _INT,
+                "harvestFailed": _INT,
+                "depositSuccessRate": _NULLABLE_NUM,
+                "cargoEfficiency": _NULLABLE_NUM,
+                "workerMeanDistFromCore": _NULLABLE_NUM,
+                "humanApplied": _INT,
+                "humanRejected": _INT,
+            },
+            "required": [
+                "records",
+                "coreDeltaSum",
+                "depositSucceeded",
+                "depositFailed",
+                "harvestSucceeded",
+                "harvestFailed",
+            ],
+        },
+        "cachedAt": _STR,
+    },
+    "required": ["generatedAt", "tenant", "window", "decision", "outcome"],
+}
+
+_HUMAN_CONFLICT_SHAPE: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "generatedAt": _STR,
+        "tenant": _STR,
+        "window": _INT,
+        "currentTick": _NULLABLE_INT,
+        "applied": _INT,
+        "rejected": _INT,
+        "rejectedRate": _NULLABLE_NUM,
+        "topRejectedReasons": _OBJ_ROWS,
+        "commandKinds": _INT_MAP,
+        "cachedAt": _STR,
+    },
+    "required": ["generatedAt", "tenant", "window", "applied", "rejected"],
+}
+
 
 # Minimal 200 response schemas for the main Command Center read endpoints.
 # Field names mirror the real payloads produced by the P5-4 projections and the
@@ -338,6 +407,14 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
             "cachedAt",
         ],
     },
+    ("GET", "/api/alliance/survey/arbitrations"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "arbitrations": _OBJ_ROWS,
+        },
+        "required": ["generatedAt", "arbitrations"],
+    },
     ("GET", "/api/alliance/survey"): {
         "type": "object",
         "properties": {
@@ -536,43 +613,10 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
         "required": ["generatedAt", "assignments", "perTenant", "unassigned", "global", "cachedAt"],
     },
     ("GET", "/api/audit/decisions"): {
-        "type": "object",
-        "properties": {
-            "generatedAt": _STR,
-            "tenant": _STR,
-            "window": _INT,
-            "currentTick": _NULLABLE_INT,
-            "decision": {
-                "type": "object",
-                "properties": {
-                    "records": _INT,
-                    "actionMix": _INT_MAP,
-                    "intentTop": {"type": "array", "items": _STR},
-                    "sourceMix": _INT_MAP,
-                    "planChurn": {"type": "object", "nullable": True},
-                    "stallTicks": _INT,
-                },
-            },
-            "outcome": {
-                "type": "object",
-                "properties": {
-                    "records": _INT,
-                    "coreDeltaSum": _NUM,
-                    "coreDeltaPositiveTicks": _INT,
-                    "depositSucceeded": _INT,
-                    "depositFailed": _INT,
-                    "harvestSucceeded": _INT,
-                    "harvestFailed": _INT,
-                    "depositSuccessRate": _NULLABLE_NUM,
-                    "cargoEfficiency": _NULLABLE_NUM,
-                    "workerMeanDistFromCore": _NULLABLE_NUM,
-                    "humanApplied": _INT,
-                    "humanRejected": _INT,
-                },
-            },
-            "cachedAt": _STR,
-        },
-        "required": ["generatedAt", "tenant", "window", "decision", "outcome"],
+        "oneOf": [
+            _DECISION_AUDIT_SHAPE,
+            {"type": "object", "additionalProperties": _DECISION_AUDIT_SHAPE},
+        ],
     },
     ("GET", "/api/audit/decisions/trend"): {
         "type": "object",
@@ -580,12 +624,11 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
             "generatedAt": _STR,
             "tenant": _STR,
             "window": _INT,
-            "currentTick": _NULLABLE_INT,
-            "decision": _OBJ,
-            "outcome": _OBJ,
+            "steps": _INT,
+            "trend": _OBJ_ROWS,
             "cachedAt": _STR,
         },
-        "required": ["generatedAt", "tenant", "window", "decision", "outcome"],
+        "required": ["generatedAt", "tenant", "window", "steps", "trend"],
     },
     ("GET", "/api/audit/workers"): {
         "type": "object",
@@ -633,39 +676,41 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
         "required": ["generatedAt", "entries", "counts", "filters"],
     },
     ("GET", "/api/audit/human/conflicts"): {
-        "type": "object",
-        "properties": {
-            "generatedAt": _STR,
-            "tenant": _STR,
-            "window": _INT,
-            "currentTick": _NULLABLE_INT,
-            "applied": _INT,
-            "rejected": _INT,
-            "rejectedRate": _NULLABLE_NUM,
-            "topRejectedReasons": _OBJ_ROWS,
-            "commandKinds": _INT_MAP,
-            "cachedAt": _STR,
-        },
-        "required": ["generatedAt", "tenant", "window", "applied", "rejected"],
+        "oneOf": [
+            _HUMAN_CONFLICT_SHAPE,
+            {"type": "object", "additionalProperties": _HUMAN_CONFLICT_SHAPE},
+        ],
     },
     ("GET", "/api/audit/mines"): {
         "type": "object",
         "properties": {
+            "generatedAt": _STR,
             "tenant": _STR,
-            "currentTick": _NULLABLE_INT,
-            "total": _INT,
-            "harvested": _INT,
-            "neverHarvested": _INT,
-            "visibleNever": _INT,
-            "staleNever": _INT,
-            "utilizationRate": _NULLABLE_NUM,
-            "medianTimeToFirstHarvest": _NULLABLE_NUM,
-            "maxGapAgeTicks": _NULLABLE_INT,
-            "medianGapAgeTicks": _NULLABLE_NUM,
-            "candidates": _OBJ_ROWS,
-            "topMines": _OBJ,
+            "tenants": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                        "tenant": _STR,
+                        "currentTick": _NULLABLE_INT,
+                        "total": _INT,
+                        "harvested": _INT,
+                        "neverHarvested": _INT,
+                        "visibleNever": _INT,
+                        "staleNever": _INT,
+                        "utilizationRate": _NULLABLE_NUM,
+                        "medianTimeToFirstHarvest": _NULLABLE_NUM,
+                        "maxGapAgeTicks": _NULLABLE_INT,
+                        "medianGapAgeTicks": _NULLABLE_NUM,
+                        "candidates": _OBJ_ROWS,
+                        "topMines": _OBJ,
+                    },
+                    "required": ["tenant", "total", "harvested", "neverHarvested"],
+                },
+            },
+            "cachedAt": _STR,
         },
-        "required": ["tenant", "total", "harvested"],
+        "required": ["generatedAt", "tenant", "tenants"],
     },
     ("GET", "/api/audit/mines/trend"): {
         "type": "object",
@@ -715,6 +760,43 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
             "cachedAt": _STR,
         },
         "required": ["generatedAt", "snapshots", "productCount", "trends"],
+    },
+    ("GET", "/api/intel/heat"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenant": _STR,
+            "currentTick": _INT,
+            "buckets": _OBJ_ROWS,
+            "fullBuckets": _OBJ_ROWS,
+            "summary": {
+                "type": "object",
+                "properties": {
+                    "totalSightings": _INT,
+                    "distinctCells": _INT,
+                    "combatSightings": _INT,
+                    "workerSightings": _INT,
+                    "tenants": _INT,
+                },
+                "required": [
+                    "totalSightings",
+                    "distinctCells",
+                    "combatSightings",
+                    "workerSightings",
+                    "tenants",
+                ],
+            },
+            "cachedAt": _STR,
+        },
+        "required": [
+            "generatedAt",
+            "tenant",
+            "currentTick",
+            "buckets",
+            "fullBuckets",
+            "summary",
+            "cachedAt",
+        ],
     },
 }
 

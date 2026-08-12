@@ -1160,6 +1160,21 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "arbitrations": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "arbitrations"
+                  ],
                   "type": "object"
                 }
               }
@@ -1394,109 +1409,251 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "cachedAt": {
-                      "type": "string"
-                    },
-                    "currentTick": {
-                      "nullable": true,
-                      "type": "integer"
-                    },
-                    "decision": {
+                  "oneOf": [
+                    {
                       "properties": {
-                        "actionMix": {
-                          "additionalProperties": {
-                            "type": "integer"
+                        "cachedAt": {
+                          "type": "string"
+                        },
+                        "currentTick": {
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "decision": {
+                          "properties": {
+                            "actionMix": {
+                              "additionalProperties": {
+                                "type": "integer"
+                              },
+                              "type": "object"
+                            },
+                            "intentTop": {
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "planChurn": {
+                              "nullable": true,
+                              "type": "object"
+                            },
+                            "records": {
+                              "type": "integer"
+                            },
+                            "sourceMix": {
+                              "additionalProperties": {
+                                "type": "integer"
+                              },
+                              "type": "object"
+                            },
+                            "stallTicks": {
+                              "type": "integer"
+                            }
                           },
+                          "required": [
+                            "records",
+                            "actionMix",
+                            "intentTop",
+                            "sourceMix",
+                            "stallTicks"
+                          ],
                           "type": "object"
                         },
-                        "intentTop": {
-                          "items": {
+                        "generatedAt": {
+                          "type": "string"
+                        },
+                        "outcome": {
+                          "properties": {
+                            "cargoEfficiency": {
+                              "nullable": true,
+                              "type": "number"
+                            },
+                            "coreDeltaPositiveTicks": {
+                              "type": "integer"
+                            },
+                            "coreDeltaSum": {
+                              "type": "number"
+                            },
+                            "depositFailed": {
+                              "type": "integer"
+                            },
+                            "depositSucceeded": {
+                              "type": "integer"
+                            },
+                            "depositSuccessRate": {
+                              "nullable": true,
+                              "type": "number"
+                            },
+                            "harvestFailed": {
+                              "type": "integer"
+                            },
+                            "harvestSucceeded": {
+                              "type": "integer"
+                            },
+                            "humanApplied": {
+                              "type": "integer"
+                            },
+                            "humanRejected": {
+                              "type": "integer"
+                            },
+                            "records": {
+                              "type": "integer"
+                            },
+                            "workerMeanDistFromCore": {
+                              "nullable": true,
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "records",
+                            "coreDeltaSum",
+                            "depositSucceeded",
+                            "depositFailed",
+                            "harvestSucceeded",
+                            "harvestFailed"
+                          ],
+                          "type": "object"
+                        },
+                        "tenant": {
+                          "type": "string"
+                        },
+                        "window": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "generatedAt",
+                        "tenant",
+                        "window",
+                        "decision",
+                        "outcome"
+                      ],
+                      "type": "object"
+                    },
+                    {
+                      "additionalProperties": {
+                        "properties": {
+                          "cachedAt": {
                             "type": "string"
                           },
-                          "type": "array"
-                        },
-                        "planChurn": {
-                          "nullable": true,
-                          "type": "object"
-                        },
-                        "records": {
-                          "type": "integer"
-                        },
-                        "sourceMix": {
-                          "additionalProperties": {
+                          "currentTick": {
+                            "nullable": true,
                             "type": "integer"
                           },
-                          "type": "object"
+                          "decision": {
+                            "properties": {
+                              "actionMix": {
+                                "additionalProperties": {
+                                  "type": "integer"
+                                },
+                                "type": "object"
+                              },
+                              "intentTop": {
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "planChurn": {
+                                "nullable": true,
+                                "type": "object"
+                              },
+                              "records": {
+                                "type": "integer"
+                              },
+                              "sourceMix": {
+                                "additionalProperties": {
+                                  "type": "integer"
+                                },
+                                "type": "object"
+                              },
+                              "stallTicks": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "records",
+                              "actionMix",
+                              "intentTop",
+                              "sourceMix",
+                              "stallTicks"
+                            ],
+                            "type": "object"
+                          },
+                          "generatedAt": {
+                            "type": "string"
+                          },
+                          "outcome": {
+                            "properties": {
+                              "cargoEfficiency": {
+                                "nullable": true,
+                                "type": "number"
+                              },
+                              "coreDeltaPositiveTicks": {
+                                "type": "integer"
+                              },
+                              "coreDeltaSum": {
+                                "type": "number"
+                              },
+                              "depositFailed": {
+                                "type": "integer"
+                              },
+                              "depositSucceeded": {
+                                "type": "integer"
+                              },
+                              "depositSuccessRate": {
+                                "nullable": true,
+                                "type": "number"
+                              },
+                              "harvestFailed": {
+                                "type": "integer"
+                              },
+                              "harvestSucceeded": {
+                                "type": "integer"
+                              },
+                              "humanApplied": {
+                                "type": "integer"
+                              },
+                              "humanRejected": {
+                                "type": "integer"
+                              },
+                              "records": {
+                                "type": "integer"
+                              },
+                              "workerMeanDistFromCore": {
+                                "nullable": true,
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "records",
+                              "coreDeltaSum",
+                              "depositSucceeded",
+                              "depositFailed",
+                              "harvestSucceeded",
+                              "harvestFailed"
+                            ],
+                            "type": "object"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          },
+                          "window": {
+                            "type": "integer"
+                          }
                         },
-                        "stallTicks": {
-                          "type": "integer"
-                        }
+                        "required": [
+                          "generatedAt",
+                          "tenant",
+                          "window",
+                          "decision",
+                          "outcome"
+                        ],
+                        "type": "object"
                       },
                       "type": "object"
-                    },
-                    "generatedAt": {
-                      "type": "string"
-                    },
-                    "outcome": {
-                      "properties": {
-                        "cargoEfficiency": {
-                          "nullable": true,
-                          "type": "number"
-                        },
-                        "coreDeltaPositiveTicks": {
-                          "type": "integer"
-                        },
-                        "coreDeltaSum": {
-                          "type": "number"
-                        },
-                        "depositFailed": {
-                          "type": "integer"
-                        },
-                        "depositSucceeded": {
-                          "type": "integer"
-                        },
-                        "depositSuccessRate": {
-                          "nullable": true,
-                          "type": "number"
-                        },
-                        "harvestFailed": {
-                          "type": "integer"
-                        },
-                        "harvestSucceeded": {
-                          "type": "integer"
-                        },
-                        "humanApplied": {
-                          "type": "integer"
-                        },
-                        "humanRejected": {
-                          "type": "integer"
-                        },
-                        "records": {
-                          "type": "integer"
-                        },
-                        "workerMeanDistFromCore": {
-                          "nullable": true,
-                          "type": "number"
-                        }
-                      },
-                      "type": "object"
-                    },
-                    "tenant": {
-                      "type": "string"
-                    },
-                    "window": {
-                      "type": "integer"
                     }
-                  },
-                  "required": [
-                    "generatedAt",
-                    "tenant",
-                    "window",
-                    "decision",
-                    "outcome"
-                  ],
-                  "type": "object"
+                  ]
                 }
               }
             },
@@ -1572,21 +1729,20 @@
                     "cachedAt": {
                       "type": "string"
                     },
-                    "currentTick": {
-                      "nullable": true,
-                      "type": "integer"
-                    },
-                    "decision": {
-                      "type": "object"
-                    },
                     "generatedAt": {
                       "type": "string"
                     },
-                    "outcome": {
-                      "type": "object"
+                    "steps": {
+                      "type": "integer"
                     },
                     "tenant": {
                       "type": "string"
+                    },
+                    "trend": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
                     },
                     "window": {
                       "type": "integer"
@@ -1596,8 +1752,8 @@
                     "generatedAt",
                     "tenant",
                     "window",
-                    "decision",
-                    "outcome"
+                    "steps",
+                    "trend"
                   ],
                   "type": "object"
                 }
@@ -1727,54 +1883,111 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "properties": {
-                    "applied": {
-                      "type": "integer"
-                    },
-                    "cachedAt": {
-                      "type": "string"
-                    },
-                    "commandKinds": {
-                      "additionalProperties": {
-                        "type": "integer"
+                  "oneOf": [
+                    {
+                      "properties": {
+                        "applied": {
+                          "type": "integer"
+                        },
+                        "cachedAt": {
+                          "type": "string"
+                        },
+                        "commandKinds": {
+                          "additionalProperties": {
+                            "type": "integer"
+                          },
+                          "type": "object"
+                        },
+                        "currentTick": {
+                          "nullable": true,
+                          "type": "integer"
+                        },
+                        "generatedAt": {
+                          "type": "string"
+                        },
+                        "rejected": {
+                          "type": "integer"
+                        },
+                        "rejectedRate": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "tenant": {
+                          "type": "string"
+                        },
+                        "topRejectedReasons": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "window": {
+                          "type": "integer"
+                        }
                       },
+                      "required": [
+                        "generatedAt",
+                        "tenant",
+                        "window",
+                        "applied",
+                        "rejected"
+                      ],
                       "type": "object"
                     },
-                    "currentTick": {
-                      "nullable": true,
-                      "type": "integer"
-                    },
-                    "generatedAt": {
-                      "type": "string"
-                    },
-                    "rejected": {
-                      "type": "integer"
-                    },
-                    "rejectedRate": {
-                      "nullable": true,
-                      "type": "number"
-                    },
-                    "tenant": {
-                      "type": "string"
-                    },
-                    "topRejectedReasons": {
-                      "items": {
+                    {
+                      "additionalProperties": {
+                        "properties": {
+                          "applied": {
+                            "type": "integer"
+                          },
+                          "cachedAt": {
+                            "type": "string"
+                          },
+                          "commandKinds": {
+                            "additionalProperties": {
+                              "type": "integer"
+                            },
+                            "type": "object"
+                          },
+                          "currentTick": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "generatedAt": {
+                            "type": "string"
+                          },
+                          "rejected": {
+                            "type": "integer"
+                          },
+                          "rejectedRate": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          },
+                          "topRejectedReasons": {
+                            "items": {
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "window": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "generatedAt",
+                          "tenant",
+                          "window",
+                          "applied",
+                          "rejected"
+                        ],
                         "type": "object"
                       },
-                      "type": "array"
-                    },
-                    "window": {
-                      "type": "integer"
+                      "type": "object"
                     }
-                  },
-                  "required": [
-                    "generatedAt",
-                    "tenant",
-                    "window",
-                    "applied",
-                    "rejected"
-                  ],
-                  "type": "object"
+                  ]
                 }
               }
             },
@@ -1884,58 +2097,81 @@
               "application/json": {
                 "schema": {
                   "properties": {
-                    "candidates": {
-                      "items": {
-                        "type": "object"
-                      },
-                      "type": "array"
+                    "cachedAt": {
+                      "type": "string"
                     },
-                    "currentTick": {
-                      "nullable": true,
-                      "type": "integer"
-                    },
-                    "harvested": {
-                      "type": "integer"
-                    },
-                    "maxGapAgeTicks": {
-                      "nullable": true,
-                      "type": "integer"
-                    },
-                    "medianGapAgeTicks": {
-                      "nullable": true,
-                      "type": "number"
-                    },
-                    "medianTimeToFirstHarvest": {
-                      "nullable": true,
-                      "type": "number"
-                    },
-                    "neverHarvested": {
-                      "type": "integer"
-                    },
-                    "staleNever": {
-                      "type": "integer"
+                    "generatedAt": {
+                      "type": "string"
                     },
                     "tenant": {
                       "type": "string"
                     },
-                    "topMines": {
+                    "tenants": {
+                      "additionalProperties": {
+                        "properties": {
+                          "candidates": {
+                            "items": {
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "currentTick": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "harvested": {
+                            "type": "integer"
+                          },
+                          "maxGapAgeTicks": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "medianGapAgeTicks": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "medianTimeToFirstHarvest": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "neverHarvested": {
+                            "type": "integer"
+                          },
+                          "staleNever": {
+                            "type": "integer"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          },
+                          "topMines": {
+                            "type": "object"
+                          },
+                          "total": {
+                            "type": "integer"
+                          },
+                          "utilizationRate": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "visibleNever": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "tenant",
+                          "total",
+                          "harvested",
+                          "neverHarvested"
+                        ],
+                        "type": "object"
+                      },
                       "type": "object"
-                    },
-                    "total": {
-                      "type": "integer"
-                    },
-                    "utilizationRate": {
-                      "nullable": true,
-                      "type": "number"
-                    },
-                    "visibleNever": {
-                      "type": "integer"
                     }
                   },
                   "required": [
+                    "generatedAt",
                     "tenant",
-                    "total",
-                    "harvested"
+                    "tenants"
                   ],
                   "type": "object"
                 }
@@ -3087,6 +3323,68 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "buckets": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "currentTick": {
+                      "type": "integer"
+                    },
+                    "fullBuckets": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "properties": {
+                        "combatSightings": {
+                          "type": "integer"
+                        },
+                        "distinctCells": {
+                          "type": "integer"
+                        },
+                        "tenants": {
+                          "type": "integer"
+                        },
+                        "totalSightings": {
+                          "type": "integer"
+                        },
+                        "workerSightings": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "totalSightings",
+                        "distinctCells",
+                        "combatSightings",
+                        "workerSightings",
+                        "tenants"
+                      ],
+                      "type": "object"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenant",
+                    "currentTick",
+                    "buckets",
+                    "fullBuckets",
+                    "summary",
+                    "cachedAt"
+                  ],
                   "type": "object"
                 }
               }

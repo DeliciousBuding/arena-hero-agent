@@ -331,4 +331,21 @@ def materialize_advice_data_root(fixture: dict[str, Any], root: Path) -> Path:
     human_audit = fixture.get("humanAudit") or ()
     if human_audit:
         _write_jsonl(root / "runtime" / "human-command-audit.jsonl", human_audit)
+    arbitration = fixture.get("arbitration") or ()
+    if arbitration:
+        _write_jsonl(root / "runtime" / "survey" / "arbitration.jsonl", arbitration)
+    runtime_jsonl = fixture.get("runtimeJsonl") or {}
+    for tenant, rows in runtime_jsonl.items():
+        if rows:
+            _write_jsonl(root / "runtime" / tenant / "telemetry" / "runtime.jsonl", rows)
+    command_audit = fixture.get("commandAudit") or {}
+    for tenant, rows in command_audit.items():
+        if rows:
+            _write_jsonl(root / "runtime" / "command-audit" / f"{tenant}.jsonl", rows)
+    supervisor = fixture.get("supervisor") or ()
+    if supervisor:
+        _write_jsonl(root / "runtime" / "supervisor.jsonl", supervisor)
+    shop_history = fixture.get("shopHistory") or ()
+    if shop_history:
+        _write_jsonl(root / "runtime" / "shop-history.jsonl", shop_history)
     return root

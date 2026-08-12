@@ -31,12 +31,25 @@ from ..goal_store import iso_utc
 from ..jsonl import read_jsonl_tail
 from ..paths import resolve_data_root, telemetry_dir, validate_tenant, write_api_audit_path
 from ..projections import (
+    AUDIT_SOURCES,
+    list_arbitrations,
     load_alliance_advice,
     load_alliance_defense,
     load_alliance_exploration,
     load_alliance_snapshot,
+    load_alliance_survey,
+    load_audit_trail,
     load_consensus_mining,
+    load_decision_audit,
+    load_decision_trend,
+    load_enemy_heat,
+    load_human_conflict,
     load_mine_patterns,
+    load_mine_utilization,
+    load_mine_utilization_trend,
+    load_mining_effectiveness,
+    load_shop_history,
+    load_worker_liveness_audit,
 )
 from ..projections._common import current_epoch_ms
 from ..projections.map_lod import load_map_lod
@@ -122,6 +135,33 @@ def _stream_n(raw: str | None) -> int:
     return min(max(value, STREAM_MIN_N), STREAM_MAX_N)
 
 
+def _clamp_int(
+    query: Mapping[str, str],
+    key: str,
+    default: int,
+    lo: int,
+    hi: int,
+    *,
+    round_value: bool = False,
+) -> int:
+    """Clamp an integer query parameter to ``lo..hi`` (TS ``Number`` parity).
+
+    Missing or non-numeric values fall back to ``default`` (TS
+    ``Number.isFinite`` check); ``round_value`` mirrors the TS ``Math.round``
+    used for limits before clamping.
+    """
+    raw = query.get(key)
+    if raw is None:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    if round_value:
+        value = round(value)
+    return min(max(int(value), lo), hi)
+
+
 class CommandCenterApp:
     """Route/dispatch/ETag/stream pipeline for the Command Center API."""
 
@@ -149,6 +189,18 @@ class CommandCenterApp:
             ("GET", "/api/alliance/exploration"): self._handle_exploration,
             ("GET", "/api/survey/mine-patterns"): self._handle_mine_patterns,
             ("GET", "/api/alliance/survey/mining"): self._handle_consensus_mining,
+            ("GET", "/api/alliance/survey"): self._handle_alliance_survey,
+            ("GET", "/api/alliance/survey/arbitrations"): self._handle_arbitrations,
+            ("GET", "/api/audit/decisions"): self._handle_decision_audit,
+            ("GET", "/api/audit/decisions/trend"): self._handle_decision_trend,
+            ("GET", "/api/audit/human/conflicts"): self._handle_human_conflict,
+            ("GET", "/api/audit/mines"): self._handle_mine_utilization,
+            ("GET", "/api/audit/mines/trend"): self._handle_mine_utilization_trend,
+            ("GET", "/api/audit/mining-effectiveness"): self._handle_mining_effectiveness,
+            ("GET", "/api/audit/trail"): self._handle_audit_trail,
+            ("GET", "/api/audit/workers"): self._handle_worker_liveness_audit,
+            ("GET", "/api/intel/heat"): self._handle_enemy_heat,
+            ("GET", "/api/shop/history"): self._handle_shop_history,
         }
         if handlers:
             self._handlers.update(handlers)
@@ -342,6 +394,163 @@ class CommandCenterApp:
     ) -> dict[str, Any]:
         del request, match, query, tenant
         return load_consensus_mining(self._data_root, now_ms=self._now_ms())
+
+    def _handle_alliance_survey(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, tenant
+        payload = load_alliance_survey(self._data_root, now_ms=self._now_ms())
+        if query.get("view") != "consensus":
+            return payload
+        return {
+            "generatedAt": payload["generatedAt"],
+            "colors": payload["colors"],
+            "tenantSummaries": payload["tenantSummaries"],
+            "conflicts": payload["conflicts"],
+            "consensusResources": payload["consensusResources"],
+            "consensusCores": payload["consensusCores"],
+            "consensusChunks": payload["consensusChunks"],
+            "cachedAt": payload["cachedAt"],
+        }
+
+    def _handle_arbitrations(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        return {
+            "generatedAt": iso_utc(self._now_ms()),
+            "arbitrations": list_arbitrations(self._data_root),
+        }
+
+    def _handle_decision_audit(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        window = _clamp_int(query, "window", 3000, 200, 20_000)
+        return load_decision_audit(self._data_root, tenant or "all", window)
+
+    def _handle_decision_trend(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        window = _clamp_int(query, "window", 500, 100, 2000)
+        steps = _clamp_int(query, "steps", 6, 2, 12)
+        return load_decision_trend(self._data_root, tenant or "t1", window, steps)
+
+    def _handle_human_conflict(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        window = _clamp_int(query, "window", 3000, 200, 20_000)
+        return load_human_conflict(self._data_root, tenant or "all", window)
+
+    def _handle_mine_utilization(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query
+        return load_mine_utilization(self._data_root, tenant or "all")
+
+    def _handle_mine_utilization_trend(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        window = _clamp_int(query, "window", 2000, 500, 4000)
+        steps = _clamp_int(query, "steps", 6, 2, 10)
+        return load_mine_utilization_trend(self._data_root, tenant or "t1", window, steps)
+
+    def _handle_mining_effectiveness(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        return load_mining_effectiveness(self._data_root, now_ms=self._now_ms())
+
+    def _handle_audit_trail(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        source = query.get("source")
+        if source is not None and source not in AUDIT_SOURCES:
+            raise RequestValidationError(f"source must be one of {sorted(AUDIT_SOURCES)}")
+        limit = _clamp_int(query, "limit", 200, 1, 500, round_value=True)
+        return load_audit_trail(
+            self._data_root,
+            tenant=None if tenant == "all" else tenant,
+            source=source,
+            limit=limit,
+        )
+
+    def _handle_worker_liveness_audit(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        window = _clamp_int(query, "window", 4000, 200, 20_000)
+        return load_worker_liveness_audit(self._data_root, tenant or "all", window)
+
+    def _handle_enemy_heat(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        window = _clamp_int(query, "window", 2000, 100, 50_000)
+        return load_enemy_heat(
+            self._data_root,
+            tenant or "all",
+            now_ms=self._now_ms(),
+            recent_window_ticks=window,
+        )
+
+    def _handle_shop_history(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        return load_shop_history(self._data_root)
 
 
 __all__ = [

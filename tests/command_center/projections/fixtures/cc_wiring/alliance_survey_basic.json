@@ -1,0 +1,149 @@
+{
+  "nowMs": 1752000000000,
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {
+          "run_id": "r1",
+          "tenant": "t1",
+          "cases_synced": 1,
+          "last_tick": 500,
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "agents": [
+        {
+          "tenant": "t1",
+          "instance": "i1",
+          "tick": 500,
+          "resources": 10,
+          "population": 3,
+          "core_x": 0,
+          "core_y": 0,
+          "units": 3,
+          "visible_enemies": 1,
+          "status": "ok",
+          "sdk_version": "0.3.0a4",
+          "base_url": "http://localhost",
+          "pid": 1,
+          "platform": "win",
+          "mode": "production",
+          "connection_state": "up",
+          "first_seen": "2025-07-08T18:00:00Z",
+          "last_heartbeat": "2025-07-08T18:40:00Z",
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "1,1",
+          "x": 1,
+          "y": 1,
+          "first_seen_tick": 100,
+          "last_seen_tick": 400,
+          "state": "visible",
+          "last_state_tick": 400,
+          "seen_count": 4
+        },
+        {
+          "cell": "5,5",
+          "x": 5,
+          "y": 5,
+          "first_seen_tick": 100,
+          "last_seen_tick": 300,
+          "state": "stale",
+          "last_state_tick": 300,
+          "seen_count": 2
+        }
+      ],
+      "coreHunts": [
+        {
+          "cell": "20,20",
+          "x": 20,
+          "y": 20,
+          "owner": "enemy1",
+          "source": "CORE",
+          "first_seen_tick": 200,
+          "last_seen_tick": 450
+        }
+      ],
+      "chunks": [
+        {
+          "chunk_key": "0,0",
+          "last_seen_tick": 400
+        }
+      ],
+      "obstacles": [
+        {
+          "cell": "3,3",
+          "x": 3,
+          "y": 3,
+          "first_seen_tick": 50,
+          "last_seen_tick": 400
+        }
+      ]
+    },
+    "t2": {
+      "syncMeta": [
+        {
+          "run_id": "r2",
+          "tenant": "t2",
+          "cases_synced": 1,
+          "last_tick": 600,
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "agents": [
+        {
+          "tenant": "t2",
+          "instance": "i1",
+          "tick": 600,
+          "resources": 10,
+          "population": 3,
+          "core_x": 0,
+          "core_y": 0,
+          "units": 3,
+          "visible_enemies": 1,
+          "status": "ok",
+          "sdk_version": "0.3.0a4",
+          "base_url": "http://localhost",
+          "pid": 1,
+          "platform": "win",
+          "mode": "production",
+          "connection_state": "up",
+          "first_seen": "2025-07-08T18:00:00Z",
+          "last_heartbeat": "2025-07-08T18:40:00Z",
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "1,1",
+          "x": 1,
+          "y": 1,
+          "first_seen_tick": 50,
+          "last_seen_tick": 500,
+          "state": "visible",
+          "last_state_tick": 500,
+          "seen_count": 6
+        }
+      ]
+    },
+    "t3": {
+      "syncMeta": [],
+      "resources": []
+    },
+    "t4": {
+      "syncMeta": [],
+      "resources": []
+    }
+  },
+  "arbitration": [
+    {
+      "cell": "1,1",
+      "winnerTenant": "t2",
+      "createdAt": "2025-07-08T18:30:00Z",
+      "note": "t2 latest"
+    }
+  ]
+}

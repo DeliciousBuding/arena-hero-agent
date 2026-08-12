@@ -172,8 +172,11 @@ def test_main_endpoint_response_schemas_have_real_fields() -> None:
     decisions = DOC["paths"]["/api/audit/decisions"]["get"]["responses"]["200"]["content"][
         "application/json"
     ]["schema"]
-    assert "decision" in decisions["properties"]
-    assert "outcome" in decisions["properties"]
+    # tenant=all returns a per-tenant map; tenant=tN returns the audit shape
+    # itself, so the operation documents both via oneOf.
+    assert "oneOf" in decisions
+    assert "decision" in decisions["oneOf"][0]["properties"]
+    assert "outcome" in decisions["oneOf"][0]["properties"]
 
     workers = DOC["paths"]["/api/audit/workers"]["get"]["responses"]["200"]["content"][
         "application/json"

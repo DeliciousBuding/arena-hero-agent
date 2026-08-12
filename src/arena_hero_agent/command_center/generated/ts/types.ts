@@ -56,7 +56,7 @@ export type PostAllianceSurveyArbitrateClearResponse = Record<string, unknown>;
 
 /** GET /api/alliance/survey/arbitrations - lists arbitration.jsonl */
 export interface GetAllianceSurveyArbitrationsParams {}
-export type GetAllianceSurveyArbitrationsResponse = Record<string, unknown>;
+export type GetAllianceSurveyArbitrationsResponse = {arbitrations: Array<Record<string, unknown>>; generatedAt: string};
 
 /** GET /api/alliance/survey/mining - GET /api/alliance/survey/mining */
 export interface GetAllianceSurveyMiningParams {}
@@ -71,7 +71,7 @@ export interface GetAuditDecisionsParams {
   tenant?: TenantWithAll;
   window?: number;
 }
-export type GetAuditDecisionsResponse = {cachedAt?: string; currentTick?: number | null; decision: {actionMix?: {[key: string]: number}; intentTop?: Array<string>; planChurn?: Record<string, unknown> | null; records?: number; sourceMix?: {[key: string]: number}; stallTicks?: number}; generatedAt: string; outcome: {cargoEfficiency?: number | null; coreDeltaPositiveTicks?: number; coreDeltaSum?: number; depositFailed?: number; depositSucceeded?: number; depositSuccessRate?: number | null; harvestFailed?: number; harvestSucceeded?: number; humanApplied?: number; humanRejected?: number; records?: number; workerMeanDistFromCore?: number | null}; tenant: string; window: number};
+export type GetAuditDecisionsResponse = {cachedAt?: string; currentTick?: number | null; decision: {actionMix: {[key: string]: number}; intentTop: Array<string>; planChurn?: Record<string, unknown> | null; records: number; sourceMix: {[key: string]: number}; stallTicks: number}; generatedAt: string; outcome: {cargoEfficiency?: number | null; coreDeltaPositiveTicks?: number; coreDeltaSum: number; depositFailed: number; depositSucceeded: number; depositSuccessRate?: number | null; harvestFailed: number; harvestSucceeded: number; humanApplied?: number; humanRejected?: number; records: number; workerMeanDistFromCore?: number | null}; tenant: string; window: number} | {[key: string]: {cachedAt?: string; currentTick?: number | null; decision: {actionMix: {[key: string]: number}; intentTop: Array<string>; planChurn?: Record<string, unknown> | null; records: number; sourceMix: {[key: string]: number}; stallTicks: number}; generatedAt: string; outcome: {cargoEfficiency?: number | null; coreDeltaPositiveTicks?: number; coreDeltaSum: number; depositFailed: number; depositSucceeded: number; depositSuccessRate?: number | null; harvestFailed: number; harvestSucceeded: number; humanApplied?: number; humanRejected?: number; records: number; workerMeanDistFromCore?: number | null}; tenant: string; window: number}};
 
 /** GET /api/audit/decisions/trend - tenant all rejected; window 100..2000, steps 2..12 */
 export interface GetAuditDecisionsTrendParams {
@@ -79,7 +79,7 @@ export interface GetAuditDecisionsTrendParams {
   window?: number;
   steps?: number;
 }
-export type GetAuditDecisionsTrendResponse = {cachedAt?: string; currentTick?: number | null; decision: Record<string, unknown>; generatedAt: string; outcome: Record<string, unknown>; tenant: string; window: number};
+export type GetAuditDecisionsTrendResponse = {cachedAt?: string; generatedAt: string; steps: number; tenant: string; trend: Array<Record<string, unknown>>; window: number};
 
 /** GET /api/audit/human - human-command-audit.jsonl tail */
 export interface GetAuditHumanParams {
@@ -93,7 +93,7 @@ export interface GetAuditHumanConflictsParams {
   tenant?: TenantWithAll;
   window?: number;
 }
-export type GetAuditHumanConflictsResponse = {applied: number; cachedAt?: string; commandKinds?: {[key: string]: number}; currentTick?: number | null; generatedAt: string; rejected: number; rejectedRate?: number | null; tenant: string; topRejectedReasons?: Array<Record<string, unknown>>; window: number};
+export type GetAuditHumanConflictsResponse = {applied: number; cachedAt?: string; commandKinds?: {[key: string]: number}; currentTick?: number | null; generatedAt: string; rejected: number; rejectedRate?: number | null; tenant: string; topRejectedReasons?: Array<Record<string, unknown>>; window: number} | {[key: string]: {applied: number; cachedAt?: string; commandKinds?: {[key: string]: number}; currentTick?: number | null; generatedAt: string; rejected: number; rejectedRate?: number | null; tenant: string; topRejectedReasons?: Array<Record<string, unknown>>; window: number}};
 
 /** GET /api/audit/lifecycle - GET /api/audit/lifecycle */
 export interface GetAuditLifecycleParams {
@@ -105,7 +105,7 @@ export type GetAuditLifecycleResponse = Record<string, unknown>;
 export interface GetAuditMinesParams {
   tenant?: TenantWithAll;
 }
-export type GetAuditMinesResponse = {candidates?: Array<Record<string, unknown>>; currentTick?: number | null; harvested: number; maxGapAgeTicks?: number | null; medianGapAgeTicks?: number | null; medianTimeToFirstHarvest?: number | null; neverHarvested?: number; staleNever?: number; tenant: string; topMines?: Record<string, unknown>; total: number; utilizationRate?: number | null; visibleNever?: number};
+export type GetAuditMinesResponse = {cachedAt?: string; generatedAt: string; tenant: string; tenants: {[key: string]: {candidates?: Array<Record<string, unknown>>; currentTick?: number | null; harvested: number; maxGapAgeTicks?: number | null; medianGapAgeTicks?: number | null; medianTimeToFirstHarvest?: number | null; neverHarvested: number; staleNever?: number; tenant: string; topMines?: Record<string, unknown>; total: number; utilizationRate?: number | null; visibleNever?: number}}};
 
 /** GET /api/audit/mines/trend - tenant all rejected; window 500..4000, steps 2..10 */
 export interface GetAuditMinesTrendParams {
@@ -210,7 +210,7 @@ export interface GetIntelHeatParams {
   tenant?: TenantWithAll;
   window?: number;
 }
-export type GetIntelHeatResponse = Record<string, unknown>;
+export type GetIntelHeatResponse = {buckets: Array<Record<string, unknown>>; cachedAt: string; currentTick: number; fullBuckets: Array<Record<string, unknown>>; generatedAt: string; summary: {combatSightings: number; distinctCells: number; tenants: number; totalSightings: number; workerSightings: number}; tenant: string};
 
 /** GET /api/leaderboard - stale >10min triggers background fetch (not awaited); 404 when snapshot missing */
 export interface GetLeaderboardParams {}
