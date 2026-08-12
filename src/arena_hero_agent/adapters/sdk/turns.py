@@ -220,8 +220,8 @@ def adapt_async_turn(turn: object) -> TurnObservation:
     events: list[TurnEvent] = []
     for event in event_values:
         _exact(event, sdk.ResolutionEvent, "ResolutionEvent")
-        if event.tick != tick:
-            raise _violation("resolution event tick must match turn tick")
+        if event.tick > tick:
+            raise _violation("resolution event tick must not exceed turn tick")
         events.append(
             TurnEvent(
                 id=_entity_id(event.event_id, "event id"),

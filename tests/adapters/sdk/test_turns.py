@@ -242,12 +242,34 @@ def test_rejects_duplicate_terrain_cells_across_batches() -> None:
         adapt_async_turn(_turn(state))
 
 
-def test_rejects_resolution_event_tick_mismatch() -> None:
+def test_rejects_future_resolution_event_tick() -> None:
     state = _state(
         events=(ResolutionEvent(event_id=EVENT_ID, tick=2, event_type="SHOT_MISSED"),),
     )
-    with pytest.raises(SdkContractViolationError, match="must match turn tick"):
+    with pytest.raises(SdkContractViolationError, match="must not exceed turn tick"):
         adapt_async_turn(_turn(state, tick=1))
+
+
+def test_accepts_historical_resolution_event_tick() -> None:
+    # The live server bundles resolutions from earlier ticks into the current
+    # turn (outcome confirmations for prior submissions). The adapter must
+    # keep them with their own tick instead of rejecting the whole turn.
+    state = _state(
+        events=(
+            ResolutionEvent(event_id=EVENT_ID, tick=1, event_type="HARVEST_SUCCEEDED"),
+            ResolutionEvent(
+                event_id="dddddddd-0000-0000-0000-000000000006",
+                tick=2,
+                event_type="DEPOSIT_SUCCEEDED",
+            ),
+        ),
+    )
+    observation = adapt_async_turn(_turn(state, tick=2))
+    assert [event.tick for event in observation.events] == [1, 2]
+    assert [event.kind for event in observation.events] == [
+        "HARVEST_SUCCEEDED",
+        "DEPOSIT_SUCCEEDED",
+    ]
 
 
 def test_rejects_unknown_player_status_member(monkeypatch: pytest.MonkeyPatch) -> None:
