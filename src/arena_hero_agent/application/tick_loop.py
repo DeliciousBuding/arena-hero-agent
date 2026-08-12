@@ -26,6 +26,12 @@ Design constraints:
   budget stops with ``selection_timeout`` and is never submitted. A submission
   that already completed records its actual outcome because an in-flight
   submission cannot be retracted.
+- Submission has an optional loop-level guardrail: when
+  ``submit_timeout_seconds`` is set, the injected submit is awaited under that
+  wall-clock bound and a timeout is recorded as a rejected outcome with
+  ``submit timed out`` instead of blocking the loop forever (a hung network
+  submit must never stall the live writer). The timeout outcome obeys the
+  ``submit_error_policy`` like any other rejection.
 """
 
 from __future__ import annotations
@@ -231,6 +237,7 @@ class TickLoopConfig:
     continue_on_gap: bool = True
     continue_on_selection_timeout: bool = False
     continue_on_stream_ended: bool = False
+    submit_timeout_seconds: float | None = None
     submit_error_policy: SubmitErrorPolicy = SubmitErrorPolicy.CONTINUE
     backoff: Backoff = field(default_factory=lambda: exponential_backoff)
     clock: Clock = field(default_factory=SystemClock)
@@ -250,6 +257,12 @@ class TickLoopConfig:
             raise TypeError("continue_on_selection_timeout must be a boolean")
         if not isinstance(self.continue_on_stream_ended, bool):
             raise TypeError("continue_on_stream_ended must be a boolean")
+        if self.submit_timeout_seconds is not None and (
+            isinstance(self.submit_timeout_seconds, bool)
+            or not isinstance(self.submit_timeout_seconds, float)
+            or self.submit_timeout_seconds <= 0
+        ):
+            raise ValueError("submit_timeout_seconds must be a positive float or None")
         if not isinstance(self.submit_error_policy, SubmitErrorPolicy):
             raise TypeError("submit_error_policy must be a SubmitErrorPolicy")
 
@@ -406,7 +419,20 @@ class SingleTenantTickLoop:
                     last_tick = tick
                     continue
 
-                outcome = await submit(decision, observation)
+                submit_call = submit(decision, observation)
+                if config.submit_timeout_seconds is not None:
+                    try:
+                        outcome = await asyncio.wait_for(
+                            submit_call, timeout=config.submit_timeout_seconds
+                        )
+                    except TimeoutError:
+                        # Loop-level guardrail: a hung submit must not stall
+                        # the writer. Unconfirmed is not accepted; record a
+                        # rejected outcome and let submit_error_policy decide
+                        # whether to continue or stop.
+                        outcome = SubmitOutcome(accepted=False, error="submit timed out")
+                else:
+                    outcome = await submit_call
                 if outcome.accepted:
                     submit_result = SubmitResult.ACCEPTED
                     submit_error: str | None = None

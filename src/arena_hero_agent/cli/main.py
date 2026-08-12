@@ -1049,6 +1049,11 @@ async def _execute_live(
                 # the agent reopens the source to keep the live writer up
                 # across session rotation.
                 continue_on_stream_ended=True,
+                # Loop-level submit guardrail: the SDK client has its own 5s
+                # request timeout, but a hung connection must never stall the
+                # tick loop forever. 10s = 2x SDK timeout; a timeout records a
+                # rejected outcome and the loop continues.
+                submit_timeout_seconds=10.0,
             ),
             recorder=recorder,
             telemetry=sink,

@@ -487,3 +487,104 @@ async def test_stream_ended_reopen_dedupes_replayed_tail() -> None:
 def test_continue_on_stream_ended_must_be_bool() -> None:
     with pytest.raises(TypeError, match="continue_on_stream_ended"):
         replace(_config(), continue_on_stream_ended="yes")  # type: ignore[arg-type]
+
+
+class HangingSubmitter:
+    """Submitter that never resolves until cancelled."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[Decision, TurnObservation]] = []
+
+    async def __call__(self, decision: Decision, observation: TurnObservation) -> SubmitOutcome:
+        self.calls.append((decision, observation))
+        await asyncio.sleep(60.0)
+        return SubmitOutcome(accepted=True)
+
+
+class RaisingSubmitter:
+    """Submitter that raises a non-SDK error (fail-closed)."""
+
+    async def __call__(self, decision: Decision, observation: TurnObservation) -> SubmitOutcome:
+        raise RuntimeError("submit exploded")
+
+
+def _raising_decider(observation: TurnObservation, budget: DeadlineBudget) -> Decision:
+    raise RuntimeError("decide exploded")
+
+
+async def test_submit_timeout_records_rejected_and_continues() -> None:
+    source = ScriptedTickSource((_observation(1), _observation(2)))
+    submitter = HangingSubmitter()
+    loop = SingleTenantTickLoop(replace(_config(), submit_timeout_seconds=0.01))
+
+    result = await loop.run(source, RecordingDecider(), submitter)
+
+    assert result.ticks_processed == 2
+    assert result.last_tick == 2
+    assert result.stopped_reason is StoppedReason.STREAM_ENDED
+    assert len(submitter.calls) == 2
+    assert [o.submit_result for o in result.outcomes] == [
+        SubmitResult.REJECTED,
+        SubmitResult.REJECTED,
+    ]
+    assert [o.submit_error for o in result.outcomes] == ["submit timed out", "submit timed out"]
+    assert [o.deadline_outcome for o in result.outcomes] == [
+        DeadlineOutcome.CANDIDATE,
+        DeadlineOutcome.CANDIDATE,
+    ]
+
+
+async def test_submit_timeout_respects_stop_policy() -> None:
+    source = ScriptedTickSource((_observation(1), _observation(2)))
+    submitter = HangingSubmitter()
+    loop = SingleTenantTickLoop(
+        replace(
+            _config(),
+            submit_timeout_seconds=0.01,
+            submit_error_policy=SubmitErrorPolicy.STOP,
+        )
+    )
+
+    result = await loop.run(source, RecordingDecider(), submitter)
+
+    assert result.ticks_processed == 1
+    assert result.last_tick == 1
+    assert result.stopped_reason is StoppedReason.SUBMIT_FAILURE
+    assert len(result.outcomes) == 1
+    assert result.outcomes[0].submit_error == "submit timed out"
+
+
+async def test_decide_within_budget_still_submits() -> None:
+    """Positive timing-margin guard: 90% of the 100ms budget still submits."""
+    clock = FakeClock()
+    source = ScriptedTickSource((_observation(1),))
+    submitter = RecordingSubmitter()
+    loop = SingleTenantTickLoop(replace(_config(), clock=clock))
+
+    result = await loop.run(source, _consuming_decider(clock, nanoseconds=90_000_000), submitter)
+
+    assert result.ticks_processed == 1
+    assert result.outcomes[0].deadline_outcome is DeadlineOutcome.CANDIDATE
+    assert result.outcomes[0].submit_result is SubmitResult.ACCEPTED
+
+
+async def test_decide_exception_propagates_fail_closed() -> None:
+    source = ScriptedTickSource((_observation(1),))
+
+    with pytest.raises(RuntimeError, match="decide exploded"):
+        await SingleTenantTickLoop(_config()).run(source, _raising_decider, RecordingSubmitter())
+
+
+async def test_submit_exception_propagates_fail_closed() -> None:
+    source = ScriptedTickSource((_observation(1),))
+
+    with pytest.raises(RuntimeError, match="submit exploded"):
+        await SingleTenantTickLoop(replace(_config(), submit_timeout_seconds=0.01)).run(
+            source, RecordingDecider(), RaisingSubmitter()
+        )
+
+
+def test_submit_timeout_requires_positive_or_none() -> None:
+    for bad in (0, -1.0, True):
+        with pytest.raises(ValueError):
+            replace(_config(), submit_timeout_seconds=bad)
