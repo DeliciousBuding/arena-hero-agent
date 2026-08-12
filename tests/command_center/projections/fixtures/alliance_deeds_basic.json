@@ -1,0 +1,141 @@
+{
+  "worlds": {
+    "t1": {
+      "after": {
+        "tick": 500,
+        "state": {
+          "objects": [
+            {
+              "id": "core-500",
+              "kind": "CORE",
+              "controlled": true,
+              "position": [
+                30,
+                40
+              ],
+              "hp": 100,
+              "shield": 10
+            }
+          ],
+          "resources": 3,
+          "population": 10,
+          "resource_capacity": 500,
+          "status": "ACTIVE"
+        }
+      }
+    },
+    "t2": {
+      "after": {
+        "tick": 300,
+        "state": {
+          "objects": [
+            {
+              "id": "core-300",
+              "kind": "CORE",
+              "controlled": true,
+              "position": [
+                31,
+                41
+              ],
+              "hp": 100,
+              "shield": 10
+            }
+          ],
+          "resources": 7,
+          "population": 10,
+          "resource_capacity": 500,
+          "status": "IDLE"
+        }
+      }
+    },
+    "t3": {
+      "after": {
+        "tick": 200,
+        "state": {
+          "objects": [
+            {
+              "id": "core-200",
+              "kind": "CORE",
+              "controlled": true,
+              "position": [
+                32,
+                42
+              ],
+              "hp": 100,
+              "shield": 10
+            }
+          ],
+          "resources": 100,
+          "population": 10,
+          "resource_capacity": 500,
+          "status": "ACTIVE"
+        }
+      }
+    },
+    "t4": {
+      "after": {
+        "tick": 100,
+        "state": {
+          "objects": [
+            {
+              "id": "core-100",
+              "kind": "CORE",
+              "controlled": true,
+              "position": [
+                33,
+                43
+              ],
+              "hp": 100,
+              "shield": 10
+            }
+          ],
+          "resources": 100,
+          "population": 10,
+          "resource_capacity": 500,
+          "status": "ACTIVE"
+        }
+      }
+    }
+  },
+  "survey": {
+    "t1": {
+      "coreHunts": [
+        {
+          "cell": "16,16",
+          "x": 16,
+          "y": 16,
+          "owner": "bob",
+          "source": "CORE",
+          "first_seen_tick": 0,
+          "last_seen_tick": 400
+        }
+      ],
+      "resources": [
+        {
+          "cell": "5,5",
+          "x": 5,
+          "y": 5,
+          "first_seen_tick": 1,
+          "last_seen_tick": 250,
+          "state": "visible",
+          "last_state_tick": 250,
+          "seen_count": 1
+        }
+      ]
+    },
+    "t2": {
+      "resources": [
+        {
+          "cell": "5,5",
+          "x": 5,
+          "y": 5,
+          "first_seen_tick": 1,
+          "last_seen_tick": 200,
+          "state": "visible",
+          "last_state_tick": 200,
+          "seen_count": 1
+        }
+      ]
+    }
+  }
+}

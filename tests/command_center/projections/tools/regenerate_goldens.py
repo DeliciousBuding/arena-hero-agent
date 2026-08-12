@@ -41,6 +41,10 @@ ORACLE_EXPLORATION_HARNESS = Path.home() / "tmp" / "cc-oracle-exploration.mjs"
 # calibration cases + survey-db core_hunts + leaderboard snapshot (W44 wave 7)
 ORACLE_INTEL_HARNESS = Path.home() / "tmp" / "cc-oracle-intel.mjs"
 ORACLE_LEADERBOARD_HARNESS = Path.home() / "tmp" / "cc-oracle-leaderboard.mjs"
+ORACLE_REPLAY_HARNESS = Path.home() / "tmp" / "cc-oracle-replay.mjs"
+ORACLE_DEEDS_HARNESS = Path.home() / "tmp" / "cc-oracle-deeds.mjs"
+ORACLE_ALLIANCE_DEEDS_HARNESS = Path.home() / "tmp" / "cc-oracle-alliance-deeds.mjs"
+ORACLE_JOURNAL_HARNESS = Path.home() / "tmp" / "cc-oracle-deeds-journal.mjs"
 
 # fixture base name -> oracle dispatch kind (see cc-oracle.mjs)
 KIND_BY_FIXTURE: dict[str, str] = {
@@ -84,6 +88,10 @@ KIND_BY_FIXTURE: dict[str, str] = {
     "exploration_basic": "exploration",
     "intel_basic": "intel",
     "leaderboard_basic": "leaderboard",
+    "replay_basic": "replay",
+    "deeds_basic": "deeds",
+    "alliance_deeds_basic": "allianceDeeds",
+    "deeds_journal_basic": "journal",
 }
 
 
@@ -184,6 +192,36 @@ def main() -> int:
                         str(spec.get("tenant", "t1")),
                         str(spec.get("cell", "")),
                     ],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                )
+        elif kind in ("replay", "deeds", "allianceDeeds", "journal"):
+            # wave-8 oracles read a materialized calibration/survey data root
+            import json as _json
+            import tempfile
+
+            import advice_fixture
+
+            spec = _json.loads(fixture.read_text(encoding="utf-8"))
+            with tempfile.TemporaryDirectory(prefix="cc-wave8-regen-") as root_dir:
+                root = Path(root_dir)
+                advice_fixture.materialize_advice_data_root(spec, root)
+                if kind == "replay":
+                    harness = ORACLE_REPLAY_HARNESS
+                    args = [str(root), "t1"]
+                elif kind == "deeds":
+                    harness = ORACLE_DEEDS_HARNESS
+                    args = [str(root), "t1", "200"]
+                elif kind == "allianceDeeds":
+                    harness = ORACLE_ALLIANCE_DEEDS_HARNESS
+                    args = [str(root)]
+                else:
+                    harness = ORACLE_JOURNAL_HARNESS
+                    args = [str(root), "t1", "5000", "", "0"]
+                result = subprocess.run(
+                    ["node", str(harness), *args],
                     capture_output=True,
                     text=True,
                     encoding="utf-8",

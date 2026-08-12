@@ -45,11 +45,15 @@ from arena_hero_agent.command_center.projections import (
     compute_exploration_stats,
     enrich_consensus_mining,
     load_alliance_advice,
+    load_alliance_deeds,
     load_alliance_intel,
     load_arbitrations,
+    load_deeds,
+    load_deeds_journal,
     load_exploration,
     load_human_audit,
     load_lifecycle_audit,
+    load_replay,
     load_survey,
     load_survey_mine,
     merge_audit_trails,
@@ -374,6 +378,23 @@ def _run_python(name: str, fixture: dict[str, Any]) -> object:
             if name == "intel_basic":
                 return load_alliance_intel(root, now_ms=NOW_MS)
             return build_leaderboard_payload(root, now_ms=NOW_MS)
+
+    if name in ("replay_basic", "deeds_basic", "alliance_deeds_basic", "deeds_journal_basic"):
+        import tempfile
+        from pathlib import Path
+
+        from .tools.advice_fixture import materialize_advice_data_root
+
+        with tempfile.TemporaryDirectory(prefix="cc-wave8-parity-") as root_dir:
+            root = Path(root_dir)
+            materialize_advice_data_root(fixture, root)
+            if name == "replay_basic":
+                return load_replay(root, "t1", now_ms=NOW_MS)
+            if name == "deeds_basic":
+                return load_deeds(root, "t1", 200, now_ms=NOW_MS)
+            if name == "alliance_deeds_basic":
+                return load_alliance_deeds(root, now_ms=NOW_MS)
+            return load_deeds_journal(root, "t1", 5000, [], 0, now_ms=NOW_MS)
     if name == "enemy_cores_basic":
         return build_enemy_core_states(
             [dict(r) for r in fixture["hunts"]],
@@ -452,6 +473,10 @@ CASES = [
     "exploration_basic",
     "intel_basic",
     "leaderboard_basic",
+    "replay_basic",
+    "deeds_basic",
+    "alliance_deeds_basic",
+    "deeds_journal_basic",
 ]
 
 

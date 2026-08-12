@@ -1,0 +1,1028 @@
+{
+  "calibrationRuns": {
+    "t1": {
+      "run-1": [
+        {
+          "before": {
+            "tick": 100,
+            "state": {
+              "objects": [
+                {
+                  "id": "c1",
+                  "kind": "CORE",
+                  "controlled": true,
+                  "position": [
+                    30,
+                    40
+                  ],
+                  "hp": 100,
+                  "shield": 10,
+                  "owner_username": "alice"
+                }
+              ]
+            }
+          },
+          "after": {
+            "tick": 100,
+            "state": {
+              "resources": 500,
+              "events": [
+                {
+                  "event_type": "SHOT_HIT",
+                  "actor_id": "u1",
+                  "target_id": "e1",
+                  "position": [
+                    11,
+                    21
+                  ],
+                  "values": {
+                    "damage": 12
+                  }
+                },
+                {
+                  "event_type": "UNIT_DAMAGED",
+                  "actor_id": "e2",
+                  "position": [
+                    12,
+                    22
+                  ],
+                  "values": {
+                    "damage": 9,
+                    "hp": 40
+                  }
+                },
+                {
+                  "event_type": "SHOT_HIT",
+                  "actor_id": "u3",
+                  "target_id": "e3",
+                  "position": [
+                    15,
+                    25
+                  ],
+                  "values": {
+                    "damage": 5
+                  }
+                },
+                {
+                  "event_type": "HARVEST_SUCCEEDED",
+                  "actor_id": "u1",
+                  "position": [
+                    13,
+                    23
+                  ],
+                  "values": {
+                    "amount": 8
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "before": {
+            "tick": 200,
+            "state": {
+              "objects": [
+                {
+                  "id": "c1",
+                  "kind": "CORE",
+                  "controlled": true,
+                  "position": [
+                    30,
+                    40
+                  ],
+                  "hp": 100,
+                  "shield": 10,
+                  "owner_username": "alice"
+                }
+              ]
+            }
+          },
+          "after": {
+            "tick": 200,
+            "state": {
+              "resources": 1200,
+              "events": [
+                {
+                  "event_type": "PICKUP_BEACON_SUCCEEDED",
+                  "actor_id": "u1",
+                  "position": [
+                    14,
+                    24
+                  ]
+                },
+                {
+                  "event_type": "CORE_SPAWN_SUCCEEDED",
+                  "target_id": "c1",
+                  "values": {
+                    "unit_type": "VANGUARD",
+                    "cost": 60
+                  }
+                },
+                {
+                  "event_type": "CORE_MOVE_SUCCEEDED",
+                  "actor_id": "c1",
+                  "position": [
+                    31,
+                    41
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "before": {
+            "tick": 300,
+            "state": {
+              "objects": [
+                {
+                  "id": "c1",
+                  "kind": "CORE",
+                  "controlled": true,
+                  "position": [
+                    30,
+                    40
+                  ],
+                  "hp": 100,
+                  "shield": 10,
+                  "owner_username": "alice"
+                }
+              ]
+            }
+          },
+          "after": {
+            "tick": 300,
+            "state": {
+              "resources": 2500,
+              "events": [
+                {
+                  "event_type": "CORE_DESTROYED",
+                  "target_id": "c-enemy",
+                  "position": [
+                    60,
+                    60
+                  ],
+                  "values": {
+                    "destroyed_by": [
+                      "u1"
+                    ]
+                  }
+                },
+                {
+                  "event_type": "DEPOSIT_SUCCEEDED",
+                  "actor_id": "u1",
+                  "values": {
+                    "amount": 30,
+                    "capacity": 100,
+                    "remaining": 70
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "survey": {
+    "t1": {
+      "notableEvents": [
+        {
+          "tenant": "t1",
+          "tick": 90,
+          "event_type": "UNIT_DESTROYED",
+          "actor_id": "e9",
+          "target_id": "u0",
+          "x": 5,
+          "y": 6,
+          "amount": null,
+          "unit_type": "WORKER"
+        },
+        {
+          "tenant": "t1",
+          "tick": 150,
+          "event_type": "CORE_RESOURCES_CAPTURED",
+          "actor_id": "u1",
+          "target_id": "c-enemy",
+          "x": 60,
+          "y": 60,
+          "amount": 100,
+          "unit_type": null
+        },
+        {
+          "tenant": "t1",
+          "tick": 250,
+          "event_type": "CORE_DESTROYED",
+          "actor_id": null,
+          "target_id": "c-enemy",
+          "x": 61,
+          "y": 61,
+          "amount": null,
+          "unit_type": null,
+          "reason_code": null,
+          "destroyed_by": "[\"u1\", \"u2\"]",
+          "is_our_core": 0
+        }
+      ],
+      "resourceEvents": [
+        {
+          "cell": "1,1",
+          "tick": 2,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "2,2",
+          "tick": 4,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "3,3",
+          "tick": 6,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "4,4",
+          "tick": 8,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "5,5",
+          "tick": 10,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "6,6",
+          "tick": 12,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "7,7",
+          "tick": 14,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "8,8",
+          "tick": 16,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "9,9",
+          "tick": 18,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "10,10",
+          "tick": 20,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "11,11",
+          "tick": 22,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "12,12",
+          "tick": 24,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "13,13",
+          "tick": 26,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "14,14",
+          "tick": 28,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "15,15",
+          "tick": 30,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "16,16",
+          "tick": 32,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "17,17",
+          "tick": 34,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "18,18",
+          "tick": 36,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "19,19",
+          "tick": 38,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "20,20",
+          "tick": 40,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "21,21",
+          "tick": 42,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "22,22",
+          "tick": 44,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "23,23",
+          "tick": 46,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "24,24",
+          "tick": 48,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "25,25",
+          "tick": 50,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "26,26",
+          "tick": 52,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "27,27",
+          "tick": 54,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "28,28",
+          "tick": 56,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "29,29",
+          "tick": 58,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "30,30",
+          "tick": 60,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "31,31",
+          "tick": 62,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "32,32",
+          "tick": 64,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "33,33",
+          "tick": 66,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "34,34",
+          "tick": 68,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "35,35",
+          "tick": 70,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "36,36",
+          "tick": 72,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "37,37",
+          "tick": 74,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "38,38",
+          "tick": 76,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "39,39",
+          "tick": 78,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "40,40",
+          "tick": 80,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "41,41",
+          "tick": 82,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "42,42",
+          "tick": 84,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "43,43",
+          "tick": 86,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "44,44",
+          "tick": 88,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "45,45",
+          "tick": 90,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "46,46",
+          "tick": 92,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "47,47",
+          "tick": 94,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "48,48",
+          "tick": 96,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "49,49",
+          "tick": 98,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "50,50",
+          "tick": 100,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "51,51",
+          "tick": 102,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "52,52",
+          "tick": 104,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "53,53",
+          "tick": 106,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "54,54",
+          "tick": 108,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "55,55",
+          "tick": 110,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "56,56",
+          "tick": 112,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "57,57",
+          "tick": 114,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "58,58",
+          "tick": 116,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "59,59",
+          "tick": 118,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        },
+        {
+          "cell": "60,60",
+          "tick": 120,
+          "event_type": "HARVEST_SUCCEEDED",
+          "amount": 10
+        }
+      ],
+      "coreSpends": [
+        {
+          "kind": "spawn",
+          "tick": 3,
+          "amount": 100,
+          "unit_type": "WORKER"
+        },
+        {
+          "kind": "spawn",
+          "tick": 6,
+          "amount": 100,
+          "unit_type": "WORKER"
+        },
+        {
+          "kind": "spawn",
+          "tick": 9,
+          "amount": 100,
+          "unit_type": "WORKER"
+        },
+        {
+          "kind": "spawn",
+          "tick": 12,
+          "amount": 100,
+          "unit_type": "WORKER"
+        },
+        {
+          "kind": "spawn",
+          "tick": 15,
+          "amount": 100,
+          "unit_type": "WORKER"
+        },
+        {
+          "kind": "spawn",
+          "tick": 18,
+          "amount": 100,
+          "unit_type": "WORKER"
+        },
+        {
+          "kind": "spawn",
+          "tick": 21,
+          "amount": 100,
+          "unit_type": "WORKER"
+        },
+        {
+          "kind": "spawn",
+          "tick": 24,
+          "amount": 100,
+          "unit_type": "WORKER"
+        },
+        {
+          "kind": "spawn",
+          "tick": 27,
+          "amount": 100,
+          "unit_type": "WORKER"
+        },
+        {
+          "kind": "spawn",
+          "tick": 30,
+          "amount": 100,
+          "unit_type": "WORKER"
+        },
+        {
+          "kind": "spawn",
+          "tick": 33,
+          "amount": 100,
+          "unit_type": "WORKER"
+        },
+        {
+          "kind": "spawn",
+          "tick": 36,
+          "amount": 100,
+          "unit_type": "WORKER"
+        }
+      ],
+      "unitLifecycle": [
+        {
+          "unit_id": "u1",
+          "unit_type": "WORKER",
+          "birth_tick": 4,
+          "birth_pos": "1,1",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 54,
+          "last_seen_pos": "1,1",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u2",
+          "unit_type": "WORKER",
+          "birth_tick": 8,
+          "birth_pos": "2,2",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 58,
+          "last_seen_pos": "2,2",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u3",
+          "unit_type": "WORKER",
+          "birth_tick": 12,
+          "birth_pos": "3,3",
+          "death_tick": 62,
+          "death_pos": "3,3",
+          "death_reason": "destroyed",
+          "last_seen_tick": 62,
+          "last_seen_pos": "3,3",
+          "current_state": "dead"
+        },
+        {
+          "unit_id": "u4",
+          "unit_type": "WORKER",
+          "birth_tick": 16,
+          "birth_pos": "4,4",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 66,
+          "last_seen_pos": "4,4",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u5",
+          "unit_type": "WORKER",
+          "birth_tick": 20,
+          "birth_pos": "5,5",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 70,
+          "last_seen_pos": "5,5",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u6",
+          "unit_type": "WORKER",
+          "birth_tick": 24,
+          "birth_pos": "6,6",
+          "death_tick": 74,
+          "death_pos": "6,6",
+          "death_reason": "destroyed",
+          "last_seen_tick": 74,
+          "last_seen_pos": "6,6",
+          "current_state": "dead"
+        },
+        {
+          "unit_id": "u7",
+          "unit_type": "WORKER",
+          "birth_tick": 28,
+          "birth_pos": "7,7",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 78,
+          "last_seen_pos": "7,7",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u8",
+          "unit_type": "WORKER",
+          "birth_tick": 32,
+          "birth_pos": "8,8",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 82,
+          "last_seen_pos": "8,8",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u9",
+          "unit_type": "WORKER",
+          "birth_tick": 36,
+          "birth_pos": "9,9",
+          "death_tick": 86,
+          "death_pos": "9,9",
+          "death_reason": "destroyed",
+          "last_seen_tick": 86,
+          "last_seen_pos": "9,9",
+          "current_state": "dead"
+        },
+        {
+          "unit_id": "u10",
+          "unit_type": "WORKER",
+          "birth_tick": 40,
+          "birth_pos": "10,10",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 90,
+          "last_seen_pos": "10,10",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u11",
+          "unit_type": "WORKER",
+          "birth_tick": 44,
+          "birth_pos": "11,11",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 94,
+          "last_seen_pos": "11,11",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u12",
+          "unit_type": "WORKER",
+          "birth_tick": 48,
+          "birth_pos": "12,12",
+          "death_tick": 98,
+          "death_pos": "12,12",
+          "death_reason": "destroyed",
+          "last_seen_tick": 98,
+          "last_seen_pos": "12,12",
+          "current_state": "dead"
+        },
+        {
+          "unit_id": "u13",
+          "unit_type": "WORKER",
+          "birth_tick": 52,
+          "birth_pos": "13,13",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 102,
+          "last_seen_pos": "13,13",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u14",
+          "unit_type": "WORKER",
+          "birth_tick": 56,
+          "birth_pos": "14,14",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 106,
+          "last_seen_pos": "14,14",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u15",
+          "unit_type": "WORKER",
+          "birth_tick": 60,
+          "birth_pos": "15,15",
+          "death_tick": 110,
+          "death_pos": "15,15",
+          "death_reason": "destroyed",
+          "last_seen_tick": 110,
+          "last_seen_pos": "15,15",
+          "current_state": "dead"
+        },
+        {
+          "unit_id": "u16",
+          "unit_type": "WORKER",
+          "birth_tick": 64,
+          "birth_pos": "16,16",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 114,
+          "last_seen_pos": "16,16",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u17",
+          "unit_type": "WORKER",
+          "birth_tick": 68,
+          "birth_pos": "17,17",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 118,
+          "last_seen_pos": "17,17",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u18",
+          "unit_type": "WORKER",
+          "birth_tick": 72,
+          "birth_pos": "18,18",
+          "death_tick": 122,
+          "death_pos": "18,18",
+          "death_reason": "destroyed",
+          "last_seen_tick": 122,
+          "last_seen_pos": "18,18",
+          "current_state": "dead"
+        },
+        {
+          "unit_id": "u19",
+          "unit_type": "WORKER",
+          "birth_tick": 76,
+          "birth_pos": "19,19",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 126,
+          "last_seen_pos": "19,19",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u20",
+          "unit_type": "WORKER",
+          "birth_tick": 80,
+          "birth_pos": "20,20",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 130,
+          "last_seen_pos": "20,20",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u21",
+          "unit_type": "WORKER",
+          "birth_tick": 84,
+          "birth_pos": "21,21",
+          "death_tick": 134,
+          "death_pos": "21,21",
+          "death_reason": "destroyed",
+          "last_seen_tick": 134,
+          "last_seen_pos": "21,21",
+          "current_state": "dead"
+        },
+        {
+          "unit_id": "u22",
+          "unit_type": "WORKER",
+          "birth_tick": 88,
+          "birth_pos": "22,22",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 138,
+          "last_seen_pos": "22,22",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u23",
+          "unit_type": "WORKER",
+          "birth_tick": 92,
+          "birth_pos": "23,23",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 142,
+          "last_seen_pos": "23,23",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u24",
+          "unit_type": "WORKER",
+          "birth_tick": 96,
+          "birth_pos": "24,24",
+          "death_tick": 146,
+          "death_pos": "24,24",
+          "death_reason": "destroyed",
+          "last_seen_tick": 146,
+          "last_seen_pos": "24,24",
+          "current_state": "dead"
+        },
+        {
+          "unit_id": "u25",
+          "unit_type": "WORKER",
+          "birth_tick": 100,
+          "birth_pos": "25,25",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 150,
+          "last_seen_pos": "25,25",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u26",
+          "unit_type": "WORKER",
+          "birth_tick": 104,
+          "birth_pos": "26,26",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 154,
+          "last_seen_pos": "26,26",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u27",
+          "unit_type": "WORKER",
+          "birth_tick": 108,
+          "birth_pos": "27,27",
+          "death_tick": 158,
+          "death_pos": "27,27",
+          "death_reason": "destroyed",
+          "last_seen_tick": 158,
+          "last_seen_pos": "27,27",
+          "current_state": "dead"
+        },
+        {
+          "unit_id": "u28",
+          "unit_type": "WORKER",
+          "birth_tick": 112,
+          "birth_pos": "28,28",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 162,
+          "last_seen_pos": "28,28",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u29",
+          "unit_type": "WORKER",
+          "birth_tick": 116,
+          "birth_pos": "29,29",
+          "death_tick": null,
+          "death_pos": null,
+          "death_reason": null,
+          "last_seen_tick": 166,
+          "last_seen_pos": "29,29",
+          "current_state": "alive"
+        },
+        {
+          "unit_id": "u30",
+          "unit_type": "WORKER",
+          "birth_tick": 120,
+          "birth_pos": "30,30",
+          "death_tick": 170,
+          "death_pos": "30,30",
+          "death_reason": "destroyed",
+          "last_seen_tick": 170,
+          "last_seen_pos": "30,30",
+          "current_state": "dead"
+        }
+      ]
+    }
+  }
+}

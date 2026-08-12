@@ -23,6 +23,10 @@ ALLOWED_DIFFERENCES: tuple[str, ...] = (
     "shop history refreshedAt is an explicit input (external fetch is a P5-9 route)",
     "arbitrations compare as ordered cell->entry pairs (Map iteration order)",
     "leaderboard ageSeconds/stale derive from Date.now wall clock (stale stripped for parity)",
+    "deeds/deeds-journal TTL memory caches are not ported (Python recomputes per request)",
+    "deeds-journal buildAuditDeeds omitted (audit-overview depends on 8120 supervisor pipeline)",
+    "deeds-journal tenant=all narrative enrichment lines omitted "
+    "(external shop fetch / 8120 / write side effect)",
 )
 
 

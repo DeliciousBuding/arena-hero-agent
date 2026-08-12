@@ -1,0 +1,163 @@
+{
+  "calibrationRuns": {
+    "t1": {
+      "run-1": [
+        {
+          "before": {
+            "tick": 100,
+            "state": {
+              "objects": [
+                {
+                  "id": "u1",
+                  "kind": "UNIT",
+                  "unit_type": "WORKER",
+                  "controlled": true,
+                  "position": [
+                    10,
+                    20
+                  ],
+                  "hp": 50,
+                  "cargo": 5
+                },
+                {
+                  "id": "c1",
+                  "kind": "CORE",
+                  "controlled": true,
+                  "owner_username": "alice",
+                  "position": [
+                    30,
+                    40
+                  ],
+                  "hp": 100,
+                  "shield": 20
+                }
+              ]
+            }
+          },
+          "after": {
+            "tick": 100,
+            "state": {
+              "objects": [
+                {
+                  "id": "u1",
+                  "kind": "UNIT",
+                  "unit_type": "WORKER",
+                  "controlled": true,
+                  "position": [
+                    11,
+                    21
+                  ],
+                  "hp": 48,
+                  "cargo": 6
+                },
+                {
+                  "id": "c1",
+                  "kind": "CORE",
+                  "controlled": true,
+                  "owner_username": "alice",
+                  "position": [
+                    30,
+                    40
+                  ],
+                  "hp": 100,
+                  "shield": 18
+                },
+                {
+                  "id": "e1",
+                  "kind": "UNIT",
+                  "unit_type": "VANGUARD",
+                  "controlled": false,
+                  "position": [
+                    50,
+                    60
+                  ],
+                  "hp": 80,
+                  "cargo": 0
+                }
+              ],
+              "events": [
+                {
+                  "event_type": "SHOT_HIT",
+                  "actor_id": "u1",
+                  "target_id": "e1",
+                  "position": [
+                    11,
+                    21
+                  ],
+                  "values": {
+                    "damage": 12
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "before": {
+            "tick": 200,
+            "state": {
+              "objects": [
+                {
+                  "id": "u1",
+                  "kind": "UNIT",
+                  "unit_type": "WORKER",
+                  "controlled": true,
+                  "position": [
+                    11,
+                    21
+                  ],
+                  "hp": 48,
+                  "cargo": 6
+                },
+                {
+                  "id": "c1",
+                  "kind": "CORE",
+                  "controlled": true,
+                  "owner_username": "alice",
+                  "position": [
+                    30,
+                    40
+                  ],
+                  "hp": 100,
+                  "shield": 18
+                }
+              ]
+            }
+          },
+          "after": {
+            "tick": 200,
+            "state": {
+              "objects": [
+                {
+                  "id": "u1",
+                  "kind": "UNIT",
+                  "unit_type": "WORKER",
+                  "controlled": true,
+                  "position": [
+                    12,
+                    22
+                  ],
+                  "hp": 46,
+                  "cargo": 7
+                },
+                {
+                  "id": "c1",
+                  "kind": "CORE",
+                  "controlled": true,
+                  "owner_username": "alice",
+                  "position": [
+                    31,
+                    41
+                  ],
+                  "hp": 99,
+                  "shield": 16
+                }
+              ],
+              "events": []
+            }
+          }
+        }
+      ]
+    }
+  }
+}
