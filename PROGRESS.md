@@ -147,3 +147,23 @@
 - 测试：`test_rejects_future_resolution_event_tick` + 新增
   `test_accepts_historical_resolution_event_tick`；1524 passed / ruff / ty 绿。
 - 版本 bump 0.1.1 → 0.1.2；openapi-v1.json 重新生成（版本字段同步）。
+
+## W25-D live shutdown race fix (2026-08-12)
+
+- P2 缺陷：`live` 收到 SIGTERM 后，`_run_live_loop` 被 cancel 时只从
+  `asyncio.wait` 传播 CancelledError，未 cancel/await 独立 runtime_task；
+  `_execute_live` 的 finally 随即关闭 recorder/sink，仍在跑的 runtime 对已关闭
+  的 sink 调 `record_loop`/`emit_loop` → `RecorderError("recorder is closed")` /
+  `JsonlWriterError("JsonlWriter is closed")` → 最终 health.json 中 recorder/
+  telemetry 组件误标 unhealthy、loop 终态记录丢失。
+- 修复：`_run_live_loop` 捕获 `asyncio.wait` 抛出的 CancelledError 后，先
+  `runtime_task.cancel()` + `await runtime_task`（suppress 其 CancelledError，
+  runtime._run 的 except 路径把 source 标 cancelled、recorder/telemetry 保持
+  健康），再 re-raise 原 CancelledError；`_execute_live` 关闭 recorder/sink 时
+  runtime 已完全结束。
+- 测试：`test_live_shutdown_cancels_runtime_before_sinks_close`（真实 JSONL
+  recorder/sink + 永不结束 source + 独立 task cancel 外层）——修复前在
+  `record_loop failed: recorder is closed` 处失败，修复后 recorder/telemetry
+  healthy=True、source cancelled。
+- 门禁：`pytest -q` = **1525 passed**（基线 1524 + 1）；ruff check / format
+  --check（267 files）/ ty check 全 PASS。版本保持 0.1.2（留给下一次扩展 release）。

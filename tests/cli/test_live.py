@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import time
 from collections.abc import AsyncIterator
@@ -27,16 +28,27 @@ from arena_hero import (
     UnitView,
 )
 
+from arena_hero_agent.adapters.recorder import (
+    RecorderBackend,
+    RecorderConfig,
+    open_tick_recorder,
+)
 from arena_hero_agent.adapters.runtime.process_leases import FileWriterLeaseCoordinator
+from arena_hero_agent.adapters.sdk import LiveSubmitter, LiveTurnSource
+from arena_hero_agent.adapters.telemetry import RuntimeTraceJsonlSink
+from arena_hero_agent.application import RuntimeStatus, TenantRuntime, TickLoopConfig
 from arena_hero_agent.cli.main import (
     EXIT_ERROR,
     EXIT_INTERRUPT,
     EXIT_OK,
     LiveState,
+    _acquire_live_writer,
     _run_live_async,
+    _run_live_loop,
     build_parser,
 )
 from arena_hero_agent.domain import DeadlineBudget, DecisionId, Generation, TenantId
+from arena_hero_agent.strategies.composition import compose_decider
 
 WORKER_ID = "aaaaaaaa-0000-0000-0000-000000000001"
 CORE_ID = "cccccccc-0000-0000-0000-000000000004"
@@ -462,3 +474,95 @@ async def test_live_output_privacy_scan(
     for forbidden in FORBIDDEN_OUTPUT:
         assert forbidden not in combined
     assert API_KEY not in combined
+
+
+async def test_live_shutdown_cancels_runtime_before_sinks_close(tmp_path: Path) -> None:
+    """SIGTERM-style cancellation must stop the runtime before sinks close.
+
+    Regression for the live shutdown race: ``_run_live_loop`` was cancelled
+    while its runtime task was still running, so ``_execute_live`` closed the
+    recorder and telemetry sink in its ``finally`` while the runtime could
+    still call ``record_tick`` / ``emit_loop`` (and later ``record_loop`` /
+    ``emit_loop``) against the closed sinks and mark recorder / telemetry
+    unhealthy in the final health snapshot.
+    """
+    data_root = tmp_path / "data"
+    gate = asyncio.Event()
+    client = FakeLiveClient(turns=(_turn(tick=1), _turn(tick=2)), block_after=gate)
+    tenant = TenantId("t4")
+    recorder = open_tick_recorder(
+        RecorderConfig(data_root=data_root, tenant_id=tenant),
+        backend=RecorderBackend.JSONL,
+    )
+    telemetry_path = data_root / "t4" / "telemetry.jsonl"
+    telemetry_path.parent.mkdir(parents=True, exist_ok=True)
+    sink = RuntimeTraceJsonlSink(tenant_id=tenant, path=telemetry_path)
+    runtime = TenantRuntime(
+        TickLoopConfig(
+            tenant_id=tenant,
+            tick_budget=DeadlineBudget.from_milliseconds(100),
+            max_reconnects=0,
+        ),
+        recorder=recorder,
+        telemetry=sink,
+        process_run_id="shutdown-race-test",
+    )
+    coordinator = FileWriterLeaseCoordinator(
+        data_root,
+        lease_duration_ns=5 * 60_000_000_000,
+        holder_id="test-live",
+    )
+    handle = await _acquire_live_writer(coordinator, tenant)
+    assert handle is not None
+
+    loop_task = asyncio.create_task(
+        _run_live_loop(
+            runtime,
+            LiveTurnSource(client),
+            compose_decider(),
+            LiveSubmitter(client, tenant_id=tenant),
+            handle,
+            renew_interval=0.05,
+        )
+    )
+    try:
+        for _ in range(500):
+            if len(client.submissions) == 2:
+                break
+            await asyncio.sleep(0.01)
+        else:
+            pytest.fail("runtime never processed two ticks")
+
+        loop_task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await loop_task
+
+        # _execute_live closes the recorder and sink right after cancellation;
+        # the fixed loop has already fully stopped the runtime task by now.
+        recorder.close()
+        await sink.close()
+        # A pre-fix runtime task would still be running here; unblock it so it
+        # can finish its loop and expose the closed-sink pollution.
+        gate.set()
+        for _ in range(500):
+            if runtime.snapshot().status is RuntimeStatus.STOPPED:
+                break
+            await asyncio.sleep(0.01)
+        else:
+            pytest.fail("runtime never stopped after shutdown")
+    finally:
+        if not loop_task.done():
+            loop_task.cancel()
+            with contextlib.suppress(BaseException):
+                await loop_task
+        gate.set()
+        recorder.close()
+        await sink.close()
+        await handle.release()
+
+    snapshot = runtime.snapshot()
+    components = {component.name: component for component in snapshot.components}
+    assert snapshot.status is RuntimeStatus.STOPPED
+    assert components["recorder"].healthy is True, components["recorder"].message
+    assert components["telemetry"].healthy is True, components["telemetry"].message
+    assert components["source"].healthy is False

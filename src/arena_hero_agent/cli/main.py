@@ -932,9 +932,23 @@ async def _run_live_loop(
     runtime_task = asyncio.create_task(runtime.run(source, decider, submitter))
     renew_task = asyncio.create_task(renew_loop())
     try:
-        done, _ = await asyncio.wait(
-            {runtime_task, renew_task}, return_when=asyncio.FIRST_COMPLETED
-        )
+        try:
+            done, _ = await asyncio.wait(
+                {runtime_task, renew_task}, return_when=asyncio.FIRST_COMPLETED
+            )
+        except asyncio.CancelledError:
+            # SIGTERM/SIGINT landed while the loop was still running. Stop the
+            # runtime task before propagating: _execute_live closes the
+            # recorder and telemetry sink as soon as this function returns, so
+            # a still-running runtime would call record_tick/emit_loop (and
+            # later record_loop/emit_loop) against the closed sinks and mark
+            # recorder/telemetry unhealthy. The runtime marks the source
+            # cancelled and keeps recorder/telemetry healthy; the original
+            # CancelledError is re-raised afterwards.
+            runtime_task.cancel()
+            with contextlib.suppress(BaseException):
+                await runtime_task
+            raise
         if renew_task in done and runtime_task not in done:
             runtime_task.cancel()
             with contextlib.suppress(BaseException):
