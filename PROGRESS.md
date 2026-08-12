@@ -135,3 +135,15 @@
     （24h soak 后台运行中，勿碰）。
   - `arena-hero-agent-ts` 只读 oracle（有 WIP 未碰）；sdk-py / Lab / 根仓 /
     production 未动。
+
+## W25-B live-fix (2026-08-12)
+
+- t4 canary smoke (release-002, agent 0.1.1) 抓到一个真实集成缺陷：live 服务器在
+  提交后的下一个 turn 里携带上一 tick 的 resolution 事件，adapt_async_turn 的
+  严格校验 `event.tick == turn.tick` 直接抛 SdkContractViolationError → 流连续
+  失败 → ReconnectLimitExceeded → live 会话失败。
+- 修复：turns.py 改为只拒绝 `event.tick > turn.tick`（防未来），历史 resolution
+  保留自身 tick 进入 TurnEvent（投影/记录语义不变，决策不消费 events）。
+- 测试：`test_rejects_future_resolution_event_tick` + 新增
+  `test_accepts_historical_resolution_event_tick`；1524 passed / ruff / ty 绿。
+- 版本 bump 0.1.1 → 0.1.2；openapi-v1.json 重新生成（版本字段同步）。
