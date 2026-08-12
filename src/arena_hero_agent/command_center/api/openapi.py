@@ -85,7 +85,10 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
             "resources": _OBJ_ROWS,
             "obstacles": _OBJ_ROWS,
             "chunks": _OBJ_ROWS,
-            "lifecycle": {"type": "object", "additionalProperties": {"type": "object", "nullable": True}},
+            "lifecycle": {
+                "type": "object",
+                "additionalProperties": {"type": "object", "nullable": True},
+            },
             "conflicts": {
                 "type": "object",
                 "properties": {
