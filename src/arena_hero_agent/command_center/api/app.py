@@ -37,6 +37,7 @@ from ..projections import (
     load_alignment_audit,
     load_alliance_advice,
     load_alliance_cluster,
+    load_alliance_deeds,
     load_alliance_defense,
     load_alliance_exploration,
     load_alliance_intel,
@@ -48,6 +49,8 @@ from ..projections import (
     load_decision_audit,
     load_decision_input,
     load_decision_trend,
+    load_deeds,
+    load_deeds_journal,
     load_enemy_cores,
     load_enemy_heat,
     load_events,
@@ -60,6 +63,7 @@ from ..projections import (
     load_mining_effectiveness,
     load_plan,
     load_redeem_history,
+    load_replay,
     load_shop_history,
     load_survey,
     load_survey_mine,
@@ -67,7 +71,7 @@ from ..projections import (
     load_world,
     read_human_audit,
 )
-from ..projections._common import current_epoch_ms
+from ..projections._common import current_epoch_ms, finite_number
 from ..projections.map_lod import load_map_lod
 from ..registry import RegistryStore
 from .map import load_merged_map
@@ -229,6 +233,9 @@ class CommandCenterApp:
             ("GET", "/api/survey/decision-input"): self._handle_decision_input,
             ("GET", "/api/survey/mine"): self._handle_survey_mine,
             ("GET", "/api/survey/enemy-cores"): self._handle_enemy_cores,
+            ("GET", "/api/replay"): self._handle_replay,
+            ("GET", "/api/deeds"): self._handle_deeds,
+            ("GET", "/api/deeds/journal"): self._handle_deeds_journal,
             ("GET", "/api/events"): self._handle_events,
             ("GET", "/api/plan"): self._handle_plan,
             ("GET", "/api/world"): self._handle_world,
@@ -750,6 +757,66 @@ class CommandCenterApp:
     ) -> dict[str, Any]:
         del request, match, query
         return load_world(self._data_root, tenant or "t1", now_ms=self._now_ms())
+
+    def _handle_replay(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query
+        tenant_value = tenant or "t1"
+        replay = load_replay(self._data_root, tenant_value, now_ms=self._now_ms())
+        at = iso_utc(self._now_ms())
+        if replay is None:
+            return {"tenant": tenant_value, "generatedAt": at, "replay": None}
+        return {"generatedAt": at, "replay": replay}
+
+    def _handle_deeds(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        tenant_value = tenant or "all"
+        limit = _clamp_int(query, "limit", 60, 1, 200)
+        deeds = load_deeds(self._data_root, tenant_value, limit, now_ms=self._now_ms())
+        if tenant_value == "all":
+            deeds = [*deeds, *load_alliance_deeds(self._data_root, now_ms=self._now_ms())]
+            deeds.sort(key=lambda item: (-int(item["tick"]), -int(item["star"])))
+        return {
+            "generatedAt": iso_utc(self._now_ms()),
+            "tenant": tenant_value,
+            "limit": limit,
+            "allianceMerged": tenant_value == "all",
+            "deeds": deeds,
+        }
+
+    def _handle_deeds_journal(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        tenant_value = tenant or "all"
+        window_ticks = _clamp_int(query, "window", 5000, 500, 50_000)
+        raw_categories = query.get("category") or ""
+        categories = [part.strip() for part in raw_categories.split(",") if part.strip()]
+        raw_min_star = finite_number(query.get("minStar") or 0)
+        min_star = int(raw_min_star) if raw_min_star is not None else 0
+        return load_deeds_journal(
+            self._data_root,
+            tenant_value,
+            window_ticks,
+            categories,
+            min_star,
+            now_ms=self._now_ms(),
+        )
 
     def _handle_survey(
         self,

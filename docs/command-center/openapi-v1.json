@@ -3696,6 +3696,83 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "allianceMerged": {
+                      "type": "boolean"
+                    },
+                    "deeds": {
+                      "items": {
+                        "properties": {
+                          "actor": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "detail": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "items": {
+                              "type": "number"
+                            },
+                            "nullable": true,
+                            "type": "array"
+                          },
+                          "star": {
+                            "type": "integer"
+                          },
+                          "target": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          },
+                          "tick": {
+                            "type": "number"
+                          },
+                          "title": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tick",
+                          "tenant",
+                          "star",
+                          "kind",
+                          "title",
+                          "detail",
+                          "position",
+                          "actor",
+                          "target"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "limit": {
+                      "type": "integer"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenant",
+                    "limit",
+                    "allianceMerged",
+                    "deeds"
+                  ],
                   "type": "object"
                 }
               }
@@ -3776,6 +3853,194 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "counts": {
+                      "additionalProperties": {
+                        "type": "integer"
+                      },
+                      "type": "object"
+                    },
+                    "currentTick": {
+                      "type": "integer"
+                    },
+                    "deeds": {
+                      "items": {
+                        "properties": {
+                          "actor": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "detail": {
+                            "type": "string"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "items": {
+                              "type": "number"
+                            },
+                            "nullable": true,
+                            "type": "array"
+                          },
+                          "star": {
+                            "type": "integer"
+                          },
+                          "target": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          },
+                          "tick": {
+                            "type": "number"
+                          },
+                          "title": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "tick",
+                          "tenant",
+                          "star",
+                          "kind",
+                          "title",
+                          "detail",
+                          "position",
+                          "actor",
+                          "target"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "delta": {
+                      "type": "object"
+                    },
+                    "filters": {
+                      "properties": {
+                        "categories": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "minStar": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "categories",
+                        "minStar"
+                      ],
+                      "type": "object"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "groups": {
+                      "additionalProperties": {
+                        "items": {
+                          "properties": {
+                            "actor": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "detail": {
+                              "type": "string"
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "kind": {
+                              "type": "string"
+                            },
+                            "position": {
+                              "items": {
+                                "type": "number"
+                              },
+                              "nullable": true,
+                              "type": "array"
+                            },
+                            "star": {
+                              "type": "integer"
+                            },
+                            "target": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "tenant": {
+                              "type": "string"
+                            },
+                            "tick": {
+                              "type": "number"
+                            },
+                            "title": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "tick",
+                            "tenant",
+                            "star",
+                            "kind",
+                            "title",
+                            "detail",
+                            "position",
+                            "actor",
+                            "target"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "type": "object"
+                    },
+                    "headline": {
+                      "nullable": true,
+                      "type": "object"
+                    },
+                    "narrative": {
+                      "type": "string"
+                    },
+                    "perTenant": {
+                      "type": "object"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    },
+                    "windowStartTick": {
+                      "type": "integer"
+                    },
+                    "windowTicks": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenant",
+                    "windowTicks",
+                    "currentTick",
+                    "windowStartTick",
+                    "headline",
+                    "counts",
+                    "perTenant",
+                    "narrative",
+                    "groups",
+                    "filters",
+                    "delta",
+                    "deeds",
+                    "cachedAt"
+                  ],
                   "type": "object"
                 }
               }
@@ -5287,6 +5552,62 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "replay": {
+                      "nullable": true,
+                      "properties": {
+                        "cores": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "eventFrames": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "runId": {
+                          "type": "string"
+                        },
+                        "tenant": {
+                          "type": "string"
+                        },
+                        "ticks": {
+                          "items": {
+                            "type": "integer"
+                          },
+                          "type": "array"
+                        },
+                        "units": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "tenant",
+                        "runId",
+                        "ticks",
+                        "units",
+                        "cores",
+                        "eventFrames"
+                      ],
+                      "type": "object"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "replay"
+                  ],
                   "type": "object"
                 }
               }

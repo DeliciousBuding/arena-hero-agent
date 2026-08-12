@@ -169,7 +169,7 @@ export interface GetDeedsParams {
   tenant?: TenantWithAll;
   limit?: number;
 }
-export type GetDeedsResponse = Record<string, unknown>;
+export type GetDeedsResponse = {allianceMerged: boolean; deeds: Array<{actor: string | null; detail: string; id: string; kind: string; position: Array<number> | null; star: number; target: string | null; tenant: string; tick: number; title: string}>; generatedAt: string; limit: number; tenant: string};
 
 /** GET /api/deeds/journal - window 500..50000; filter keys part of cache key */
 export interface GetDeedsJournalParams {
@@ -178,7 +178,7 @@ export interface GetDeedsJournalParams {
   category?: string;
   minStar?: number;
 }
-export type GetDeedsJournalResponse = Record<string, unknown>;
+export type GetDeedsJournalResponse = {cachedAt: string; counts: {[key: string]: number}; currentTick: number; deeds: Array<{actor: string | null; detail: string; id: string; kind: string; position: Array<number> | null; star: number; target: string | null; tenant: string; tick: number; title: string}>; delta: Record<string, unknown>; filters: {categories: Array<string>; minStar: number}; generatedAt: string; groups: {[key: string]: Array<{actor: string | null; detail: string; id: string; kind: string; position: Array<number> | null; star: number; target: string | null; tenant: string; tick: number; title: string}>}; headline: Record<string, unknown> | null; narrative: string; perTenant: Record<string, unknown>; tenant: string; windowStartTick: number; windowTicks: number};
 
 /** GET /api/events - GET /api/events */
 export interface GetEventsParams {
@@ -270,7 +270,7 @@ export type PostRegistryKeysResponse = Record<string, unknown>;
 export interface GetReplayParams {
   tenant?: Tenant;
 }
-export type GetReplayResponse = Record<string, unknown>;
+export type GetReplayResponse = {generatedAt: string; replay: {cores: Array<Record<string, unknown>>; eventFrames: Array<Record<string, unknown>>; runId: string; tenant: string; ticks: Array<number>; units: Array<Record<string, unknown>>} | null; tenant?: string};
 
 /** GET /api/shop - official shop products */
 export interface GetShopParams {}

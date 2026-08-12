@@ -302,7 +302,112 @@ _ENCOUNTER_ENTRY_SHAPE: dict[str, Any] = {
     },
 }
 
+_DEED_SHAPE: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "id": _STR,
+        "tick": _NUM,
+        "tenant": _STR,
+        "star": _INT,
+        "kind": _STR,
+        "title": _STR,
+        "detail": _STR,
+        "position": {"type": "array", "items": _NUM, "nullable": True},
+        "actor": {"type": "string", "nullable": True},
+        "target": {"type": "string", "nullable": True},
+    },
+    "required": [
+        "id",
+        "tick",
+        "tenant",
+        "star",
+        "kind",
+        "title",
+        "detail",
+        "position",
+        "actor",
+        "target",
+    ],
+}
+
 _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
+    ("GET", "/api/replay"): {
+        "type": "object",
+        "properties": {
+            "tenant": _STR,
+            "generatedAt": _STR,
+            "replay": {
+                "type": "object",
+                "nullable": True,
+                "properties": {
+                    "tenant": _STR,
+                    "runId": _STR,
+                    "ticks": {"type": "array", "items": _INT},
+                    "units": _OBJ_ROWS,
+                    "cores": _OBJ_ROWS,
+                    "eventFrames": _OBJ_ROWS,
+                },
+                "required": ["tenant", "runId", "ticks", "units", "cores", "eventFrames"],
+            },
+        },
+        "required": ["generatedAt", "replay"],
+    },
+    ("GET", "/api/deeds"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenant": _STR,
+            "limit": _INT,
+            "allianceMerged": {"type": "boolean"},
+            "deeds": {"type": "array", "items": _DEED_SHAPE},
+        },
+        "required": ["generatedAt", "tenant", "limit", "allianceMerged", "deeds"],
+    },
+    ("GET", "/api/deeds/journal"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenant": _STR,
+            "windowTicks": _INT,
+            "currentTick": _INT,
+            "windowStartTick": _INT,
+            "headline": {"type": "object", "nullable": True},
+            "counts": _INT_MAP,
+            "perTenant": _OBJ,
+            "narrative": _STR,
+            "groups": {
+                "type": "object",
+                "additionalProperties": {"type": "array", "items": _DEED_SHAPE},
+            },
+            "filters": {
+                "type": "object",
+                "properties": {
+                    "categories": {"type": "array", "items": _STR},
+                    "minStar": _INT,
+                },
+                "required": ["categories", "minStar"],
+            },
+            "delta": _OBJ,
+            "deeds": {"type": "array", "items": _DEED_SHAPE},
+            "cachedAt": _STR,
+        },
+        "required": [
+            "generatedAt",
+            "tenant",
+            "windowTicks",
+            "currentTick",
+            "windowStartTick",
+            "headline",
+            "counts",
+            "perTenant",
+            "narrative",
+            "groups",
+            "filters",
+            "delta",
+            "deeds",
+            "cachedAt",
+        ],
+    },
     ("GET", "/api/stream"): {
         "type": "object",
         "properties": {

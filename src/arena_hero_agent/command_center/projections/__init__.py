@@ -21,6 +21,7 @@ from .alliance_cluster import (
     cluster_input_of_members,
     load_alliance_cluster,
 )
+from .alliance_deeds import load_alliance_deeds
 from .alliance_defense import build_alliance_defense_payload, load_alliance_defense
 from .alliance_mining import assign_alliance_mining, build_observers_by_cell, load_alliance_mining
 from .alliance_snapshot import build_alliance_snapshot_payload, load_alliance_snapshot
@@ -40,6 +41,8 @@ from .decisions import (
     load_decision_audit,
     load_decision_trend,
 )
+from .deeds import NOTABLE_KINDS, deed_from_event, deed_from_notable_row, load_deeds
+from .deeds_journal import build_narrative, build_window_delta, load_deeds_journal
 from .enemy_cores import (
     DEFAULT_ENEMY_CORE_OPTS,
     build_enemy_core_states,
@@ -90,6 +93,7 @@ from .mining_effectiveness import (
 )
 from .redeem import MAX_KEEP as REDEEM_MAX_KEEP
 from .redeem import load_redeem_history
+from .replay import load_replay
 from .shop_history import (
     aggregate_shop_history,
     load_shop_history,
@@ -118,6 +122,7 @@ from .workers import aggregate_worker_liveness, load_worker_liveness_audit
 
 __all__ = [
     "AUDIT_SOURCES",
+    "NOTABLE_KINDS",
     "aggregate_alignment",
     "load_alignment_audit",
     "CLUSTER_LINK_DIST",
@@ -172,6 +177,12 @@ __all__ = [
     "load_lifecycle_audit",
     "load_decision_audit",
     "load_decision_input",
+    "load_deeds",
+    "load_deeds_journal",
+    "deed_from_event",
+    "deed_from_notable_row",
+    "build_narrative",
+    "build_window_delta",
     "load_events",
     "load_decision_trend",
     "load_human_audit",
@@ -199,6 +210,7 @@ __all__ = [
     "build_encountered_index_from_enemies",
     "build_leaderboard_payload",
     "load_alliance_intel",
+    "load_alliance_deeds",
     "load_beacon_trail",
     "load_our_usernames",
     "load_mine_patterns",
@@ -223,6 +235,7 @@ __all__ = [
     "normalize_products",
     "read_human_audit",
     "load_world",
+    "load_replay",
     "should_append",
     "snapshot_signature",
 ]
