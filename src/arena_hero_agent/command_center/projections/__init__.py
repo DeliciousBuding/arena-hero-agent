@@ -58,7 +58,19 @@ from .exploration_coverage import (
 from .human import DEFAULT_LIMIT as HUMAN_AUDIT_DEFAULT_LIMIT
 from .human import MAX_KEEP as HUMAN_AUDIT_MAX_KEEP
 from .human import load_human_audit, read_human_audit
-from .leaderboard import SNAPSHOT_STALE_SECONDS, load_leaderboard_intel
+from .intel import (
+    build_encountered_index,
+    build_encountered_index_from_enemies,
+    load_alliance_intel,
+    load_beacon_trail,
+)
+from .leaderboard import (
+    OUR_USERNAME_SCAN_LIMIT,
+    SNAPSHOT_STALE_SECONDS,
+    build_leaderboard_payload,
+    load_leaderboard_intel,
+    load_our_usernames,
+)
 from .lifecycle import aggregate_lifecycle, load_lifecycle_audit
 from .map_lod import MAP_LOD_CHUNK, aggregate_map_lod, load_map_lod
 from .mine_patterns import load_mine_patterns
@@ -182,6 +194,13 @@ __all__ = [
     "load_enemy_heat",
     "load_enemy_cores",
     "load_leaderboard_intel",
+    "OUR_USERNAME_SCAN_LIMIT",
+    "build_encountered_index",
+    "build_encountered_index_from_enemies",
+    "build_leaderboard_payload",
+    "load_alliance_intel",
+    "load_beacon_trail",
+    "load_our_usernames",
     "load_mine_patterns",
     "load_mining_effectiveness",
     "load_plan",
