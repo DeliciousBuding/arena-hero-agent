@@ -16,9 +16,11 @@
   health 快照有真实 run id）——不影响数据完整性，随 release-005 修复。
 - telemetry `agentLatencyMs`/`selectionLatencyMs`：根因已查明，tick_loop 只追踪
   budget 消耗不追踪墙钟延迟（P4-4 设计使然），非 bug；随 release-005/P3 补墙钟字段。
-- **live `stream_ended` 硬化（F5，P1）**：SDK `events()` 对 websocket code 1000 正常
-  关闭直接 return（不重连），tick loop 以 `stream_ended` 结束、进程干净退出
-  （exit 0，systemd 不拉起）。2026-08-12 观测到一次（catch-up 会话关闭，一次性）；
-  F5 = live 下 stream_ended 重开 source 继续，默认离线语义不变。
+- **live `stream_ended` 硬化（F5，已实现 main@3272009，随 release-005 部署）**：
+  SDK `events()` 对 websocket code 1000 正常关闭直接 return（不重连），tick loop 以
+  `stream_ended` 结束、进程干净退出（exit 0，systemd 不拉起）。2026-08-12 观测到一次
+  （catch-up 会话关闭，一次性）；F5 = `continue_on_stream_ended`（默认 False 离线不变，
+  live 置 True）在 clean stream end 时重开 source 继续（max_reconnects 有界），重放尾
+  去重。1531 passed。
 
 其余：无。
