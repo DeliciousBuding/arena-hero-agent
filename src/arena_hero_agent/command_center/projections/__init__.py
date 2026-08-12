@@ -25,6 +25,7 @@ from .alliance_survey import TENANT_COLORS, aggregate_alliance_survey, load_alli
 from .arbitrations import arbitration_file, list_arbitrations, load_arbitrations
 from .conflicts import DEFAULT_WINDOW as CONFLICT_DEFAULT_WINDOW
 from .conflicts import aggregate_human_conflict, load_human_conflict
+from .consensus_mining import enrich_consensus_mining, load_consensus_mining
 from .core_trails import load_core_trails_from_survey_db
 from .decisions import (
     DECISION_TREND_STEPS,
@@ -132,8 +133,10 @@ __all__ = [
     "SNAPSHOT_STALE_SECONDS",
     "build_alliance_advice_payload",
     "compute_exploration_stats",
+    "enrich_consensus_mining",
     "load_alliance_advice",
     "load_alliance_exploration",
+    "load_consensus_mining",
     "load_core_trails_from_survey_db",
     "load_enemy_heat",
     "load_leaderboard_intel",

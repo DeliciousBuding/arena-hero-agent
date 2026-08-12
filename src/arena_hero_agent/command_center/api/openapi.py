@@ -440,6 +440,60 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
         },
         "required": ["generatedAt", "tenant", "tenants", "modelCaveat", "cachedAt"],
     },
+    ("GET", "/api/alliance/survey/mining"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "resources": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "x": _NUM,
+                        "y": _NUM,
+                        "cell": _STR,
+                        "assignedTenant": {"type": "string", "nullable": True},
+                        "miningStatus": {"type": "string", "nullable": True},
+                        "gapAgeTicks": _NULLABLE_NUM,
+                        "threatLevel": _INT,
+                        "threatCombat": _NUM,
+                    },
+                },
+            },
+            "summary": {
+                "type": "object",
+                "properties": {
+                    "assigned": _INT,
+                    "open": _INT,
+                    "stale": _INT,
+                    "harvested": _INT,
+                    "harvestedByOther": _INT,
+                    "highThreat": _INT,
+                    "topStale": _OBJ_ROWS,
+                },
+                "required": [
+                    "assigned",
+                    "open",
+                    "stale",
+                    "harvested",
+                    "harvestedByOther",
+                    "highThreat",
+                    "topStale",
+                ],
+            },
+            "colors": _STR_MAP,
+            "tenantSummaries": {"type": "object", "additionalProperties": _OBJ},
+            "cachedAt": _STR,
+        },
+        "required": [
+            "generatedAt",
+            "resources",
+            "summary",
+            "colors",
+            "tenantSummaries",
+            "cachedAt",
+        ],
+    },
     ("GET", "/api/alliance/cluster"): {
         "type": "object",
         "properties": {

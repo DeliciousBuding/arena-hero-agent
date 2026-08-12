@@ -1,0 +1,64 @@
+{
+  "nowMs": 1752000000000,
+  "worlds": {
+    "t1": {
+      "tick": 5000,
+      "state": {
+        "objects": [
+          {"id": "core-t1", "kind": "CORE", "controlled": true, "position": [0, 0], "hp": 500}
+        ]
+      }
+    },
+    "t2": {
+      "tick": 5000,
+      "state": {
+        "objects": [
+          {"id": "core-t2", "kind": "CORE", "controlled": true, "position": [160, 160], "hp": 500}
+        ]
+      }
+    },
+    "t3": {},
+    "t4": {}
+  },
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {"run_id": "r1", "tenant": "t1", "cases_synced": 1, "last_tick": 5000, "updated_at": "2025-07-08T18:40:00Z"}
+      ],
+      "agents": [
+        {"tenant": "t1", "instance": "a1", "tick": 5000, "resources": 8, "population": 5, "core_x": 0, "core_y": 0, "units": 5, "visible_enemies": 0, "status": "ACTIVE", "sdk_version": "x", "base_url": "http://x", "pid": 1, "platform": "test", "mode": "production", "connection_state": "up", "first_seen": "2025-07-08T18:40:00Z", "last_heartbeat": "2025-07-08T18:40:00Z", "updated_at": "2025-07-08T18:40:00Z"}
+      ],
+      "resources": [
+        {"cell": "10,10", "x": 10, "y": 10, "first_seen_tick": 1000, "last_seen_tick": 4900, "state": "visible", "last_state_tick": 4900, "seen_count": 1}
+      ],
+      "unitsSeen": [
+        {"cell": "10,10", "unit_type": "VANGUARD", "controlled": 0, "tick": 4010, "x": 10, "y": 10},
+        {"cell": "10,10", "unit_type": "VANGUARD", "controlled": 0, "tick": 4011, "x": 10, "y": 10},
+        {"cell": "10,10", "unit_type": "VANGUARD", "controlled": 0, "tick": 4012, "x": 10, "y": 10},
+        {"cell": "10,10", "unit_type": "VANGUARD", "controlled": 0, "tick": 4013, "x": 10, "y": 10},
+        {"cell": "10,10", "unit_type": "VANGUARD", "controlled": 0, "tick": 4014, "x": 10, "y": 10},
+        {"cell": "10,10", "unit_type": "VANGUARD", "controlled": 0, "tick": 4015, "x": 10, "y": 10},
+        {"cell": "10,10", "unit_type": "VANGUARD", "controlled": 0, "tick": 4016, "x": 10, "y": 10},
+        {"cell": "10,10", "unit_type": "VANGUARD", "controlled": 0, "tick": 4017, "x": 10, "y": 10},
+        {"cell": "10,10", "unit_type": "VANGUARD", "controlled": 0, "tick": 4018, "x": 10, "y": 10},
+        {"cell": "10,10", "unit_type": "VANGUARD", "controlled": 0, "tick": 4019, "x": 10, "y": 10}
+      ],
+      "resourceEvents": []
+    },
+    "t2": {
+      "syncMeta": [
+        {"run_id": "r2", "tenant": "t2", "cases_synced": 1, "last_tick": 5000, "updated_at": "2025-07-08T18:40:00Z"}
+      ],
+      "agents": [
+        {"tenant": "t2", "instance": "a2", "tick": 5000, "resources": 8, "population": 5, "core_x": 160, "core_y": 160, "units": 5, "visible_enemies": 0, "status": "ACTIVE", "sdk_version": "x", "base_url": "http://x", "pid": 1, "platform": "test", "mode": "production", "connection_state": "up", "first_seen": "2025-07-08T18:40:00Z", "last_heartbeat": "2025-07-08T18:40:00Z", "updated_at": "2025-07-08T18:40:00Z"}
+      ],
+      "resources": [
+        {"cell": "170,170", "x": 170, "y": 170, "first_seen_tick": 2000, "last_seen_tick": 5000, "state": "visible", "last_state_tick": 5000, "seen_count": 1}
+      ],
+      "unitsSeen": [],
+      "resourceEvents": []
+    },
+    "t3": {},
+    "t4": {}
+  }
+}

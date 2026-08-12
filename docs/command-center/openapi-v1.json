@@ -1108,6 +1108,107 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "colors": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "resources": {
+                      "items": {
+                        "properties": {
+                          "assignedTenant": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "cell": {
+                            "type": "string"
+                          },
+                          "gapAgeTicks": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "miningStatus": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "threatCombat": {
+                            "type": "number"
+                          },
+                          "threatLevel": {
+                            "type": "integer"
+                          },
+                          "x": {
+                            "type": "number"
+                          },
+                          "y": {
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "summary": {
+                      "properties": {
+                        "assigned": {
+                          "type": "integer"
+                        },
+                        "harvested": {
+                          "type": "integer"
+                        },
+                        "harvestedByOther": {
+                          "type": "integer"
+                        },
+                        "highThreat": {
+                          "type": "integer"
+                        },
+                        "open": {
+                          "type": "integer"
+                        },
+                        "stale": {
+                          "type": "integer"
+                        },
+                        "topStale": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "assigned",
+                        "open",
+                        "stale",
+                        "harvested",
+                        "harvestedByOther",
+                        "highThreat",
+                        "topStale"
+                      ],
+                      "type": "object"
+                    },
+                    "tenantSummaries": {
+                      "additionalProperties": {
+                        "type": "object"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "resources",
+                    "summary",
+                    "colors",
+                    "tenantSummaries",
+                    "cachedAt"
+                  ],
                   "type": "object"
                 }
               }

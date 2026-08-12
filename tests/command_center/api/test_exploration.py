@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from arena_hero_agent.command_center.api import (
     ApiRequest,
@@ -22,7 +23,7 @@ def _app(data_root: Path, **kwargs) -> CommandCenterApp:
     return CommandCenterApp(data_root=data_root, **kwargs)
 
 
-def _json_body(response: ApiResponse) -> dict[str, object]:
+def _json_body(response: ApiResponse) -> dict[str, Any]:
     body = json.loads(response.body.decode("utf-8"))
     assert isinstance(body, dict)
     return body

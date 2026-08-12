@@ -25,6 +25,8 @@ projections to Python on top of the P5-3 data base (`paths` / `jsonl` /
 | `alliance_snapshot.py` | `/api/alliance/snapshot` | calibration world cases + survey-db `core_hunts` + leaderboard snapshot (canonical alliance domain model: members/sightings/counts/intel/threat/threatSummaries; W20) |
 | `alliance_defense.py` | `/api/alliance/defense` | W20 snapshot payload (members/sightings/threatSummaries) -> endangered/reinforce/formation/pocket advice (TS `alliance-defense.ts`; W21) |
 | `alliance_mining.py` | `/api/alliance/mining` | alliance survey/snapshot/mines inputs |
+| `consensus_mining.py` | `/api/alliance/survey/mining` | alliance survey + mining-effectiveness + mine utilization + enemy heat |
+
 | `alliance_cluster.py` | `/api/alliance/cluster` | none (pure member input) |
 | `arbitrations.py` | `/api/alliance/survey/arbitrations` | `runtime/survey/arbitration.jsonl` |
 | `shop_history.py` | `/api/shop/history` | `runtime/shop-history.jsonl` |
