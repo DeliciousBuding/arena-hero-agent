@@ -17,9 +17,11 @@ from .alliance_cluster import (
     CLUSTER_LINK_DIST,
     COHESION_MAX_DIST,
     build_alliance_cluster_view,
+    cluster_input_of_members,
+    load_alliance_cluster,
 )
 from .alliance_defense import build_alliance_defense_payload, load_alliance_defense
-from .alliance_mining import assign_alliance_mining, build_observers_by_cell
+from .alliance_mining import assign_alliance_mining, build_observers_by_cell, load_alliance_mining
 from .alliance_snapshot import build_alliance_snapshot_payload, load_alliance_snapshot
 from .alliance_survey import TENANT_COLORS, aggregate_alliance_survey, load_alliance_survey
 from .arbitrations import arbitration_file, list_arbitrations, load_arbitrations
@@ -112,6 +114,9 @@ __all__ = [
     "aggregate_worker_liveness",
     "arbitration_file",
     "assign_alliance_mining",
+    "cluster_input_of_members",
+    "load_alliance_cluster",
+    "load_alliance_mining",
     "build_alliance_cluster_view",
     "build_observers_by_cell",
     "list_arbitrations",

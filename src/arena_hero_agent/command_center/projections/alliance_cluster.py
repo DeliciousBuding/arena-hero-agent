@@ -9,13 +9,23 @@ military/worker strength. ``/api/alliance/cluster``.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import os
+from collections.abc import Mapping, Sequence
 from typing import Any
+
+from ._common import current_epoch_ms, num
+from .alliance_snapshot import load_alliance_snapshot
 
 CLUSTER_LINK_DIST = 120
 COHESION_MAX_DIST = 300
 
-__all__ = ["CLUSTER_LINK_DIST", "COHESION_MAX_DIST", "build_alliance_cluster_view"]
+__all__ = [
+    "CLUSTER_LINK_DIST",
+    "COHESION_MAX_DIST",
+    "build_alliance_cluster_view",
+    "cluster_input_of_members",
+    "load_alliance_cluster",
+]
 
 
 def _chebyshev(a: Sequence[int], b: Sequence[int]) -> int:
@@ -138,3 +148,50 @@ def build_alliance_cluster_view(
             "avgCohesion": avg_cohesion,
         },
     }
+
+
+def cluster_input_of_members(
+    members: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    """Build the cluster member input from alliance-snapshot members.
+
+    Mirrors the TS oracle ``clusterInputOfMembers``: ``core`` is the member's
+    core position (or None), ``military`` is vanguards + rangers, and status is
+    carried through for the member table.
+    """
+    out: list[dict[str, Any]] = []
+    for tenant_id, member in members.items():
+        if not isinstance(member, dict):
+            continue
+        core = member.get("core") or {}
+        position = core.get("position")
+        core_position: list[int] | None = None
+        if isinstance(position, (list, tuple)) and len(position) >= 2:
+            core_position = [int(num(position[0])), int(num(position[1]))]
+        out.append(
+            {
+                "tenantId": str(tenant_id),
+                "core": core_position,
+                "military": num(member.get("vanguards")) + num(member.get("rangers")),
+                "workers": num(member.get("workers")),
+                "status": str(member.get("status") or ""),
+            }
+        )
+    return out
+
+
+def load_alliance_cluster(
+    data_root: str | os.PathLike[str],
+    *,
+    now_ms: int | None = None,
+) -> dict[str, Any]:
+    """Load the alliance cluster situational view (TS ``loadAllianceCluster``).
+
+    Composes the P5-4 ``load_alliance_snapshot`` members (core/strength per
+    tenant) into the pure cluster aggregation. Fail-open: an empty snapshot
+    yields one empty member set with zero groups/cohesion.
+    """
+    snapshot = load_alliance_snapshot(data_root, now_ms=now_ms)
+    members = snapshot.get("members") or {}
+    now = now_ms if now_ms is not None else current_epoch_ms()
+    return build_alliance_cluster_view(cluster_input_of_members(members), now)

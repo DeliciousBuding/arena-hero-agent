@@ -12,13 +12,23 @@ injectable via ``now_ms``.
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from ..goal_store import iso_utc
 from ..paths import TENANTS
 from ._common import current_epoch_ms, finite_number, num
+from .alliance_snapshot import load_alliance_snapshot
+from .alliance_survey import load_alliance_survey
+from .enemy_heat import load_enemy_heat
+from .mine_patterns import load_mine_patterns
+from .mines import load_mine_utilization
 
-__all__ = ["assign_alliance_mining", "build_observers_by_cell"]
+__all__ = [
+    "assign_alliance_mining",
+    "build_observers_by_cell",
+    "load_alliance_mining",
+]
 
 
 def _chebyshev(
@@ -190,3 +200,107 @@ def assign_alliance_mining(
         },
         "cachedAt": at,
     }
+
+
+def load_alliance_mining(
+    data_root: str | os.PathLike[str],
+    *,
+    now_ms: int | None = None,
+) -> dict[str, Any]:
+    """Load the alliance mining assignment view (TS ``loadAllianceMining``).
+
+    Composes the P5-4 loaders the TS oracle composes: alliance snapshot
+    (per-tenant core/workers), alliance survey (resource observers + overlaps),
+    mine utilization (visible-unharvested candidates), mine patterns (refill
+    predictions; the Python port currently emits empty predictions so
+    ``predictedNextTick``/``dueInTicks`` stay null fail-open), and enemy heat
+    (16x16 threat buckets). Fail-open: an empty root yields an empty assignment
+    payload.
+    """
+    snapshot = load_alliance_snapshot(data_root, now_ms=now_ms)
+    survey = load_alliance_survey(data_root, now_ms=now_ms)
+    mines = load_mine_utilization(data_root, "all")
+    members = snapshot.get("members") or {}
+
+    cores: dict[str, tuple[int | float, int | float] | None] = {}
+    workers: dict[str, int | float | None] = {}
+    for tenant in TENANTS:
+        member = members.get(tenant) or {}
+        position = (member.get("core") or {}).get("position")
+        cores[tenant] = (
+            (num(position[0]), num(position[1]))
+            if isinstance(position, (list, tuple)) and len(position) >= 2
+            else None
+        )
+        raw_workers = member.get("workers")
+        workers[tenant] = raw_workers if isinstance(raw_workers, (int, float)) else None
+
+    candidates_by_tenant: dict[str, list[dict[str, Any]]] = {}
+    for tenant in TENANTS:
+        candidates_by_tenant[tenant] = [
+            {
+                "cell": candidate.get("cell"),
+                "x": candidate.get("x"),
+                "y": candidate.get("y"),
+                "lastSeenTick": candidate.get("lastSeenTick"),
+            }
+            for candidate in (mines.get("tenants") or {}).get(tenant, {}).get("candidates") or ()
+        ]
+
+    observers_by_cell = build_observers_by_cell(survey.get("resources") or [])
+    conflict_cells: set[str] = set()
+    for overlap in (survey.get("conflicts") or {}).get("resourceOverlaps") or ():
+        cell = overlap.get("cell")
+        if isinstance(cell, str) and cell:
+            conflict_cells.add(cell)
+
+    meta_by_cell: dict[str, dict[str, Any]] = {}
+    for tenant in TENANTS:
+        for candidate in (mines.get("tenants") or {}).get(tenant, {}).get("candidates") or ():
+            cell = candidate.get("cell")
+            if not isinstance(cell, str):
+                continue
+            current = meta_by_cell.setdefault(
+                cell,
+                {"gapAgeTicks": None, "predictedNextTick": None, "dueInTicks": None},
+            )
+            gap = num(candidate.get("gapAgeTicks")) or 0
+            if gap > (current["gapAgeTicks"] or 0):
+                current["gapAgeTicks"] = gap
+
+    patterns = load_mine_patterns(data_root, "all", now_ms=now_ms)
+    for tenant in TENANTS:
+        for prediction in (patterns.get("tenants") or {}).get(tenant, {}).get("predictions") or ():
+            cell = prediction.get("cell")
+            if not isinstance(cell, str):
+                continue
+            current = meta_by_cell.setdefault(
+                cell,
+                {"gapAgeTicks": None, "predictedNextTick": None, "dueInTicks": None},
+            )
+            if prediction.get("predictedNextTick") is not None:
+                current["predictedNextTick"] = prediction["predictedNextTick"]
+            if prediction.get("dueInTicks") is not None:
+                current["dueInTicks"] = prediction["dueInTicks"]
+
+    heat_by_bucket: dict[str, dict[str, Any]] = {}
+    for bucket in load_enemy_heat(data_root, "all", now_ms=now_ms).get("buckets") or ():
+        key = f"{int(num(bucket.get('bx')))},{int(num(bucket.get('by')))}"
+        current = heat_by_bucket.setdefault(key, {"combatCount": 0, "count": 0, "lastTick": 0})
+        current["combatCount"] = current["combatCount"] + num(bucket.get("combatCount"))
+        current["count"] = current["count"] + num(bucket.get("count"))
+        current["lastTick"] = max(current["lastTick"], num(bucket.get("lastTick")))
+
+    payload = assign_alliance_mining(
+        cores,
+        workers,
+        candidates_by_tenant,
+        observers_by_cell,
+        conflict_cells,
+        meta_by_cell,
+        heat_by_bucket,
+        now_ms=now_ms,
+    )
+    current_tick = snapshot.get("currentTick")
+    payload["currentTick"] = current_tick if isinstance(current_tick, (int, float)) else None
+    return payload
