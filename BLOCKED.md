@@ -19,11 +19,11 @@
   - `GET /api/audit/human` **已接线（w44/cc-wave3）**：按 Python manifest fail-closed 语义
     （`tenant_param=tN`，默认 t1，tenant=all/非法 → 400）；与 TS 的 ALLOWED divergence 已记录
     （TS 宽松：默认全租户、非法租户降级不 400）。Python-first fail-closed 纪律优先（2026-08-12 captain 裁决）。
-  - `GET /api/leaderboard` 仍 SKIP（缺口已精确记录）：服务端富化两部分——
-    `loadOurUsernames`（各租户 calibration 受控 CORE owner_username）Python 可用小 loader 补；
-    `buildEncounteredIndex`（`loadAllianceIntel().enemies`，含 raid-risk/信标载者推断/enemyUnitMemory，
-    intel.ts 整仓未移植，Python 只有 alliance_snapshot/shared_intel 融合模型，无 TS enemies 形状）——
-    缺该数据源，profiles `encountered`/`encounteredCount`/`encountered` 无法 1:1 补出，不硬凑。
+  - `GET /api/leaderboard` **已解除（w44/cc-wave7，2026-08-12）**：服务端富化两部分已移植——
+    `loadOurUsernames`（各租户 calibration 受控 CORE owner_username）与
+    `buildEncounteredIndex`（`intel.py:load_alliance_intel` 移植后的 enemies 形状，含
+    raid-risk/信标载者推断/enemyUnitMemory）已 1:1 补出；501→200，OpenAPI 200 + golden MATCH
+    （详见下方第七波小节）。
 - **路由映射裁决（2026-08-12 captain）**：联盟探索覆盖 canonical 路由是
   `/api/alliance/exploration`（TS `loadAllianceExploration`）；`/api/exploration`
   （TS `loadTenantSurveyCached`：per-tenant survey+lifecycle+current）**已接线**
@@ -66,6 +66,41 @@ survey-db 数据源扩展 + 三路由接线（needs-new-data-source 关闭）：
 - OpenAPI 200 schema 三路由 + `openapi-v1.json` + 生成 TS client/types
   （tsgen hash pin）已同步；baseline 1732 → 1753 passed。
 
+
+## W44 第七波只读接线（w44/cc-wave7，2026-08-12）
+
+intel + leaderboard 两路由接线（needs-new-data-source / needs-new-projection 关闭）：
+
+- **`projections/intel.py`（新）**：移植 `intel.ts` `loadAllianceIntel`（enemy core 扫描
+  `seenCores`/`enemyUnitById`/`combatNearCore` + `assessRaidRisk` 级联 + 30-run×8-case 扫描 +
+  survey-db `core_hunts` 贴脸记忆合并 + leaderboard 威胁画像 join + 信标载者推断 +
+  `enemyUnitMemory` 上限 100）+ `trails.ts` `loadBeaconTrail`（跨 run 合并/同格去重/96 点上限/
+  2000 tick 时间窗）+ `buildEncounteredIndex`。空根 fail-open 200（4 租户 `runId: null` 占位，
+  TS 同形状）。
+- **`projections/leaderboard.py` 扩展**：`load_our_usernames`（TS `loadOurUsernames`，最新 run
+  受控 CORE owner_username）+ `build_leaderboard_payload`（TS server.ts 组合：profiles 富化
+  `ours`/`encountered` + `snapshotAtMs` 透传 + `encounteredCount`/`encountered`）。快照缺失 →
+  **200 空成功形状 + TS 404 error 文案**（注册 divergence：TS 返回 404，wave-7 fail-open 纪律
+  不 500）。
+- `GET /api/intel`、`GET /api/leaderboard` **501 → 200**；OpenAPI 200 schema（intel 全形状 +
+  leaderboard 全形状）+ `openapi-v1.json` + 生成 TS client/types（tsgen hash pin 已更新）。
+- **Node golden 对拍（2 新 case 全 MATCH）**：`intel_basic` / `leaderboard_basic` 物化多 run
+  calibration + survey-db core_hunts + leaderboard 快照，跑真实 TS `loadAllianceIntel` /
+  server.ts leaderboard 组合；oracle harness 在 `~/tmp/cc-oracle-intel.mjs` /
+  `~/tmp/cc-oracle-leaderboard.mjs`（仓外，TS checkout 只读）。`advice_fixture.py` 补
+  `calibrationRuns` 多 run 物化。现 43 个 golden case。
+- **注册 divergence**：
+  - leaderboard 快照缺失 200（TS 404）；
+  - `maybeRefreshLeaderboardLazy` 不移植（官方 API 外部 fetch 写副作用，P5-9 gate 路由）；
+  - `ageSeconds`/`stale` 依赖墙钟 `Date.now()`（Python 注入 `now_ms`），golden 对拍时
+    `ageSeconds` 剥离、`stale` 按 case 剥离（ALLOWED_DIFFERENCES 已登记）；
+  - intel/leaderboard 30s 内存缓存不移植（Python 每次重算，输出同形状，无后台刷新）；
+  - `history.jsonl` 仅由 POST `/api/leaderboard/refresh` 追加，不在 GET payload 内（server.ts
+    核实），GET 不读。
+- 维持 SKIP（不变）：`/api/deeds`、`/api/deeds/journal`、`/api/audit/overview`（8120 pipeline）、
+  `/api/health/pipeline`（surveySync 写副作用）、`/api/replay`、`/api/tenants`、`/api/agents`、
+  `/api/shop`、`/api/shop/me`、`/api/shop/orders`（外部商店 cookie 契约）、`/api/commands`
+  （reconcile 写回契约）、`/api/alliance/director`（8120）；mapEngine 调用方迁移顺序不变。
 
 ## W44 第五波只读接线（w44/cc-wave5，2026-08-12）
 
@@ -139,7 +174,7 @@ agents / shop / me / orders / commands / director。
 | needs-small-loader | `/api/survey/mine` | （wave-4 已接线） survey-db resources + `resource_events` timeline；Python schema 无 resource_events 时 timeline 空（同 mines.py ALLOWED divergence），可接但需新 loader |
 | needs-small-loader | `/api/survey/enemy-cores` | （wave-4 已接线） `enemy-core-state.ts` 聚合（core_hunts → ACTIVE/RELOCATED/STALE + 威胁级）未移植；Python 有 core_hunts 表 + core_trails 投影，聚合逻辑 ~100 行待移植 |
 | needs-small-loader | `/api/redeem/history` | （wave-4 已接线，恒空 fail-open） `redeem-log.jsonl` 尾读极小 loader，但 Python 侧无 redeem 写路径（POST /api/redeem 501，属 shop 外部集成），接了恒空——等写路径落地再接 |
-| needs-new-projection | `/api/leaderboard` | `ours`（calibration 受控 CORE owner_username）小 loader 可补；`encountered` 需 `intel.ts loadAllianceIntel` 移植（enemies 形状未移植）→ 整体不接线（缺数据源，不硬凑），见上 SKIP 精确缺口 |
+| ~~needs-new-projection~~ → **已接线（w44/cc-wave7）** | `/api/leaderboard` | `load_our_usernames`（calibration 受控 CORE owner_username）+ `build_leaderboard_payload`（encountered 来自 `intel.py` enemies 索引），501→200；OpenAPI 200 + golden MATCH；快照缺失 200（TS 404）为注册 divergence |
 | ~~needs-new-projection~~ → **已接线（w44/cc-wave5）** | `/api/audit/alignment` | `alignment.py` 移植完成（aggregate_alignment + load_alignment_audit），501→200；OpenAPI 200 + golden MATCH |
 | needs-new-projection | `/api/survey/decision-input` | （wave-4 已接线） `decision-input.ts`（矿刷新预测 dueInTicks + chunk 覆盖）——依赖 mine-patterns predictions（Python 恒空）+ chunks 表 |
 | ~~needs-new-data-source~~ → **已接线（w44/cc-wave6）** | `/api/audit/lifecycle` | `lifecycle.py` 移植（AGENT_SCHEMA 已补 `unit_lifecycle`/`core_spends`/`notable_events`），501→200；OpenAPI 200 + 8 测试 |
@@ -147,7 +182,7 @@ agents / shop / me / orders / commands / director。
 | needs-new-data-source | `/api/deeds` | 事迹扫描（★3-4 稀有 + ★2 survey-db 里程碑 + 联盟事迹）+ 45s 缓存，全新产品能力 |
 | needs-new-data-source | `/api/deeds/journal` | 事迹流日记聚合 + category/minStar 筛选 |
 | needs-new-data-source | `/api/health/pipeline` | survey-db 水位 vs live tick + `surveySync` 桥状态；且 TS 请求路径会触发惰性 survey:sync（写副作用，Python P5-9 已 gate 该路由） |
-| needs-new-data-source | `/api/intel` | `intel.ts loadAllianceIntel`（enemy core 扫描 + raid-risk + 信标载者 + enemyUnitMemory）整仓未移植 |
+| ~~needs-new-data-source~~ → **已接线（w44/cc-wave7）** | `/api/intel` | `intel.py` 移植 `loadAllianceIntel`（enemy core 扫描 + raid-risk + 信标载者 + enemyUnitMemory）+ `loadBeaconTrail` + `buildEncounteredIndex`，501→200；OpenAPI 200 + golden MATCH |
 | needs-new-data-source | `/api/overview` | supervisor 8120 + agents 台账 + outcome.jsonl 双源合并，未移植 |
 | needs-new-data-source | `/api/replay` | 回放轨迹重建（calibration cases → replay 序列）未移植 |
 | needs-new-data-source | `/api/tenants` | supervisor /ready 探活（8120）；Python 无 supervisor 桥，接了一律 live=false |
