@@ -234,6 +234,74 @@ _LIFECYCLE_AUDIT_SHAPE: dict[str, Any] = {
 # heterogeneous records. Every route without a dedicated entry falls back to a
 # non-empty object schema, so no operation documents an empty (``unknown``)
 # response type and generated TS clients stop being ``unknown``.
+_INTEL_ENEMY_SHAPE: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "username": _STR,
+        "position": {"type": "array", "items": _NUM},
+        "lastSeenTick": _INT,
+        "tier": _STR,
+        "damageRank": _NULLABLE_INT,
+        "distanceToFriendlyCore": _NULLABLE_NUM,
+        "raidRisk": _STR,
+        "raidReason": _STR,
+        "raidActivityAge": _NULLABLE_INT,
+    },
+    "required": [
+        "username",
+        "position",
+        "lastSeenTick",
+        "tier",
+        "damageRank",
+        "distanceToFriendlyCore",
+        "raidRisk",
+        "raidReason",
+        "raidActivityAge",
+    ],
+}
+
+_INTEL_ENEMY_WITH_TENANT_SHAPE: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        **_INTEL_ENEMY_SHAPE["properties"],
+        "tenant": _STR,
+    },
+    "required": [*_INTEL_ENEMY_SHAPE["required"], "tenant"],
+}
+
+_INTEL_UNIT_MEMORY_SHAPE: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "id": _STR,
+        "unitType": _STR,
+        "position": {"type": "array", "items": _NUM},
+        "lastSeenTick": _INT,
+    },
+}
+
+_INTEL_BEACON_SHAPE: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "tenant": _STR,
+        "x": _NUM,
+        "y": _NUM,
+        "tick": _INT,
+        "moving": {"type": "boolean"},
+        "carrierGuess": {"type": "string", "nullable": True},
+        "carrierDist": _NULLABLE_NUM,
+    },
+}
+
+_ENCOUNTER_ENTRY_SHAPE: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "tenant": _STR,
+        "lastSeenTick": _NULLABLE_INT,
+        "distanceToFriendlyCore": _NULLABLE_NUM,
+        "raidRisk": {"type": "string", "nullable": True},
+    },
+}
+
 _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
     ("GET", "/api/stream"): {
         "type": "object",
@@ -347,6 +415,79 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
             "current": {"type": "object", "nullable": True},
         },
         "required": ["tenant", "generatedAt", "survey", "current"],
+    },
+    ("GET", "/api/intel"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenants": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "tenant": _STR,
+                        "runId": {"type": "string", "nullable": True},
+                        "enemyCores": {"type": "array", "items": _INTEL_ENEMY_SHAPE},
+                        "enemyUnits": _INT,
+                        "enemyUnitSightings": _INT,
+                        "enemyUnitMemory": {"type": "array", "items": _INTEL_UNIT_MEMORY_SHAPE},
+                        "ourCore": {"type": "array", "items": _NUM, "nullable": True},
+                        "combatUnitsNearCore": _INT,
+                        "raidActivityAge": _NULLABLE_INT,
+                    },
+                },
+            },
+            "enemies": {"type": "array", "items": _INTEL_ENEMY_WITH_TENANT_SHAPE},
+            "totalEnemyCores": _INT,
+            "beacons": {"type": "array", "items": _INTEL_BEACON_SHAPE},
+        },
+        "required": ["generatedAt", "tenants", "enemies", "totalEnemyCores", "beacons"],
+    },
+    ("GET", "/api/leaderboard"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "snapshot": _STR,
+            "snapshotAt": _STR,
+            "snapshotAtMs": _NUM,
+            "ageSeconds": _NUM,
+            "stale": {"type": "boolean"},
+            "beacon_ticks_held": _OBJ_ROWS,
+            "damage_dealt": _OBJ_ROWS,
+            "core_destruction_participations": _OBJ_ROWS,
+            "profiles": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "username": _STR,
+                        "rank": _NUM,
+                        "damage": _NUM,
+                        "tier": _STR,
+                        "ours": {"type": "string", "nullable": True},
+                        "encountered": {
+                            "type": "array",
+                            "items": _ENCOUNTER_ENTRY_SHAPE,
+                            "nullable": True,
+                        },
+                    },
+                },
+            },
+            "ours": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {"tenant": _STR, "username": _STR},
+                },
+            },
+            "encounteredCount": _INT,
+            "encountered": {
+                "type": "object",
+                "additionalProperties": {"type": "array", "items": _ENCOUNTER_ENTRY_SHAPE},
+            },
+            "error": _STR,
+        },
+        "required": ["generatedAt", "profiles", "ours", "encounteredCount", "encountered"],
     },
     ("GET", "/api/survey/decision-input"): {
         "type": "object",

@@ -203,7 +203,7 @@ export type PostIngestAgentsResponse = Record<string, unknown>;
 
 /** GET /api/intel - GET /api/intel */
 export interface GetIntelParams {}
-export type GetIntelResponse = Record<string, unknown>;
+export type GetIntelResponse = {beacons: Array<{carrierDist?: number | null; carrierGuess?: string | null; moving?: boolean; tenant?: string; tick?: number; x?: number; y?: number}>; enemies: Array<{damageRank: number | null; distanceToFriendlyCore: number | null; lastSeenTick: number; position: Array<number>; raidActivityAge: number | null; raidReason: string; raidRisk: string; tenant: string; tier: string; username: string}>; generatedAt: string; tenants: Array<{combatUnitsNearCore?: number; enemyCores?: Array<{damageRank: number | null; distanceToFriendlyCore: number | null; lastSeenTick: number; position: Array<number>; raidActivityAge: number | null; raidReason: string; raidRisk: string; tier: string; username: string}>; enemyUnitMemory?: Array<{id?: string; lastSeenTick?: number; position?: Array<number>; unitType?: string}>; enemyUnitSightings?: number; enemyUnits?: number; ourCore?: Array<number> | null; raidActivityAge?: number | null; runId?: string | null; tenant?: string}>; totalEnemyCores: number};
 
 /** GET /api/intel/heat - window 100..50000; tenant validated */
 export interface GetIntelHeatParams {
@@ -214,7 +214,7 @@ export type GetIntelHeatResponse = {buckets: Array<Record<string, unknown>>; cac
 
 /** GET /api/leaderboard - stale >10min triggers background fetch (not awaited); 404 when snapshot missing */
 export interface GetLeaderboardParams {}
-export type GetLeaderboardResponse = Record<string, unknown>;
+export type GetLeaderboardResponse = {ageSeconds?: number; beacon_ticks_held?: Array<Record<string, unknown>>; core_destruction_participations?: Array<Record<string, unknown>>; damage_dealt?: Array<Record<string, unknown>>; encountered: {[key: string]: Array<{distanceToFriendlyCore?: number | null; lastSeenTick?: number | null; raidRisk?: string | null; tenant?: string}>}; encounteredCount: number; error?: string; generatedAt: string; ours: Array<{tenant?: string; username?: string}>; profiles: Array<{damage?: number; encountered?: Array<{distanceToFriendlyCore?: number | null; lastSeenTick?: number | null; raidRisk?: string | null; tenant?: string}> | null; ours?: string | null; rank?: number; tier?: string; username?: string}>; snapshot?: string; snapshotAt?: string; snapshotAtMs?: number; stale?: boolean};
 
 /** POST /api/leaderboard/refresh - request-driven refresh; 502 on fetch failure */
 export interface PostLeaderboardRefreshParams {}

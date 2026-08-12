@@ -4145,6 +4145,218 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "beacons": {
+                      "items": {
+                        "properties": {
+                          "carrierDist": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "carrierGuess": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "moving": {
+                            "type": "boolean"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          },
+                          "tick": {
+                            "type": "integer"
+                          },
+                          "x": {
+                            "type": "number"
+                          },
+                          "y": {
+                            "type": "number"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "enemies": {
+                      "items": {
+                        "properties": {
+                          "damageRank": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "distanceToFriendlyCore": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "lastSeenTick": {
+                            "type": "integer"
+                          },
+                          "position": {
+                            "items": {
+                              "type": "number"
+                            },
+                            "type": "array"
+                          },
+                          "raidActivityAge": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "raidReason": {
+                            "type": "string"
+                          },
+                          "raidRisk": {
+                            "type": "string"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          },
+                          "tier": {
+                            "type": "string"
+                          },
+                          "username": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "username",
+                          "position",
+                          "lastSeenTick",
+                          "tier",
+                          "damageRank",
+                          "distanceToFriendlyCore",
+                          "raidRisk",
+                          "raidReason",
+                          "raidActivityAge",
+                          "tenant"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "tenants": {
+                      "items": {
+                        "properties": {
+                          "combatUnitsNearCore": {
+                            "type": "integer"
+                          },
+                          "enemyCores": {
+                            "items": {
+                              "properties": {
+                                "damageRank": {
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "distanceToFriendlyCore": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "lastSeenTick": {
+                                  "type": "integer"
+                                },
+                                "position": {
+                                  "items": {
+                                    "type": "number"
+                                  },
+                                  "type": "array"
+                                },
+                                "raidActivityAge": {
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "raidReason": {
+                                  "type": "string"
+                                },
+                                "raidRisk": {
+                                  "type": "string"
+                                },
+                                "tier": {
+                                  "type": "string"
+                                },
+                                "username": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "username",
+                                "position",
+                                "lastSeenTick",
+                                "tier",
+                                "damageRank",
+                                "distanceToFriendlyCore",
+                                "raidRisk",
+                                "raidReason",
+                                "raidActivityAge"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "enemyUnitMemory": {
+                            "items": {
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "lastSeenTick": {
+                                  "type": "integer"
+                                },
+                                "position": {
+                                  "items": {
+                                    "type": "number"
+                                  },
+                                  "type": "array"
+                                },
+                                "unitType": {
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "enemyUnitSightings": {
+                            "type": "integer"
+                          },
+                          "enemyUnits": {
+                            "type": "integer"
+                          },
+                          "ourCore": {
+                            "items": {
+                              "type": "number"
+                            },
+                            "nullable": true,
+                            "type": "array"
+                          },
+                          "raidActivityAge": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "runId": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "totalEnemyCores": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenants",
+                    "enemies",
+                    "totalEnemyCores",
+                    "beacons"
+                  ],
                   "type": "object"
                 }
               }
@@ -4307,6 +4519,145 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "ageSeconds": {
+                      "type": "number"
+                    },
+                    "beacon_ticks_held": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "core_destruction_participations": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "damage_dealt": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "encountered": {
+                      "additionalProperties": {
+                        "items": {
+                          "properties": {
+                            "distanceToFriendlyCore": {
+                              "nullable": true,
+                              "type": "number"
+                            },
+                            "lastSeenTick": {
+                              "nullable": true,
+                              "type": "integer"
+                            },
+                            "raidRisk": {
+                              "nullable": true,
+                              "type": "string"
+                            },
+                            "tenant": {
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
+                      "type": "object"
+                    },
+                    "encounteredCount": {
+                      "type": "integer"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "ours": {
+                      "items": {
+                        "properties": {
+                          "tenant": {
+                            "type": "string"
+                          },
+                          "username": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "profiles": {
+                      "items": {
+                        "properties": {
+                          "damage": {
+                            "type": "number"
+                          },
+                          "encountered": {
+                            "items": {
+                              "properties": {
+                                "distanceToFriendlyCore": {
+                                  "nullable": true,
+                                  "type": "number"
+                                },
+                                "lastSeenTick": {
+                                  "nullable": true,
+                                  "type": "integer"
+                                },
+                                "raidRisk": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "tenant": {
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
+                            },
+                            "nullable": true,
+                            "type": "array"
+                          },
+                          "ours": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "rank": {
+                            "type": "number"
+                          },
+                          "tier": {
+                            "type": "string"
+                          },
+                          "username": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "snapshot": {
+                      "type": "string"
+                    },
+                    "snapshotAt": {
+                      "type": "string"
+                    },
+                    "snapshotAtMs": {
+                      "type": "number"
+                    },
+                    "stale": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "profiles",
+                    "ours",
+                    "encounteredCount",
+                    "encountered"
+                  ],
                   "type": "object"
                 }
               }

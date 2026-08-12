@@ -32,12 +32,14 @@ from ..jsonl import read_jsonl_tail
 from ..paths import resolve_data_root, telemetry_dir, validate_tenant, write_api_audit_path
 from ..projections import (
     AUDIT_SOURCES,
+    build_leaderboard_payload,
     list_arbitrations,
     load_alignment_audit,
     load_alliance_advice,
     load_alliance_cluster,
     load_alliance_defense,
     load_alliance_exploration,
+    load_alliance_intel,
     load_alliance_mining,
     load_alliance_snapshot,
     load_alliance_survey,
@@ -216,6 +218,8 @@ class CommandCenterApp:
             ("GET", "/api/audit/mining-effectiveness"): self._handle_mining_effectiveness,
             ("GET", "/api/audit/trail"): self._handle_audit_trail,
             ("GET", "/api/audit/workers"): self._handle_worker_liveness_audit,
+            ("GET", "/api/intel"): self._handle_intel,
+            ("GET", "/api/leaderboard"): self._handle_leaderboard,
             ("GET", "/api/intel/heat"): self._handle_enemy_heat,
             ("GET", "/api/shop/history"): self._handle_shop_history,
             ("GET", "/api/audit/human"): self._handle_audit_human,
@@ -555,6 +559,26 @@ class CommandCenterApp:
         del request, match
         window = _clamp_int(query, "window", 4000, 200, 20_000)
         return load_worker_liveness_audit(self._data_root, tenant or "all", window)
+
+    def _handle_intel(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        return load_alliance_intel(self._data_root, now_ms=self._now_ms())
+
+    def _handle_leaderboard(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        return build_leaderboard_payload(self._data_root, now_ms=self._now_ms())
 
     def _handle_enemy_heat(
         self,
