@@ -10,6 +10,15 @@
   `http://127.0.0.1:8120/alliance-director`（非投影移植项，运维接线，Python 部署无 8120）。
 - **W44 遗留**：三端点 Node golden 对拍（`run-arena-report` + `.golden.json`）待做；
   现为纯 Python fixture 级验证（`fixtures/cc_wiring/`，W25-A now_ms 注入 + fail-open 钉死）。
+- **W44 只读接线 SKIP（w44/cc-readonly，2026-08-12）**：
+  - `GET /api/leaderboard` 仍 SKIP：TS 路由在 `loadLeaderboardIntel` 之外做服务端富化
+    （`loadOurUsernames` = 各租户 calibration 受控 CORE 的 owner_username、`buildEncounteredIndex`
+    = 联盟敌人测绘遭遇索引，profiles 标注 `ours`/`encountered` + `encounteredCount`/`encountered`）；
+    Python 只有 buildIntel 主体，无 ours/encountered 移植。接线会输出缺字段 payload（非 1:1），
+    待两富化移植或契约裁决。
+  - `GET /api/audit/human` 仍 SKIP：manifest `tenant_param=tN`（fail-closed，默认 t1，
+    tenant=all/非法租户 400）vs TS 路由宽松语义（默认全租户、非法租户按全租户降级、不 400）——
+    租户降级语义不匹配，接线会在默认请求下返回 t1-only（TS 返回全量），需契约裁决。
 - **路由映射裁决（2026-08-12 captain）**：联盟探索覆盖 canonical 路由是
   `/api/alliance/exploration`（TS `loadAllianceExploration`）；`/api/exploration`
   （TS `loadTenantSurveyCached`：per-tenant survey+lifecycle+current）Python 未移植，

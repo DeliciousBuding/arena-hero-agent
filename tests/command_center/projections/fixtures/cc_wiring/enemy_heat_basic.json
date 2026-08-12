@@ -1,0 +1,54 @@
+{
+  "nowMs": 1752000000000,
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {
+          "run_id": "r1",
+          "tenant": "t1",
+          "cases_synced": 1,
+          "last_tick": 5000,
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "unitsSeen": [
+        {
+          "cell": "1,1,0",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4900,
+          "x": 1,
+          "y": 1
+        },
+        {
+          "cell": "1,1,1",
+          "unit_type": "VANGUARD",
+          "controlled": 0,
+          "tick": 4950,
+          "x": 1,
+          "y": 1
+        },
+        {
+          "cell": "20,20,0",
+          "unit_type": "WORKER",
+          "controlled": 0,
+          "tick": 4800,
+          "x": 20,
+          "y": 20
+        }
+      ]
+    },
+    "t2": {
+      "syncMeta": [],
+      "unitsSeen": []
+    },
+    "t3": {
+      "syncMeta": [],
+      "unitsSeen": []
+    },
+    "t4": {
+      "syncMeta": [],
+      "unitsSeen": []
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "nowMs": 1752000000000,
+  "shopHistory": [
+    {
+      "at": "2026-08-08T00:00:00Z",
+      "products": [
+        {
+          "id": "p1",
+          "name": "Item A",
+          "resourceCost": 100,
+          "availableStock": 5,
+          "purchaseLimit": 1
+        },
+        {
+          "id": "p2",
+          "name": "Item B",
+          "resourceCost": 50,
+          "availableStock": 10,
+          "purchaseLimit": 1
+        }
+      ]
+    },
+    {
+      "at": "2026-08-08T01:00:00Z",
+      "products": [
+        {
+          "id": "p1",
+          "name": "Item A",
+          "resourceCost": 120,
+          "availableStock": 3,
+          "purchaseLimit": 1
+        }
+      ]
+    }
+  ]
+}
