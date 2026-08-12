@@ -1,14 +1,19 @@
 # BLOCKED — W22 当前待办（2026-08-12）
 
-## 明确 SKIP（W19–W21 遗留，未做）
+## SKIP / 已解除（W44 更新，2026-08-12）
 
-- alliance exploration / director / survey-mining 端点：依赖未移植的
-  projection 或非领域读模型，Python Command Center 尚未实现（app 现仅
-  stream / map / map-lod / alliance-snapshot / alliance-defense /
-  alliance-advice；advice 已于 W25-A DONE）。
-- mapEngine / RedeemPanel / IntelPanel 调用方迁移：legacy 包装含 cookie 行为
-  （X-Shop-Cookie / localStorage，`web/src/lib/shopApi.ts`）且实际提交 I/O 仍在
-  mapEngine（~4300 行）内、无单测覆盖，迁移前需先建测试与 I/O 边界。
+- **alliance exploration / survey-mining → 已解除（W44，w44/cc-wiring 已合入）**：
+  `GET /api/exploration`、`GET /api/survey/mine-patterns`、`GET /api/alliance/survey/mining`
+  已接线（投影已移植；consensus-mining 新写纯 join），OpenAPI 200 schema + 28 测试，
+  main 门禁 1565 passed。
+- **director 端点仍 SKIP**：依赖外部 arena-agent supervisor Debug API
+  `http://127.0.0.1:8120/alliance-director`（非投影移植项，运维接线，Python 部署无 8120）。
+- **W44 遗留**：三端点 Node golden 对拍（`run-arena-report` + `.golden.json`）待做；
+  现为纯 Python fixture 级验证（`fixtures/cc_wiring/`，W25-A now_ms 注入 + fail-open 钉死）。
+- **mapEngine / RedeemPanel / IntelPanel 调用方迁移：继续 SKIP**（2026-08-12 Meitner 调查）：
+  目标写端点（`/api/command*`、`/api/shop/order`、`/api/redeem`）Python 后端全部 501
+  （P5-9 写门就绪但无实现），现在迁移会指向死 API；正确顺序 = 后端写端点落地 →
+  抽 mapEngine I/O 边界 + 补测试 → 前端调用方换生成 client。
 
 ## P3 观察（release-005 待修，2026-08-12 W43）
 

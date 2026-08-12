@@ -1,4 +1,4 @@
-# PROGRESS — W18–W25 收口（w25/advice 基线 main@f4ba3eb）
+# PROGRESS — W18–W25 + W44 收口
 
 > 状态：W18–W21 已合入 main 并 push；W25-A alliance advice 读模型移植在
 > `.worktrees/w25-advice`（分支 `w25/advice`）完成，待合入。本文档为收口摘要；
@@ -167,3 +167,19 @@
   healthy=True、source cancelled。
 - 门禁：`pytest -q` = **1525 passed**（基线 1524 + 1）；ruff check / format
   --check（267 files）/ ty check 全 PASS。版本保持 0.1.2（留给下一次扩展 release）。
+
+## W44 — Command Center 只读投影接线（w44/cc-wiring，2026-08-12）
+
+- 背景：Meitner 只读调查确认 projections/ 21 模块已移植但 app 仅挂 6 handler，
+  66 路由 60 条 501（含全部 16 写路由）。本 wave 只做只读低垂果实。
+- Commits：`3436c65`（wire GET /api/exploration）、`254933b`（wire GET
+  /api/survey/mine-patterns）、`975cbce`（consensus-mining 投影 + wire
+  /api/alliance/survey/mining）、`44b6501`（tsgen/golden 合规 + fixtures 隔离）、
+  docs 收口（BLOCKED/PROGRESS）。
+- 端点：3 条 501→200；OpenAPI 200 schema + openapi-v1.json 重新生成；
+  generated/ts/types.ts 同步（client.ts 路由集不变）。
+- 测试：新增 28（projections 13 + API 15）；main 合并后 `pytest -q` = **1565 passed**；
+  ruff format/check（274 files）、ty check、`git diff --check` 全 PASS。
+- 遗留：三端点 Node golden 对拍待做（fixtures/cc_wiring/ 保持 golden-pair 不变量）；
+  `/api/alliance/exploration` 仍 501（canonical route 为 alliance 前缀，待 captain 定映射）；
+  director SKIP；前端调用方迁移等后端写端点。
