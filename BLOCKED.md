@@ -10,7 +10,13 @@
   （X-Shop-Cookie / localStorage，`web/src/lib/shopApi.ts`）且实际提交 I/O 仍在
   mapEngine（~4300 行）内、无单测覆盖，迁移前需先建测试与 I/O 边界。
 
-## P3 观察（release-005 待修，2026-08-12 W41）
+## P3 观察（release-005 待修，2026-08-12 W43）
+
+- **submit 超时护栏已实现（main@3a482b5）**：`TickLoopConfig.submit_timeout_seconds`
+  （默认 None 离线不变，live 10s = 2x SDK 5s 超时），submit 超时记
+  `REJECTED("submit timed out")` 并受 `submit_error_policy` 控制——挂起的网络提交
+  不再可能永久阻塞 tick loop。decide/submit 非 SDK 异常 fail-closed 已用测试钉死。
+  架构约束与"为何不用外部 agent 框架"决策记录已写入 docs/architecture.md。
 
 - telemetry `processRunId` 恒 "unknown"（sink 默认值，offline/live 两路径一致；
   health 快照有真实 run id）——不影响数据完整性，随 release-005 修复。
