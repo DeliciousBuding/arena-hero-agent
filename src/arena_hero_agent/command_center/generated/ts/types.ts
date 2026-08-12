@@ -60,7 +60,7 @@ export type GetAllianceSurveyArbitrationsResponse = Record<string, unknown>;
 
 /** GET /api/alliance/survey/mining - GET /api/alliance/survey/mining */
 export interface GetAllianceSurveyMiningParams {}
-export type GetAllianceSurveyMiningResponse = Record<string, unknown>;
+export type GetAllianceSurveyMiningResponse = {cachedAt: string; colors: {[key: string]: string}; generatedAt: string; resources: Array<{assignedTenant?: string | null; cell?: string; gapAgeTicks?: number | null; miningStatus?: string | null; threatCombat?: number; threatLevel?: number; x?: number; y?: number}>; summary: {assigned: number; harvested: number; harvestedByOther: number; highThreat: number; open: number; stale: number; topStale: Array<Record<string, unknown>>}; tenantSummaries: {[key: string]: Record<string, unknown>}};
 
 /** GET /api/audit/alignment - GET /api/audit/alignment */
 export interface GetAuditAlignmentParams {}
@@ -191,7 +191,7 @@ export type GetEventsResponse = Record<string, unknown>;
 export interface GetExplorationParams {
   tenant?: Tenant;
 }
-export type GetExplorationResponse = Record<string, unknown>;
+export type GetExplorationResponse = {alliance: {coveragePct?: number | null; exclusiveByTenant: {[key: string]: number}; unionChunks: number; unionRecent: number}; cachedAt: string; gaps: Array<Record<string, unknown>>; generatedAt: string; perTenant: {[key: string]: Record<string, unknown>}; resurveyTargets: Array<Record<string, unknown>>; world: {chunkSize: number; coveragePct?: number | null; exploredChunks: number; observedSpan?: Record<string, unknown> | null; spanChunks: number}};
 
 /** GET /api/health/pipeline - may trigger background survey:sync when lag >60 ticks (debounced 60s, lock-guarded) */
 export interface GetHealthPipelineParams {}
@@ -331,7 +331,7 @@ export type GetSurveyMineResponse = Record<string, unknown>;
 export interface GetSurveyMinePatternsParams {
   tenant?: TenantWithAll;
 }
-export type GetSurveyMinePatternsResponse = Record<string, unknown>;
+export type GetSurveyMinePatternsResponse = {cachedAt: string; generatedAt: string; modelCaveat: string; tenant: string; tenants: {[key: string]: {absentStats?: Record<string, unknown> | null; avgAgeTicks?: number; deadMines?: Array<Record<string, unknown>>; harvestFailed?: number; harvestSucceeded?: number; harvestSuccessRate?: number | null; medianSeenCount?: number; predictionAccuracy?: number | null; predictions?: Array<Record<string, unknown>>; refill?: Record<string, unknown> | null; refillSource?: string; stale?: number; tenant?: string; topActive?: Array<Record<string, unknown>>; total?: number; visible?: number}}};
 
 /** GET /api/tenants - per-tenant live status from supervisor /ready probe; tenant colors */
 export interface GetTenantsParams {}

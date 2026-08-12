@@ -61,7 +61,11 @@ def test_consensus_mining_empty_root_returns_200_payload(tmp_path: Path) -> None
 def test_consensus_mining_fixture_root_returns_200_payload(tmp_path: Path) -> None:
     fixture = json.loads(
         (
-            Path(__file__).parents[1] / "projections" / "fixtures" / "consensus_mining_basic.json"
+            Path(__file__).parents[1]
+            / "projections"
+            / "fixtures"
+            / "cc_wiring"
+            / "consensus_mining_basic.json"
         ).read_text(encoding="utf-8")
     )
     materialize_advice_data_root(fixture, tmp_path)

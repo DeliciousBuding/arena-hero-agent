@@ -55,7 +55,11 @@ def test_exploration_empty_root_returns_200_payload(tmp_path: Path) -> None:
 def test_exploration_fixture_root_returns_200_payload(tmp_path: Path) -> None:
     fixture = json.loads(
         (
-            Path(__file__).parents[1] / "projections" / "fixtures" / "exploration_basic.json"
+            Path(__file__).parents[1]
+            / "projections"
+            / "fixtures"
+            / "cc_wiring"
+            / "exploration_basic.json"
         ).read_text(encoding="utf-8")
     )
     materialize_advice_data_root(fixture, tmp_path)

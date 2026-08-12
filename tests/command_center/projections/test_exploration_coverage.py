@@ -25,7 +25,7 @@ ISO_AT = "2025-07-08T18:40:00.000Z"
 
 
 def _load_fixture(name: str) -> dict:
-    path = Path(__file__).parent / "fixtures" / f"{name}.json"
+    path = Path(__file__).parent / "fixtures" / "cc_wiring" / f"{name}.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
 

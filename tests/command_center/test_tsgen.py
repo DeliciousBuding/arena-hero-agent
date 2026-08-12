@@ -29,7 +29,7 @@ from arena_hero_agent.command_center.api.tsgen import (
 TABLE = RouteTable()
 DOC = build_openapi(TABLE)
 
-GOLDEN_SHA256 = "fe1a9c865dc2c1eba655b0bf82765d8394fe0bf743d6be112819ebc1b0d63b5a"
+GOLDEN_SHA256 = "2bf8fc0b963c62a4b92345f42fce6f436c258580b2e9473679c71020350a6c8d"
 
 
 def _artifact_hash(artifacts: dict[str, str]) -> str:
