@@ -1,0 +1,136 @@
+{
+  "nowMs": 1752000000000,
+  "worlds": {
+    "t1": {
+      "tick": 5000,
+      "state": {
+        "objects": [
+          {
+            "id": "core-t1",
+            "kind": "CORE",
+            "controlled": true,
+            "position": [
+              0,
+              0
+            ],
+            "hp": 500,
+            "shield": 0
+          }
+        ],
+        "status": "ACTIVE",
+        "resources": 10,
+        "population": 1
+      }
+    }
+  },
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {
+          "run_id": "r1",
+          "tenant": "t1",
+          "cases_synced": 1,
+          "last_tick": 5000,
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "agents": [
+        {
+          "tenant": "t1",
+          "instance": "a1",
+          "tick": 5000,
+          "resources": 8,
+          "population": 1,
+          "core_x": 0,
+          "core_y": 0,
+          "units": 1,
+          "visible_enemies": 0,
+          "status": "ACTIVE",
+          "sdk_version": "x",
+          "base_url": "http://x",
+          "pid": 1,
+          "platform": "test",
+          "mode": "production",
+          "connection_state": "up",
+          "first_seen": "2025-07-08T18:00:00Z",
+          "last_heartbeat": "2025-07-08T18:40:00Z",
+          "updated_at": "2025-07-08T18:40:00Z"
+        }
+      ],
+      "resources": [
+        {
+          "cell": "10,10",
+          "x": 10,
+          "y": 10,
+          "first_seen_tick": 1000,
+          "last_seen_tick": 4900,
+          "state": "visible",
+          "last_state_tick": 4900,
+          "seen_count": 6
+        }
+      ],
+      "resourceEvents": [
+        {
+          "cell": "10,10",
+          "tick": 3000,
+          "event_type": "HARVEST_FAILED",
+          "reason_code": null,
+          "amount": null,
+          "actor_id": "w1"
+        }
+      ],
+      "resourceSeenHistory": [
+        {
+          "cell": "10,10",
+          "tick": 1000
+        },
+        {
+          "cell": "10,10",
+          "tick": 1001
+        },
+        {
+          "cell": "10,10",
+          "tick": 1002
+        },
+        {
+          "cell": "10,10",
+          "tick": 4000
+        },
+        {
+          "cell": "10,10",
+          "tick": 4001
+        },
+        {
+          "cell": "10,10",
+          "tick": 4002
+        }
+      ],
+      "chunks": [
+        {
+          "chunk_key": "0,0",
+          "last_seen_tick": 1000
+        }
+      ],
+      "coreHunts": [
+        {
+          "cell": "100,100",
+          "x": 100,
+          "y": 100,
+          "owner": "raider",
+          "source": "CORE",
+          "first_seen_tick": 1000,
+          "last_seen_tick": 2000
+        },
+        {
+          "cell": "50,50",
+          "x": 50,
+          "y": 50,
+          "owner": "raider",
+          "source": "CORE",
+          "first_seen_tick": 2000,
+          "last_seen_tick": 3000
+        }
+      ]
+    }
+  }
+}

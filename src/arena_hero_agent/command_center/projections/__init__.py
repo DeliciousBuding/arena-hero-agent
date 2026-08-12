@@ -29,6 +29,7 @@ from .conflicts import DEFAULT_WINDOW as CONFLICT_DEFAULT_WINDOW
 from .conflicts import aggregate_human_conflict, load_human_conflict
 from .consensus_mining import enrich_consensus_mining, load_consensus_mining
 from .core_trails import load_core_trails_from_survey_db
+from .decision_input import build_decision_input, load_decision_input
 from .decisions import (
     DECISION_TREND_STEPS,
     DECISION_TREND_WINDOW,
@@ -130,6 +131,7 @@ __all__ = [
     "arbitration_file",
     "assign_alliance_mining",
     "cluster_input_of_members",
+    "build_decision_input",
     "load_alliance_cluster",
     "load_alliance_mining",
     "build_alliance_cluster_view",
@@ -141,6 +143,7 @@ __all__ = [
     "load_arbitrations",
     "load_audit_trail",
     "load_decision_audit",
+    "load_decision_input",
     "load_events",
     "load_decision_trend",
     "load_human_audit",

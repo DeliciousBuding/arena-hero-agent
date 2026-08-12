@@ -314,7 +314,7 @@ export type GetSurveyResponse = Record<string, unknown>;
 export interface GetSurveyDecisionInputParams {
   tenant?: Tenant;
 }
-export type GetSurveyDecisionInputResponse = Record<string, unknown>;
+export type GetSurveyDecisionInputResponse = {cachedAt: string; chunkCoverage: Array<Record<string, unknown>>; coreThreats: Array<Record<string, unknown>>; currentTick: number | null; generatedAt: string; miningCandidates: Array<Record<string, unknown>>; refillPredictions: Array<Record<string, unknown>>; resurveyTargets: Array<Record<string, unknown>>; tenant: string};
 
 /** GET /api/survey/enemy-cores - core_hunts readOnly per tenant + alliance snapshot */
 export interface GetSurveyEnemyCoresParams {}

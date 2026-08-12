@@ -43,6 +43,7 @@ from ..projections import (
     load_audit_trail,
     load_consensus_mining,
     load_decision_audit,
+    load_decision_input,
     load_decision_trend,
     load_enemy_cores,
     load_enemy_heat,
@@ -215,6 +216,7 @@ class CommandCenterApp:
             ("GET", "/api/alliance/cluster"): self._handle_alliance_cluster,
             ("GET", "/api/alliance/mining"): self._handle_alliance_mining,
             ("GET", "/api/registry/agents"): self._handle_registry_agents,
+            ("GET", "/api/survey/decision-input"): self._handle_decision_input,
             ("GET", "/api/survey/mine"): self._handle_survey_mine,
             ("GET", "/api/survey/enemy-cores"): self._handle_enemy_cores,
             ("GET", "/api/events"): self._handle_events,
@@ -631,6 +633,16 @@ class CommandCenterApp:
             item["keys"] = [asdict(key) for key in raw_keys]
             serialized.append(item)
         return {"generatedAt": iso_utc(self._now_ms()), "agents": serialized}
+
+    def _handle_decision_input(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query
+        return load_decision_input(self._data_root, tenant or "t1", now_ms=self._now_ms())
 
     def _handle_survey_mine(
         self,

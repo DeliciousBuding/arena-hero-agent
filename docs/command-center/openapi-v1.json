@@ -4591,6 +4591,62 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "chunkCoverage": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "coreThreats": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "currentTick": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "miningCandidates": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "refillPredictions": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "resurveyTargets": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenant",
+                    "currentTick",
+                    "refillPredictions",
+                    "chunkCoverage",
+                    "resurveyTargets",
+                    "coreThreats",
+                    "miningCandidates",
+                    "cachedAt"
+                  ],
                   "type": "object"
                 }
               }

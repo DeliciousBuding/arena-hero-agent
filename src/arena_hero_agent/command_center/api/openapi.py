@@ -169,6 +169,31 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
         },
         "required": ["tenant", "generatedAt", "state", "caseFile"],
     },
+    ("GET", "/api/survey/decision-input"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenant": _STR,
+            "currentTick": _NULLABLE_INT,
+            "refillPredictions": {"type": "array", "items": _OBJ},
+            "chunkCoverage": {"type": "array", "items": _OBJ},
+            "resurveyTargets": {"type": "array", "items": _OBJ},
+            "coreThreats": {"type": "array", "items": _OBJ},
+            "miningCandidates": {"type": "array", "items": _OBJ},
+            "cachedAt": _STR,
+        },
+        "required": [
+            "generatedAt",
+            "tenant",
+            "currentTick",
+            "refillPredictions",
+            "chunkCoverage",
+            "resurveyTargets",
+            "coreThreats",
+            "miningCandidates",
+            "cachedAt",
+        ],
+    },
     ("GET", "/api/survey/mine"): {
         "type": "object",
         "properties": {
