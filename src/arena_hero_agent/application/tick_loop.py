@@ -230,6 +230,7 @@ class TickLoopConfig:
     max_reconnects: int = 3
     continue_on_gap: bool = True
     continue_on_selection_timeout: bool = False
+    continue_on_stream_ended: bool = False
     submit_error_policy: SubmitErrorPolicy = SubmitErrorPolicy.CONTINUE
     backoff: Backoff = field(default_factory=lambda: exponential_backoff)
     clock: Clock = field(default_factory=SystemClock)
@@ -247,6 +248,8 @@ class TickLoopConfig:
             raise TypeError("continue_on_gap must be a boolean")
         if not isinstance(self.continue_on_selection_timeout, bool):
             raise TypeError("continue_on_selection_timeout must be a boolean")
+        if not isinstance(self.continue_on_stream_ended, bool):
+            raise TypeError("continue_on_stream_ended must be a boolean")
         if not isinstance(self.submit_error_policy, SubmitErrorPolicy):
             raise TypeError("submit_error_policy must be a SubmitErrorPolicy")
 
@@ -320,6 +323,21 @@ class SingleTenantTickLoop:
                 try:
                     observation = await stream.__anext__()
                 except StopAsyncIteration:
+                    if config.continue_on_stream_ended and reconnect_count < config.max_reconnects:
+                        # Live resilience: a clean stream end (e.g. the SDK
+                        # websocket closing with code 1000) is a reopenable
+                        # boundary, not a terminal session. Reopen the source
+                        # and resume from the last observed tick so the live
+                        # writer survives session rotation. Offline replays
+                        # keep the default fail-closed STREAM_ENDED behavior.
+                        reconnect_count += 1
+                        delay = config.backoff(reconnect_count)
+                        if delay > 0:
+                            await asyncio.sleep(delay)
+                        await _close_iterator(stream)
+                        stream = source.stream()
+                        stream_open = True
+                        continue
                     stopped_reason = StoppedReason.STREAM_ENDED
                     break
                 except asyncio.CancelledError:

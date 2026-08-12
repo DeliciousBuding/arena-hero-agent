@@ -427,3 +427,63 @@ def test_tick_result_rejects_inconsistent_submit_state() -> None:
             submit_result=SubmitResult.ACCEPTED,
             submit_error="unexpected",
         )
+
+
+async def test_stream_ended_reopens_when_configured() -> None:
+    source = ScriptedTickSource(
+        (_observation(1), _observation(2)),
+        (_observation(3), _observation(4)),
+    )
+    decider = RecordingDecider()
+    loop = SingleTenantTickLoop(replace(_config(), continue_on_stream_ended=True))
+
+    result = await loop.run(source, decider, RecordingSubmitter())
+
+    assert result.ticks_processed == 4
+    assert result.last_tick == 4
+    # The reopened stream ends and empty reopen attempts consume the bounded
+    # reconnect budget too (fail-safe against an immediately-ending source).
+    assert result.reconnect_count == 3
+    assert result.stopped_reason is StoppedReason.STREAM_ENDED
+    assert [obs.tick for obs, _ in decider.calls] == [1, 2, 3, 4]
+    assert source.stream_calls == 4
+    assert [outcome.tick for outcome in result.outcomes] == [1, 2, 3, 4]
+
+
+async def test_stream_ended_reopen_respects_max_reconnects() -> None:
+    source = ScriptedTickSource(
+        (_observation(1),),
+        (_observation(2),),
+        (_observation(3),),
+        (_observation(4),),
+        (_observation(5),),
+    )
+    loop = SingleTenantTickLoop(replace(_config(), continue_on_stream_ended=True, max_reconnects=2))
+
+    result = await loop.run(source, RecordingDecider(), RecordingSubmitter())
+
+    assert result.ticks_processed == 3
+    assert result.last_tick == 3
+    assert result.reconnect_count == 2
+    assert result.stopped_reason is StoppedReason.STREAM_ENDED
+    assert source.stream_calls == 3
+
+
+async def test_stream_ended_reopen_dedupes_replayed_tail() -> None:
+    source = ScriptedTickSource(
+        (_observation(1), _observation(2)),
+        (_observation(2), _observation(3)),
+    )
+    loop = SingleTenantTickLoop(replace(_config(), continue_on_stream_ended=True))
+
+    result = await loop.run(source, RecordingDecider(), RecordingSubmitter())
+
+    assert result.ticks_processed == 3
+    assert result.duplicate_ticks == 1
+    assert result.last_tick == 3
+    assert result.reconnect_count == 3
+
+
+def test_continue_on_stream_ended_must_be_bool() -> None:
+    with pytest.raises(TypeError, match="continue_on_stream_ended"):
+        replace(_config(), continue_on_stream_ended="yes")  # type: ignore[arg-type]

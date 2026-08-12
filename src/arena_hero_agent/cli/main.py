@@ -1044,6 +1044,11 @@ async def _execute_live(
                 # record the selection timeout and keep collecting instead of
                 # ending the whole session (availability over fail-closed).
                 continue_on_selection_timeout=True,
+                # A clean upstream stream end must also reopen: the SDK
+                # returns on websocket code 1000 without reconnecting, so
+                # the agent reopens the source to keep the live writer up
+                # across session rotation.
+                continue_on_stream_ended=True,
             ),
             recorder=recorder,
             telemetry=sink,
