@@ -37,6 +37,7 @@ from arena_hero_agent.command_center.projections import (
     aggregate_worker_liveness,
     assign_alliance_mining,
     build_alliance_cluster_view,
+    build_alliance_defense_payload,
     load_arbitrations,
     load_human_audit,
     merge_audit_trails,
@@ -144,6 +145,13 @@ def _run_python(name: str, fixture: dict[str, Any]) -> object:
     if name == "alliance_cluster_basic":
         return build_alliance_cluster_view(
             [dict(item) for item in fixture["input"]], int(fixture["nowMs"])
+        )
+    if name == "alliance_defense_basic":
+        return build_alliance_defense_payload(
+            members=dict(fixture["members"]),
+            sightings=[dict(item) for item in fixture["sightings"]],
+            threat_summaries=[dict(item) for item in fixture["threatSummaries"]],
+            now_ms=int(fixture["nowMs"]),
         )
     if name == "alliance_mining_basic":
         return assign_alliance_mining(
@@ -255,6 +263,7 @@ def _run_python(name: str, fixture: dict[str, Any]) -> object:
 
 CASES = [
     "alliance_cluster_basic",
+    "alliance_defense_basic",
     "alliance_intel_basic",
     "alliance_mining_basic",
     "alliance_snapshot_basic",

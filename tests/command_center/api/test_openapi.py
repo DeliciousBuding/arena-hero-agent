@@ -220,6 +220,43 @@ def test_main_endpoint_response_schemas_have_real_fields() -> None:
     assert "maxDirect" in snapshot["properties"]["threat"]["properties"]
     assert snapshot["properties"]["threat"]["properties"]["maxDirect"]["nullable"] is True
 
+    defense = DOC["paths"]["/api/alliance/defense"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
+    assert set(defense["properties"]) == {"generatedAtMs", "advice", "endangered", "pockets"}
+    assert defense["required"] == ["generatedAtMs", "advice", "endangered", "pockets"]
+    advice_item = defense["properties"]["advice"]["items"]
+    assert set(advice_item["properties"]) == {
+        "id",
+        "category",
+        "severity",
+        "title",
+        "detail",
+        "tenant",
+        "relatedTenants",
+        "evidence",
+    }
+    assert set(advice_item["properties"]["evidence"]["items"]["properties"]) == {
+        "label",
+        "value",
+    }
+    assert set(defense["properties"]["endangered"]["items"]["properties"]) == {
+        "tenantId",
+        "military",
+        "threatScore",
+    }
+    pocket_item = defense["properties"]["pockets"]["items"]
+    assert set(pocket_item["properties"]) == {
+        "id",
+        "centroid",
+        "enemyCores",
+        "threatenedTenants",
+        "minDistance",
+    }
+    assert (
+        pocket_item["properties"]["enemyCores"]["items"]["properties"]["owner"]["nullable"] is True
+    )
+
 
 def test_committed_document_is_valid_json_object() -> None:
     parsed = json.loads(OPENAPI_PATH.read_text(encoding="utf-8"))
