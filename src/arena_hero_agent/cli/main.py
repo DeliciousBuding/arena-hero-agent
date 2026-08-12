@@ -9,6 +9,17 @@ P4-7 implements the offline process contract:
 - ``arena-hero-agent health --tenant <id> ...`` reads that snapshot and
   reports ready/not-ready through its exit code.
 
+P4-20 makes the runtime a deterministic offline contestant that Lab can
+consume in bulk:
+
+- every successful ``run`` persists a content-addressed ``manifest.json``
+  (per-artifact and combined SHA-256 digests over health, telemetry, and
+  ticks with non-semantic timestamps stripped);
+- ``arena-hero-agent batch --input-dir <dir> ...`` replays every regular file
+  in a directory as one scenario with a stable ``scenario-<name>-seed-<n>``
+  run id, writing each scenario under ``<data-root>/<run-id>/<tenant>/``;
+- explicit duplicate run ids fail closed before any artifact is written.
+
 Safety contract: this module never reads credentials or environment secrets,
 never opens network connections, never submits to a live game API, and never
 accepts an API key. Errors are reported as fixed safe summaries; health output
@@ -24,7 +35,7 @@ import json
 import re
 import signal
 import sys
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -51,7 +62,12 @@ from arena_hero_agent.application import (
     TickSource,
 )
 from arena_hero_agent.application.turns import TurnObservation
-from arena_hero_agent.domain import DeadlineBudget, TenantId
+from arena_hero_agent.cli.canonical import (
+    MANIFEST_FILENAME,
+    build_manifest,
+    read_manifest,
+)
+from arena_hero_agent.domain import DeadlineBudget, TenantId, canonical_sha256
 
 PROG = "arena-hero-agent"
 
@@ -68,6 +84,8 @@ DEFAULT_MAX_RECONNECTS = 3
 SHUTDOWN_TIMEOUT_SECONDS = 5.0
 HEALTH_FILENAME = "health.json"
 TELEMETRY_FILENAME = "telemetry.jsonl"
+BATCH_RUN_ID_PREFIX = "scenario-"
+BATCH_RUN_ID_SEED_MARKER = "-seed-"
 
 _SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 _SAFE_COMPONENT_MESSAGES = frozenset(
@@ -229,6 +247,10 @@ def _telemetry_path(data_root: str | Path, tenant: TenantId) -> Path:
     return _tenant_dir(data_root, tenant) / TELEMETRY_FILENAME
 
 
+def _manifest_path(data_root: str | Path, tenant: TenantId) -> Path:
+    return _tenant_dir(data_root, tenant) / MANIFEST_FILENAME
+
+
 def _parse_tenant(value: str) -> TenantId | None:
     try:
         return TenantId(value)
@@ -258,6 +280,18 @@ def _write_health(path: Path, health: HealthSnapshot) -> None:
         path.write_text(payload + "\n", encoding="utf-8")
     except OSError:
         _print_error("health snapshot could not be written")
+
+
+def _write_manifest(path: Path, manifest: dict[str, object]) -> bool:
+    """Persist a run manifest; returns False when the artifact is incomplete."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True)
+        path.write_text(payload + "\n", encoding="utf-8")
+        return True
+    except OSError:
+        _print_error("run manifest could not be written")
+        return False
 
 
 async def _bounded(operation: Awaitable[None], timeout: float) -> None:
@@ -307,6 +341,11 @@ async def _execute_run(
     except (ReplayError, OSError):
         _print_error("replay input could not be loaded")
         return EXIT_ERROR
+    if args.run_id is not None:
+        existing = read_manifest(_manifest_path(args.data_root, tenant))
+        if existing is not None and existing.get("runId") == args.run_id:
+            _print_error("run id conflict: run id already recorded for this tenant")
+            return EXIT_ERROR
 
     factory = source_factory if source_factory is not None else ReplayTickSource
     source = factory(observations)
@@ -362,11 +401,23 @@ async def _execute_run(
         if callable(close_source):
             close_source()
 
-    health = _health_from_snapshot(runtime.snapshot(), completed=completed)
+    snapshot = runtime.snapshot()
+    health = _health_from_snapshot(snapshot, completed=completed)
     _write_health(_health_path(args.data_root, tenant), health)
     if cancelled:
         raise asyncio.CancelledError
     if completed:
+        manifest_ok = _write_manifest(
+            _manifest_path(args.data_root, tenant),
+            build_manifest(
+                _tenant_dir(args.data_root, tenant),
+                tenant_id=tenant.value,
+                run_id=snapshot.run_id,
+                process_run_id=snapshot.process_run_id,
+            ),
+        )
+        if not manifest_ok:
+            return EXIT_ERROR
         _print_health(health)
         return EXIT_OK
     _print_error("run failed")
@@ -415,23 +466,11 @@ def _exit_code_for_signal(signum: int | None) -> int:
     return EXIT_INTERRUPT
 
 
-async def _run_async(
-    args: argparse.Namespace,
-    *,
-    shutdown_timeout: float = SHUTDOWN_TIMEOUT_SECONDS,
-    state: RunState | None = None,
-    source_factory: Callable[[tuple[TurnObservation, ...]], TickSource] | None = None,
-) -> int:
+async def _run_cancellable(operation: Callable[[], Coroutine[Any, Any, int]]) -> int:
+    """Run one async CLI operation with bounded SIGINT/SIGTERM handling."""
     loop = asyncio.get_running_loop()
     requests: list[int] = []
-    run_task = asyncio.create_task(
-        _execute_run(
-            args,
-            shutdown_timeout=shutdown_timeout,
-            state=state,
-            source_factory=source_factory,
-        )
-    )
+    run_task = asyncio.create_task(operation())
 
     def _on_signal(signum: int) -> None:
         requests.append(signum)
@@ -447,6 +486,23 @@ async def _run_async(
         return _exit_code_for_signal(requests[-1] if requests else None)
     finally:
         _restore_signal_handlers(installed)
+
+
+async def _run_async(
+    args: argparse.Namespace,
+    *,
+    shutdown_timeout: float = SHUTDOWN_TIMEOUT_SECONDS,
+    state: RunState | None = None,
+    source_factory: Callable[[tuple[TurnObservation, ...]], TickSource] | None = None,
+) -> int:
+    return await _run_cancellable(
+        lambda: _execute_run(
+            args,
+            shutdown_timeout=shutdown_timeout,
+            state=state,
+            source_factory=source_factory,
+        )
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -498,6 +554,54 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="ID",
         help="optional stable run identifier (safe identifier characters only)",
+    )
+
+    batch_parser = subparsers.add_parser(
+        "batch",
+        help="run one offline replay per input file with deterministic scenario run ids",
+    )
+    batch_parser.add_argument(
+        "--input-dir",
+        required=True,
+        metavar="DIR",
+        help="directory of replay inputs; each regular file is one scenario",
+    )
+    batch_parser.add_argument("--tenant", required=True, metavar="ID", help="tenant id")
+    batch_parser.add_argument(
+        "--data-root",
+        default=DEFAULT_DATA_ROOT,
+        metavar="PATH",
+        help=(
+            "output root: one <run-id>/<tenant>/ directory per scenario "
+            f"(default: {DEFAULT_DATA_ROOT})"
+        ),
+    )
+    batch_parser.add_argument(
+        "--backend",
+        default=RecorderBackend.JSONL.value,
+        choices=[backend.value for backend in RecorderBackend],
+        help="recorder backend (default: jsonl)",
+    )
+    batch_parser.add_argument(
+        "--tick-budget-ms",
+        type=int,
+        default=DEFAULT_TICK_BUDGET_MS,
+        metavar="MS",
+        help="per-tick deadline budget in milliseconds (default: 100)",
+    )
+    batch_parser.add_argument(
+        "--max-reconnects",
+        type=int,
+        default=DEFAULT_MAX_RECONNECTS,
+        metavar="N",
+        help="stream reopen bound (default: 3)",
+    )
+    batch_parser.add_argument(
+        "--seed",
+        type=int,
+        default=0,
+        metavar="N",
+        help="stable seed folded into each derived scenario run id (default: 0)",
     )
 
     health_parser = subparsers.add_parser(
@@ -562,12 +666,136 @@ def run_command(args: argparse.Namespace) -> int:
         return EXIT_INTERRUPT
 
 
+def _derive_scenario_run_id(stem: str, seed: int) -> str | None:
+    """Derive a stable scenario run id from a filename stem and a seed.
+
+    The result follows the ``scenario-<name>-seed-<n>`` shape and satisfies the
+    ``_SAFE_RUN_ID`` contract. Returns ``None`` when the stem cannot produce a
+    safe identifier (for example an empty result after cleaning).
+    """
+    if isinstance(seed, bool) or seed < 0:
+        return None
+    cleaned = re.sub(r"[^A-Za-z0-9._:-]", "-", stem)
+    cleaned = re.sub(r"-{2,}", "-", cleaned).strip("-").lstrip("._:-")
+    if not cleaned:
+        return None
+    suffix = f"{BATCH_RUN_ID_SEED_MARKER}{seed}"
+    limit = 128 - len(BATCH_RUN_ID_PREFIX) - len(suffix)
+    if len(cleaned) > limit:
+        tail = canonical_sha256(stem)[:8]
+        cleaned = f"{cleaned[: max(0, limit - 8)]}{tail}"
+    run_id = f"{BATCH_RUN_ID_PREFIX}{cleaned}{suffix}"
+    if _SAFE_RUN_ID.fullmatch(run_id) is None:
+        return None
+    return run_id
+
+
+def _plan_batch(
+    args: argparse.Namespace,
+) -> tuple[list[argparse.Namespace], str | None]:
+    """Validate a batch request and build one run namespace per scenario.
+
+    Returns ``(scenarios, None)`` on success or ``([], message)`` when any
+    validation fails. Every check runs before any scenario executes, so a bad
+    batch never leaves partial artifacts behind.
+    """
+    tenant = _parse_tenant(args.tenant)
+    if tenant is None:
+        return [], "invalid tenant id"
+    if isinstance(args.seed, bool) or args.seed < 0:
+        return [], "seed must be a non-negative integer"
+    backend = _parse_backend(args.backend)
+    if backend is None:
+        return [], "invalid recorder backend"
+    if isinstance(args.tick_budget_ms, bool) or args.tick_budget_ms <= 0:
+        return [], "tick budget must be a positive integer"
+    if isinstance(args.max_reconnects, bool) or args.max_reconnects < 0:
+        return [], "max reconnects must be a non-negative integer"
+    input_dir = Path(args.input_dir)
+    if not input_dir.is_dir():
+        return [], "input directory not found"
+    files = sorted(path for path in input_dir.iterdir() if path.is_file())
+    if not files:
+        return [], "no scenario inputs found in input directory"
+    run_ids: dict[str, str] = {}
+    scenarios: list[argparse.Namespace] = []
+    for path in files:
+        run_id = _derive_scenario_run_id(path.stem, args.seed)
+        if run_id is None:
+            return [], f"scenario file cannot produce a safe run id: {path.name}"
+        if run_id in run_ids:
+            return [], f"run id conflict: multiple scenario files map to run id {run_id!r}"
+        run_ids[run_id] = path.name
+        try:
+            load_observations(path)
+        except (ReplayError, OSError):
+            return [], f"replay input could not be loaded: {path.name}"
+        scenario_root = Path(args.data_root) / run_id
+        existing = read_manifest(scenario_root / tenant.value / MANIFEST_FILENAME)
+        if existing is not None and existing.get("runId") == run_id:
+            return [], "run id conflict: run id already recorded for this tenant"
+        scenarios.append(
+            argparse.Namespace(
+                command="run",
+                tenant=args.tenant,
+                input=str(path),
+                data_root=str(scenario_root),
+                backend=args.backend,
+                tick_budget_ms=args.tick_budget_ms,
+                max_reconnects=args.max_reconnects,
+                run_id=run_id,
+            )
+        )
+    return scenarios, None
+
+
+async def _execute_scenarios(
+    scenarios: Sequence[argparse.Namespace],
+    *,
+    shutdown_timeout: float,
+) -> int:
+    """Execute scenarios in sorted order, aborting on the first failure."""
+    completed = 0
+    for scenario in scenarios:
+        code = await _execute_run(scenario, shutdown_timeout=shutdown_timeout)
+        if code != EXIT_OK:
+            _print_error(f"batch failed at scenario {scenario.run_id}")
+            return EXIT_ERROR
+        completed += 1
+        print(f"scenario {scenario.run_id}: ok")
+    print(f"batch: {completed} scenario(s) completed")
+    return EXIT_OK
+
+
+async def _run_batch_async(
+    args: argparse.Namespace,
+    *,
+    shutdown_timeout: float = SHUTDOWN_TIMEOUT_SECONDS,
+) -> int:
+    scenarios, error = _plan_batch(args)
+    if error is not None:
+        _print_error(error)
+        return EXIT_ERROR
+    return await _run_cancellable(
+        lambda: _execute_scenarios(scenarios, shutdown_timeout=shutdown_timeout)
+    )
+
+
+def batch_command(args: argparse.Namespace) -> int:
+    try:
+        return asyncio.run(_run_batch_async(args))
+    except KeyboardInterrupt:
+        return EXIT_INTERRUPT
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     try:
         if args.command == "run":
             return run_command(args)
+        if args.command == "batch":
+            return batch_command(args)
         return health_command(args)
     except KeyboardInterrupt:
         return EXIT_INTERRUPT
@@ -594,6 +822,7 @@ __all__ = [
     "PROG",
     "RunState",
     "WaitDecider",
+    "batch_command",
     "build_parser",
     "console_entrypoint",
     "health_command",
