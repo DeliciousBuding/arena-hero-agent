@@ -26,12 +26,45 @@
     缺该数据源，profiles `encountered`/`encounteredCount`/`encountered` 无法 1:1 补出，不硬凑。
 - **路由映射裁决（2026-08-12 captain）**：联盟探索覆盖 canonical 路由是
   `/api/alliance/exploration`（TS `loadAllianceExploration`）；`/api/exploration`
-  （TS `loadTenantSurveyCached`：per-tenant survey+lifecycle+current）Python 未移植，
-  保持 501（已注册+校验，非 404），待后续 port。
+  （TS `loadTenantSurveyCached`：per-tenant survey+lifecycle+current）**已接线**
+  （w44/cc-wave6，2026-08-12）——wave-6 survey-db 数据源落地后按 pre-ruling 解除。
 - **mapEngine / RedeemPanel / IntelPanel 调用方迁移：继续 SKIP**（2026-08-12 Meitner 调查）：
   目标写端点（`/api/command*`、`/api/shop/order`、`/api/redeem`）Python 后端全部 501
   （P5-9 写门就绪但无实现），现在迁移会指向死 API；正确顺序 = 后端写端点落地 →
   抽 mapEngine I/O 边界 + 补测试 → 前端调用方换生成 client。
+
+
+
+## W44 第六波只读接线（w44/cc-wave6，2026-08-12）
+
+survey-db 数据源扩展 + 三路由接线（needs-new-data-source 关闭）：
+
+- **AGENT_SCHEMA 扩展（additive only）**：补齐 TS survey-db 缺失 8 表
+  （`sync_meta`/`unit_lifecycle`/`core_spends`/`resource_events`/`chunks`/
+  `heat_archive`/`resource_absences`/`notable_events`，列类型/default 与
+  `advice_fixture.SURVEY_SCHEMA` 逐列一致）+ `idx_units_seen_controlled_tick`；
+  `CREATE TABLE IF NOT EXISTS` 非破坏，存量库照常打开；新增 schema-parity 测试。
+- `GET /api/audit/lifecycle` **501 → 200**（needs-new-data-source 关闭）：
+  `lifecycle.py` 移植 `aggregateLifecycle` + `loadLifecycleAudit`
+  （calibration case 事件聚合 + survey-db `unit_lifecycle`/`core_spends`/
+  `notable_events` 回填）；`?tenant=all|tN` 默认 all；空根 fail-open 200
+  （TS 空 payload，不 500）；OpenAPI 200 oneOf schema + 8 测试。
+- `GET /api/survey` **501 → 200**（needs-new-data-source 关闭）：
+  `survey.py` 移植 `loadSurveyDb`/`loadChunksDb`/`loadLifecycleDb`/
+  `loadSpendTrend`/`loadUnitLifecycleDb` + `loadTenantSurveyCached` 与逐租户
+  组合（`?tenant=all|tN` 默认 all、`?states=visible,stale` 过滤、colors）；
+  缺库 = 逐租户 `{error: "survey db missing"}`（TS parity）；OpenAPI 200 + 13 测试。
+- `GET /api/exploration` **501 → 200**（2026-08-12 captain pre-ruling 解除：
+  “数据源存在即接线”）：`exploration.py` = `loadTenantSurveyCached` + 缺库
+  calibration-scan 回退（TS `loadSurvey`）+ `loadWorld` current 子集；
+  全缺 = `{tenant, generatedAt, survey: null}` fail-open；OpenAPI 200 + 路由测试。
+- `GET /api/audit/overview` **仍不接线**：lifecycle 输入现已可用，但 8120
+  supervisor pipeline 输入仍未移植（`loadAuditOverview` 组合含管线健康），
+  维持 SKIP，缺口精确记录于下表。
+- `advice_fixture.py` 物化器补 `unit_lifecycle`/`core_spends`/`notable_events`/
+  `agent_events` 表写入（TABLE_MAP 扩展），供 fixture/golden 物化。
+- OpenAPI 200 schema 三路由 + `openapi-v1.json` + 生成 TS client/types
+  （tsgen hash pin）已同步；baseline 1732 → 1753 passed。
 
 
 ## W44 第五波只读接线（w44/cc-wave5，2026-08-12）
@@ -75,10 +108,10 @@ wave-3 标为 needs-small-loader 的 6 条 + decision-input 全部接线（501�
 
 ### 跳过的（wave-4 范围内）
 
-无。6 条 needs-small-loader + decision-input 全部接线。其余 SKIP（leaderboard / audit-alignment /
-deeds / journal / audit-lifecycle / audit-overview / intel / health-pipeline / replay / tenants /
-agents / survey / exploration / shop / me / orders / commands / director）维持 wave-3 分类不变
-（缺数据源/契约裁决，见第三波小节）。
+无。6 条 needs-small-loader + decision-input 全部接线。其余 SKIP 维持 wave-3 分类不变
+（缺数据源/契约裁决，见第三波小节）；wave-6 已接线 audit-lifecycle / survey / exploration（见上方第六波小节），
+剩 leaderboard / deeds / journal / audit-overview / intel / health-pipeline / replay / tenants /
+agents / shop / me / orders / commands / director。
 
 
 
@@ -109,8 +142,8 @@ agents / survey / exploration / shop / me / orders / commands / director）维�
 | needs-new-projection | `/api/leaderboard` | `ours`（calibration 受控 CORE owner_username）小 loader 可补；`encountered` 需 `intel.ts loadAllianceIntel` 移植（enemies 形状未移植）→ 整体不接线（缺数据源，不硬凑），见上 SKIP 精确缺口 |
 | ~~needs-new-projection~~ → **已接线（w44/cc-wave5）** | `/api/audit/alignment` | `alignment.py` 移植完成（aggregate_alignment + load_alignment_audit），501→200；OpenAPI 200 + golden MATCH |
 | needs-new-projection | `/api/survey/decision-input` | （wave-4 已接线） `decision-input.ts`（矿刷新预测 dueInTicks + chunk 覆盖）——依赖 mine-patterns predictions（Python 恒空）+ chunks 表 |
-| needs-new-data-source | `/api/audit/lifecycle` | `loadLifecycleAudit` 依赖 survey-db `unit_lifecycle`/`core_spends`/`resource_events` 表——Python AGENT_SCHEMA 无这些表 |
-| needs-new-data-source | `/api/audit/overview` | 组合含 lifecycle + pipeline 两个未移植输入 |
+| ~~needs-new-data-source~~ → **已接线（w44/cc-wave6）** | `/api/audit/lifecycle` | `lifecycle.py` 移植（AGENT_SCHEMA 已补 `unit_lifecycle`/`core_spends`/`notable_events`），501→200；OpenAPI 200 + 8 测试 |
+| needs-new-data-source | `/api/audit/overview` | 组合含 lifecycle（wave-6 已可用）+ pipeline（8120 supervisor 输入）两个输入——pipeline 仍未移植，**维持 501 不接线** |
 | needs-new-data-source | `/api/deeds` | 事迹扫描（★3-4 稀有 + ★2 survey-db 里程碑 + 联盟事迹）+ 45s 缓存，全新产品能力 |
 | needs-new-data-source | `/api/deeds/journal` | 事迹流日记聚合 + category/minStar 筛选 |
 | needs-new-data-source | `/api/health/pipeline` | survey-db 水位 vs live tick + `surveySync` 桥状态；且 TS 请求路径会触发惰性 survey:sync（写副作用，Python P5-9 已 gate 该路由） |
@@ -119,8 +152,8 @@ agents / survey / exploration / shop / me / orders / commands / director）维�
 | needs-new-data-source | `/api/replay` | 回放轨迹重建（calibration cases → replay 序列）未移植 |
 | needs-new-data-source | `/api/tenants` | supervisor /ready 探活（8120）；Python 无 supervisor 桥，接了一律 live=false |
 | needs-new-data-source | `/api/agents` | supervisor + overview + agent db + world 合并（`/api/agents` 大组合） |
-| needs-new-data-source | `/api/survey` | per-tenant SurveyData + lifecycle/spendsTrend/unitsDetail/chunks（缺 lifecycle/chunks/spends 表） |
-| needs-new-data-source | `/api/exploration` | `loadTenantSurveyCached` 的 survey+lifecycle+current：survey-db `sync_meta`/`resource_events`/`unit_lifecycle`/`core_spends`/`chunks` 表缺；current world state 无 loadWorld 移植——**缺口精确记录，不接线**（2026-08-12 captain 预裁决：现有投影补不出则记录） |
+| ~~needs-new-data-source~~ → **已接线（w44/cc-wave6）** | `/api/survey` | `survey.py` 移植（AGENT_SCHEMA 已补 `lifecycle`/`chunks`/`spends`/`resource_events` 表），501→200；OpenAPI 200 + 13 测试 |
+| ~~needs-new-data-source~~ → **已接线（w44/cc-wave6）** | `/api/exploration` | `exploration.py` 移植（survey-db 表已补 + loadWorld 已有 `snapshots.py`），501→200；缺库 calibration-scan 回退；全缺 survey null fail-open |
 | needs-new-data-source | `/api/shop` | 官方商店外部 API 代理（无 cookie）；Python 部署无该代理，契约裁决 |
 | needs-new-data-source | `/api/shop/me` `/api/shop/orders` | 外部商店 API + X-Shop-Cookie 头转发（登录 Cookie 敏感面），契约裁决 |
 | contract-decision | `/api/commands` | manifest `write_semantics=read + reconcile (may write-back cleanup)`：GET 会写回（reconcile 清 satisfed/applied + 取消 stuck goal），Python P5-9 `is_write_route` 不含它（不 gate）——只读面带无门禁写回，需 captain 裁决 |
