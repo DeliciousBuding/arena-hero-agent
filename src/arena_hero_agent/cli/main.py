@@ -20,10 +20,22 @@ consume in bulk:
   run id, writing each scenario under ``<data-root>/<run-id>/<tenant>/``;
 - explicit duplicate run ids fail closed before any artifact is written.
 
-Safety contract: this module never reads credentials or environment secrets,
-never opens network connections, never submits to a live game API, and never
-accepts an API key. Errors are reported as fixed safe summaries; health output
-contains no keys, cookies, absolute local paths, or tracebacks.
+P4-21 adds the fenced live writer for one tenant:
+
+- ``arena-hero-agent live --tenant <id> --data-root <path> ...`` acquires a
+  cross-process writer lease (P4-15), composes the SDK game client from
+  ``ARENA_HERO_API_KEY``, streams ``AsyncTurn`` events through the strict turn
+  adapter, runs the composed deterministic decider (P4-11/P4-12/P4-13), and
+  submits decisions with deterministic idempotency keys while reusing the
+  recorder / telemetry / health observers shared with ``run``. SIGTERM/SIGINT
+  stop the session gracefully: the lease is released and the client closed.
+
+Safety contract: the offline commands never read credentials or environment
+secrets, never open network connections, and never submit to a live game API.
+Only ``live`` reads ``ARENA_HERO_API_KEY`` and opens the SDK connection; it is
+the explicit, separately authorized live path. Errors are reported as fixed
+safe summaries; health output contains no keys, cookies, absolute local paths,
+or tracebacks.
 """
 
 from __future__ import annotations
@@ -32,9 +44,11 @@ import argparse
 import asyncio
 import contextlib
 import json
+import os
 import re
 import signal
 import sys
+import uuid
 from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -50,6 +64,14 @@ from arena_hero_agent.adapters.replay import (
     ReplayTickSource,
     load_observations,
 )
+from arena_hero_agent.adapters.runtime.process_leases import (
+    FileWriterLeaseCoordinator,
+)
+from arena_hero_agent.adapters.sdk import (
+    LiveSubmitter,
+    LiveTurnSource,
+    create_sdk_game_client,
+)
 from arena_hero_agent.adapters.telemetry import RuntimeTraceJsonlSink
 from arena_hero_agent.application import (
     CoreAction,
@@ -61,13 +83,21 @@ from arena_hero_agent.application import (
     TickLoopConfig,
     TickSource,
 )
+from arena_hero_agent.application.tick_loop import Decider, Submitter
 from arena_hero_agent.application.turns import TurnObservation
 from arena_hero_agent.cli.canonical import (
     MANIFEST_FILENAME,
     build_manifest,
     read_manifest,
 )
-from arena_hero_agent.domain import DeadlineBudget, TenantId, canonical_sha256
+from arena_hero_agent.domain import (
+    DeadlineBudget,
+    Generation,
+    TenantId,
+    canonical_sha256,
+)
+from arena_hero_agent.ports import GameClient, WriterLeaseHandle
+from arena_hero_agent.strategies.composition import compose_decider
 
 PROG = "arena-hero-agent"
 
@@ -84,6 +114,9 @@ DEFAULT_MAX_RECONNECTS = 3
 SHUTDOWN_TIMEOUT_SECONDS = 5.0
 HEALTH_FILENAME = "health.json"
 TELEMETRY_FILENAME = "telemetry.jsonl"
+LIVE_API_KEY_ENV = "ARENA_HERO_API_KEY"
+LIVE_LEASE_DURATION_NS = 5 * 60 * 1_000_000_000
+LIVE_LEASE_RENEW_INTERVAL_SECONDS = LIVE_LEASE_DURATION_NS // 3 / 1_000_000_000
 BATCH_RUN_ID_PREFIX = "scenario-"
 BATCH_RUN_ID_SEED_MARKER = "-seed-"
 
@@ -160,6 +193,22 @@ class RunState:
     sink: RuntimeTraceJsonlSink | None = None
     source: Any = None
     runtime: TenantRuntime | None = None
+
+
+class LiveLeaseLostError(RuntimeError):
+    """Raised when the fenced writer lease can no longer be renewed."""
+
+
+@dataclass(slots=True)
+class LiveState:
+    """Handles created by one live session, for bounded shutdown inspection."""
+
+    client: Any = None
+    source: Any = None
+    runtime: TenantRuntime | None = None
+    lease: Any = None
+    recorder: Any = None
+    sink: RuntimeTraceJsonlSink | None = None
 
 
 class WaitDecider:
@@ -508,7 +557,9 @@ async def _run_async(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=PROG,
-        description="Offline Arena Hero agent runtime: replay-based run and health contracts.",
+        description=(
+            "Arena Hero agent runtime: offline replay (run/batch/health) and the live writer."
+        ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -602,6 +653,38 @@ def build_parser() -> argparse.ArgumentParser:
         default=0,
         metavar="N",
         help="stable seed folded into each derived scenario run id (default: 0)",
+    )
+
+    live_parser = subparsers.add_parser(
+        "live",
+        help="run one live game session for a tenant with a fenced writer lease",
+    )
+    live_parser.add_argument("--tenant", required=True, metavar="ID", help="tenant id")
+    live_parser.add_argument(
+        "--data-root",
+        default=DEFAULT_DATA_ROOT,
+        metavar="PATH",
+        help=f"output root for recorder, telemetry, and health (default: {DEFAULT_DATA_ROOT})",
+    )
+    live_parser.add_argument(
+        "--base-url",
+        default=None,
+        metavar="URL",
+        help="optional SDK base URL override (default: SDK default)",
+    )
+    live_parser.add_argument(
+        "--tick-budget-ms",
+        type=int,
+        default=DEFAULT_TICK_BUDGET_MS,
+        metavar="MS",
+        help="per-tick deadline budget in milliseconds (default: 100)",
+    )
+    live_parser.add_argument(
+        "--max-reconnects",
+        type=int,
+        default=DEFAULT_MAX_RECONNECTS,
+        metavar="N",
+        help="stream reopen bound (default: 3)",
     )
 
     health_parser = subparsers.add_parser(
@@ -788,6 +871,254 @@ def batch_command(args: argparse.Namespace) -> int:
         return EXIT_INTERRUPT
 
 
+async def _acquire_live_writer(
+    coordinator: FileWriterLeaseCoordinator,
+    tenant: TenantId,
+) -> WriterLeaseHandle | None:
+    """Acquire the tenant writer lease, taking over an expired holder's fence.
+
+    A fresh tenant acquires fence 1; an existing (released or expired) holder
+    is replaced only with the exact observed fencing token, keeping the fence
+    monotonic across live sessions.
+    """
+
+    budget = DeadlineBudget.from_milliseconds(1000)
+    handle = await coordinator.acquire_writer(tenant, Generation(1), budget)
+    if handle is not None:
+        return handle
+    observed = coordinator.observed_writer_lease(tenant)
+    if observed is None:
+        return None
+    # observed.generation is already a Generation and observed.fencing_token
+    # is already a FencingToken; do not double-wrap them.
+    return await coordinator.replace_writer(
+        tenant,
+        observed.generation,
+        expected_fencing_token=observed.fencing_token,
+        budget=budget,
+    )
+
+
+async def _run_live_loop(
+    runtime: TenantRuntime,
+    source: TickSource,
+    decider: Decider,
+    submitter: Submitter,
+    lease: WriterLeaseHandle,
+    *,
+    renew_interval: float,
+) -> None:
+    """Run one live tick loop while renewing the fence lease.
+
+    Returns normally when the loop finishes on its own. Raises
+    :class:`LiveLeaseLostError` when the lease can no longer be renewed: the
+    runtime is stopped so no submission continues without fence authority.
+    Cancellation (SIGTERM/SIGINT) propagates after the runtime stops.
+    """
+
+    stop = asyncio.Event()
+    lost = False
+
+    async def renew_loop() -> None:
+        nonlocal lost
+        while not stop.is_set():
+            await asyncio.sleep(renew_interval)
+            if stop.is_set():
+                return
+            if not await lease.renew(DeadlineBudget.from_milliseconds(500)):
+                lost = True
+                return
+
+    runtime_task = asyncio.create_task(runtime.run(source, decider, submitter))
+    renew_task = asyncio.create_task(renew_loop())
+    try:
+        done, _ = await asyncio.wait(
+            {runtime_task, renew_task}, return_when=asyncio.FIRST_COMPLETED
+        )
+        if renew_task in done and runtime_task not in done:
+            runtime_task.cancel()
+            with contextlib.suppress(BaseException):
+                await runtime_task
+            if lost:
+                raise LiveLeaseLostError("writer lease was lost")
+            return
+        await runtime_task
+    finally:
+        stop.set()
+        if not renew_task.done():
+            renew_task.cancel()
+            with contextlib.suppress(BaseException):
+                await renew_task
+
+
+async def _execute_live(
+    args: argparse.Namespace,
+    *,
+    shutdown_timeout: float = SHUTDOWN_TIMEOUT_SECONDS,
+    state: LiveState | None = None,
+    client_factory: Callable[..., GameClient] | None = None,
+    decider_factory: Callable[[], Decider] | None = None,
+    lease_factory: Callable[[], FileWriterLeaseCoordinator] | None = None,
+    lease_renew_interval: float = LIVE_LEASE_RENEW_INTERVAL_SECONDS,
+) -> int:
+    """Run one live game session and return a process exit code.
+
+    Only ``asyncio.CancelledError`` propagates (after bounded cleanup: the
+    lease is released and the client closed); all other failures are converted
+    to a safe error summary and exit code.
+    """
+
+    tenant = _parse_tenant(args.tenant)
+    if tenant is None:
+        _print_error("invalid tenant id")
+        return EXIT_ERROR
+    if isinstance(args.tick_budget_ms, bool) or args.tick_budget_ms <= 0:
+        _print_error("tick budget must be a positive integer")
+        return EXIT_ERROR
+    if isinstance(args.max_reconnects, bool) or args.max_reconnects < 0:
+        _print_error("max reconnects must be a non-negative integer")
+        return EXIT_ERROR
+    api_key = os.environ.get(LIVE_API_KEY_ENV, "")
+    if not api_key:
+        _print_error(f"{LIVE_API_KEY_ENV} is not set")
+        return EXIT_ERROR
+
+    coordinator = (
+        lease_factory()
+        if lease_factory is not None
+        else FileWriterLeaseCoordinator(
+            args.data_root,
+            lease_duration_ns=LIVE_LEASE_DURATION_NS,
+            holder_id=f"live-{tenant.value}",
+        )
+    )
+    handle = await _acquire_live_writer(coordinator, tenant)
+    if handle is None:
+        _print_error("writer lease is not available for this tenant")
+        return EXIT_ERROR
+
+    client: GameClient | None = None
+    recorder: Any = None
+    sink: RuntimeTraceJsonlSink | None = None
+    source: Any = None
+    try:
+        factory = client_factory if client_factory is not None else create_sdk_game_client
+        client = factory(api_key=api_key, base_url=args.base_url)
+        source = LiveTurnSource(client)
+        try:
+            recorder = open_tick_recorder(
+                RecorderConfig(data_root=args.data_root, tenant_id=tenant),
+                backend=RecorderBackend.JSONL,
+            )
+            telemetry_path = _telemetry_path(args.data_root, tenant)
+            telemetry_path.parent.mkdir(parents=True, exist_ok=True)
+            sink = RuntimeTraceJsonlSink(tenant_id=tenant, path=telemetry_path)
+        except Exception:
+            _print_error("runtime storage could not be initialized")
+            if recorder is not None:
+                await _bounded(_sync_close(recorder), shutdown_timeout)
+            if sink is not None:
+                await _bounded(sink.close(), shutdown_timeout)
+            return EXIT_ERROR
+
+        runtime = TenantRuntime(
+            TickLoopConfig(
+                tenant_id=tenant,
+                tick_budget=DeadlineBudget.from_milliseconds(args.tick_budget_ms),
+                max_reconnects=args.max_reconnects,
+            ),
+            recorder=recorder,
+            telemetry=sink,
+            process_run_id=uuid.uuid4().hex[:16],
+        )
+        decider = decider_factory() if decider_factory is not None else compose_decider()
+        submitter = LiveSubmitter(client, tenant_id=tenant)
+        if state is not None:
+            state.client = client
+            state.source = source
+            state.runtime = runtime
+            state.lease = handle
+            state.recorder = recorder
+            state.sink = sink
+
+        completed = False
+        cancelled = False
+        lease_lost = False
+        try:
+            await _run_live_loop(
+                runtime,
+                source,
+                decider,
+                submitter,
+                handle,
+                renew_interval=lease_renew_interval,
+            )
+            completed = True
+        except asyncio.CancelledError:
+            cancelled = True
+        except LiveLeaseLostError:
+            lease_lost = True
+        except Exception:
+            completed = False
+        finally:
+            if recorder is not None:
+                await _bounded(_sync_close(recorder), shutdown_timeout)
+            if sink is not None:
+                await _bounded(sink.close(), shutdown_timeout)
+            close_source = getattr(source, "close", None)
+            if callable(close_source):
+                close_source()
+            if client is not None:
+                await _bounded(client.close(), shutdown_timeout)
+
+        snapshot = runtime.snapshot()
+        health = _health_from_snapshot(snapshot, completed=completed)
+        _write_health(_health_path(args.data_root, tenant), health)
+        if cancelled:
+            raise asyncio.CancelledError
+        if completed:
+            _print_health(health)
+            return EXIT_OK
+        if lease_lost:
+            _print_error("writer lease lost; live session stopped")
+            return EXIT_ERROR
+        _print_error("live session failed")
+        return EXIT_ERROR
+    finally:
+        with contextlib.suppress(Exception):
+            await handle.release()
+
+
+async def _run_live_async(
+    args: argparse.Namespace,
+    *,
+    shutdown_timeout: float = SHUTDOWN_TIMEOUT_SECONDS,
+    state: LiveState | None = None,
+    client_factory: Callable[..., GameClient] | None = None,
+    decider_factory: Callable[[], Decider] | None = None,
+    lease_factory: Callable[[], FileWriterLeaseCoordinator] | None = None,
+    lease_renew_interval: float = LIVE_LEASE_RENEW_INTERVAL_SECONDS,
+) -> int:
+    return await _run_cancellable(
+        lambda: _execute_live(
+            args,
+            shutdown_timeout=shutdown_timeout,
+            state=state,
+            client_factory=client_factory,
+            decider_factory=decider_factory,
+            lease_factory=lease_factory,
+            lease_renew_interval=lease_renew_interval,
+        )
+    )
+
+
+def live_command(args: argparse.Namespace) -> int:
+    try:
+        return asyncio.run(_run_live_async(args))
+    except KeyboardInterrupt:
+        return EXIT_INTERRUPT
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -796,6 +1127,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_command(args)
         if args.command == "batch":
             return batch_command(args)
+        if args.command == "live":
+            return live_command(args)
         return health_command(args)
     except KeyboardInterrupt:
         return EXIT_INTERRUPT
@@ -818,6 +1151,8 @@ __all__ = [
     "EXIT_OK",
     "EXIT_TERMINATED",
     "HealthSnapshot",
+    "LiveLeaseLostError",
+    "LiveState",
     "LocalSubmitter",
     "PROG",
     "RunState",
@@ -826,6 +1161,7 @@ __all__ = [
     "build_parser",
     "console_entrypoint",
     "health_command",
+    "live_command",
     "main",
     "run_command",
 ]
