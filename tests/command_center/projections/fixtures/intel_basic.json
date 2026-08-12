@@ -1,0 +1,412 @@
+{
+  "nowMs": 1752000000000,
+  "leaderboard": {
+    "fileName": "leaderboard-2026-07-08-00-00-00.json",
+    "mtimeMs": 1752000000000,
+    "content": {
+      "beacon_ticks_held": [
+        {
+          "rank": 1,
+          "username": "alpha",
+          "score": 12
+        }
+      ],
+      "damage_dealt": [
+        {
+          "rank": 1,
+          "username": "alpha",
+          "score": 9000
+        },
+        {
+          "rank": 15,
+          "username": "beta",
+          "score": 4000
+        },
+        {
+          "rank": 16,
+          "username": "aggr",
+          "score": 3800
+        },
+        {
+          "rank": 17,
+          "username": "aggrfar",
+          "score": 3500
+        },
+        {
+          "rank": 42,
+          "username": "we-t1",
+          "score": 1500
+        },
+        {
+          "rank": 50,
+          "username": "delta",
+          "score": 1000
+        },
+        {
+          "rank": 100,
+          "username": "stranger",
+          "score": 300
+        }
+      ],
+      "core_destruction_participations": []
+    }
+  },
+  "calibrationRuns": {
+    "t1": {
+      "run-old": [
+        {
+          "tick": 3050,
+          "before": {
+            "state": {
+              "objects": [
+                {
+                  "kind": "CORE",
+                  "controlled": true,
+                  "position": [
+                    0,
+                    0
+                  ],
+                  "owner_username": "we-t1"
+                },
+                {
+                  "kind": "CORE",
+                  "controlled": false,
+                  "position": [
+                    12,
+                    12
+                  ],
+                  "owner_username": "oldcore"
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "run-new": [
+        {
+          "tick": 5000,
+          "before": {
+            "state": {
+              "objects": [
+                {
+                  "kind": "CORE",
+                  "controlled": true,
+                  "position": [
+                    0,
+                    0
+                  ],
+                  "owner_username": "we-t1"
+                },
+                {
+                  "kind": "CORE",
+                  "controlled": false,
+                  "position": [
+                    10,
+                    5
+                  ],
+                  "owner_username": "alpha"
+                },
+                {
+                  "kind": "CORE",
+                  "controlled": false,
+                  "position": [
+                    30,
+                    30
+                  ],
+                  "owner_username": "beta"
+                },
+                {
+                  "kind": "UNIT",
+                  "controlled": false,
+                  "position": [
+                    3,
+                    2
+                  ],
+                  "unit_type": "VANGUARD",
+                  "id": "u1"
+                },
+                {
+                  "kind": "UNIT",
+                  "controlled": false,
+                  "position": [
+                    5,
+                    5
+                  ],
+                  "unit_type": "RANGER",
+                  "id": "u2"
+                },
+                {
+                  "kind": "UNIT",
+                  "controlled": false,
+                  "position": [
+                    60,
+                    60
+                  ],
+                  "unit_type": "WORKER",
+                  "id": "w1"
+                }
+              ],
+              "champion_beacon": {
+                "position": [
+                  3,
+                  3
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tick": 5100,
+          "before": {
+            "state": {
+              "objects": [
+                {
+                  "kind": "CORE",
+                  "controlled": true,
+                  "position": [
+                    0,
+                    0
+                  ],
+                  "owner_username": "we-t1"
+                },
+                {
+                  "kind": "CORE",
+                  "controlled": false,
+                  "position": [
+                    10,
+                    5
+                  ],
+                  "owner_username": "alpha"
+                }
+              ],
+              "champion_beacon": {
+                "position": [
+                  4,
+                  4
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tick": 5195,
+          "before": {
+            "state": {
+              "objects": [
+                {
+                  "kind": "CORE",
+                  "controlled": true,
+                  "position": [
+                    0,
+                    0
+                  ],
+                  "owner_username": "we-t1"
+                },
+                {
+                  "kind": "CORE",
+                  "controlled": false,
+                  "position": [
+                    10,
+                    5
+                  ],
+                  "owner_username": "alpha"
+                }
+              ],
+              "champion_beacon": {
+                "position": [
+                  5,
+                  5
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tick": 5200,
+          "before": {
+            "state": {
+              "objects": [
+                {
+                  "kind": "CORE",
+                  "controlled": true,
+                  "position": [
+                    0,
+                    0
+                  ],
+                  "owner_username": "we-t1"
+                },
+                {
+                  "kind": "CORE",
+                  "controlled": false,
+                  "position": [
+                    10,
+                    5
+                  ],
+                  "owner_username": "alpha"
+                },
+                {
+                  "kind": "UNIT",
+                  "controlled": false,
+                  "position": [
+                    2,
+                    2
+                  ],
+                  "unit_type": "VANGUARD",
+                  "id": "u3"
+                }
+              ],
+              "champion_beacon": {
+                "position": [
+                  6,
+                  6
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "t2": {
+      "run-1": [
+        {
+          "tick": 6000,
+          "before": {
+            "state": {
+              "objects": [
+                {
+                  "kind": "CORE",
+                  "controlled": true,
+                  "position": [
+                    50,
+                    50
+                  ],
+                  "owner_username": "we-t2"
+                },
+                {
+                  "kind": "CORE",
+                  "controlled": false,
+                  "position": [
+                    58,
+                    60
+                  ],
+                  "owner_username": "delta"
+                },
+                {
+                  "kind": "CORE",
+                  "controlled": false,
+                  "position": [
+                    60,
+                    60
+                  ],
+                  "owner_username": "epsilon"
+                },
+                {
+                  "kind": "CORE",
+                  "controlled": false,
+                  "position": [
+                    90,
+                    80
+                  ],
+                  "owner_username": "aggr"
+                },
+                {
+                  "kind": "CORE",
+                  "controlled": false,
+                  "position": [
+                    110,
+                    110
+                  ],
+                  "owner_username": "farfar"
+                },
+                {
+                  "kind": "CORE",
+                  "controlled": false,
+                  "position": [
+                    140,
+                    130
+                  ],
+                  "owner_username": "aggrfar"
+                },
+                {
+                  "kind": "CORE",
+                  "controlled": false,
+                  "position": [
+                    200,
+                    200
+                  ],
+                  "owner_username": "out"
+                },
+                {
+                  "kind": "UNIT",
+                  "controlled": false,
+                  "position": [
+                    30,
+                    30
+                  ],
+                  "unit_type": "VANGUARD",
+                  "id": "u4"
+                },
+                {
+                  "kind": "UNIT",
+                  "controlled": false,
+                  "position": [
+                    65,
+                    55
+                  ],
+                  "unit_type": "RANGER",
+                  "id": "u5"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  },
+  "survey": {
+    "t1": {
+      "syncMeta": [
+        {
+          "run_id": "run-new",
+          "tenant": "t1",
+          "cases_synced": 4,
+          "last_tick": 5200,
+          "updated_at": "2026-07-08T18:40:00Z"
+        }
+      ],
+      "coreHunts": [
+        {
+          "cell": "5,8",
+          "x": 5,
+          "y": 8,
+          "owner": "gamma",
+          "source": "CORE",
+          "first_seen_tick": 4800,
+          "last_seen_tick": 5190
+        }
+      ]
+    },
+    "t2": {
+      "syncMeta": [
+        {
+          "run_id": "run-1",
+          "tenant": "t2",
+          "cases_synced": 1,
+          "last_tick": 6000,
+          "updated_at": "2026-07-08T18:40:00Z"
+        }
+      ],
+      "coreHunts": [
+        {
+          "cell": "55,62",
+          "x": 55,
+          "y": 62,
+          "owner": "zeta",
+          "source": "CORE",
+          "first_seen_tick": 5900,
+          "last_seen_tick": 5990
+        }
+      ]
+    }
+  }
+}

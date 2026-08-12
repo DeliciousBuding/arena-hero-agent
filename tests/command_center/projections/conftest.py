@@ -12,7 +12,7 @@ FIXTURES = Path(__file__).parent / "fixtures"
 # Wall-clock fields emitted by the TS oracle with ``new Date().toISOString()``.
 # The Python ports inject ``now_ms`` instead, so these fields are compared only
 # for shape (both present) and are otherwise excluded from the value comparison.
-TIMESTAMP_FIELDS = frozenset({"generatedAt", "cachedAt", "refreshedAt"})
+TIMESTAMP_FIELDS = frozenset({"generatedAt", "cachedAt", "refreshedAt", "ageSeconds"})
 
 # Per-module documented divergences (the only reasons a result may be ALLOWED
 # instead of MATCH). Asserted stable so differences never silently disappear.
@@ -22,6 +22,7 @@ ALLOWED_DIFFERENCES: tuple[str, ...] = (
     "survey loaders derive currentTick from MAX(agents.tick); missing TS tables degrade to empty",
     "shop history refreshedAt is an explicit input (external fetch is a P5-9 route)",
     "arbitrations compare as ordered cell->entry pairs (Map iteration order)",
+    "leaderboard ageSeconds/stale derive from Date.now wall clock (stale stripped for parity)",
 )
 
 

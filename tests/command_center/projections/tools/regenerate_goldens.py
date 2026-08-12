@@ -37,6 +37,10 @@ ORACLE_SURVEY_MINE_HARNESS = Path.home() / "tmp" / "cc-oracle-survey-mine.mjs"
 ORACLE_LIFECYCLE_HARNESS = Path.home() / "tmp" / "cc-oracle-lifecycle.mjs"
 ORACLE_SURVEY_HARNESS = Path.home() / "tmp" / "cc-oracle-survey.mjs"
 ORACLE_EXPLORATION_HARNESS = Path.home() / "tmp" / "cc-oracle-exploration.mjs"
+# intel/leaderboard fixtures need a materialized data root with multi-run
+# calibration cases + survey-db core_hunts + leaderboard snapshot (W44 wave 7)
+ORACLE_INTEL_HARNESS = Path.home() / "tmp" / "cc-oracle-intel.mjs"
+ORACLE_LEADERBOARD_HARNESS = Path.home() / "tmp" / "cc-oracle-leaderboard.mjs"
 
 # fixture base name -> oracle dispatch kind (see cc-oracle.mjs)
 KIND_BY_FIXTURE: dict[str, str] = {
@@ -78,6 +82,8 @@ KIND_BY_FIXTURE: dict[str, str] = {
     "lifecycle_basic": "lifecycle",
     "survey_basic": "survey",
     "exploration_basic": "exploration",
+    "intel_basic": "intel",
+    "leaderboard_basic": "leaderboard",
 }
 
 
@@ -95,7 +101,26 @@ def main() -> int:
         if not fixture.exists():
             print(f"missing fixture: {fixture}", file=sys.stderr)
             return 1
-        if kind == "advice":
+        if kind in ("intel", "leaderboard"):
+            # wave-7 oracles read a materialized multi-run calibration root
+            import json as _json
+            import tempfile
+
+            import advice_fixture
+
+            spec = _json.loads(fixture.read_text(encoding="utf-8"))
+            with tempfile.TemporaryDirectory(prefix="cc-wave7-regen-") as root_dir:
+                root = Path(root_dir)
+                advice_fixture.materialize_advice_data_root(spec, root)
+                harness = ORACLE_INTEL_HARNESS if kind == "intel" else ORACLE_LEADERBOARD_HARNESS
+                result = subprocess.run(
+                    ["node", str(harness), str(root)],
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                )
+        elif kind == "advice":
             # advice oracle reads a materialized Command Center data root
             import json as _json
             import tempfile

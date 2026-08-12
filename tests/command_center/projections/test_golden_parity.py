@@ -41,9 +41,11 @@ from arena_hero_agent.command_center.projections import (
     build_alliance_defense_payload,
     build_decision_input,
     build_enemy_core_states,
+    build_leaderboard_payload,
     compute_exploration_stats,
     enrich_consensus_mining,
     load_alliance_advice,
+    load_alliance_intel,
     load_arbitrations,
     load_exploration,
     load_human_audit,
@@ -360,6 +362,18 @@ def _run_python(name: str, fixture: dict[str, Any]) -> object:
             if name == "survey_basic":
                 return load_survey(root, str(fixture.get("tenant", "all")), now_ms=NOW_MS)
             return load_exploration(root, str(fixture.get("tenant", "t1")), now_ms=NOW_MS)
+    if name in ("intel_basic", "leaderboard_basic"):
+        import tempfile
+        from pathlib import Path
+
+        from .tools.advice_fixture import materialize_advice_data_root
+
+        with tempfile.TemporaryDirectory(prefix="cc-wave7-parity-") as root_dir:
+            root = Path(root_dir)
+            materialize_advice_data_root(fixture, root)
+            if name == "intel_basic":
+                return load_alliance_intel(root, now_ms=NOW_MS)
+            return build_leaderboard_payload(root, now_ms=NOW_MS)
     if name == "enemy_cores_basic":
         return build_enemy_core_states(
             [dict(r) for r in fixture["hunts"]],
@@ -379,6 +393,22 @@ def _run_python(name: str, fixture: dict[str, Any]) -> object:
             now_ms=NOW_MS,
         )
     raise AssertionError(f"no Python runner registered for fixture {name}")
+
+
+def _remove_key(value: object, key: str) -> object:
+    """Recursively drop a wall-clock-derived key (leaderboard ``stale``)."""
+    if isinstance(value, dict):
+        return {k: _remove_key(item, key) for k, item in value.items() if k != key}
+    if isinstance(value, list):
+        return [_remove_key(item, key) for item in value]
+    return value
+
+
+def _normalize_for_case(case: str, value: object) -> object:
+    """Per-case parity normalization for non-oracle-comparable fields."""
+    if case == "leaderboard_basic":
+        return _remove_key(value, "stale")
+    return value
 
 
 CASES = [
@@ -420,6 +450,8 @@ CASES = [
     "lifecycle_basic",
     "survey_basic",
     "exploration_basic",
+    "intel_basic",
+    "leaderboard_basic",
 ]
 
 
@@ -427,8 +459,8 @@ CASES = [
 def test_projection_matches_ts_oracle_golden(case: str) -> None:
     """Every projection core classifies MATCH against the TS oracle golden."""
     fixture = load_fixture(case)
-    actual = _run_python(case, fixture)
-    expected = load_golden(case)
+    actual = _normalize_for_case(case, _run_python(case, fixture))
+    expected = _normalize_for_case(case, load_golden(case))
     assert_matches(actual, expected, case)
 
 
@@ -437,8 +469,8 @@ def test_all_golden_cases_classify_match() -> None:
     mismatches: list[str] = []
     for case in CASES:
         fixture = load_fixture(case)
-        actual = _run_python(case, fixture)
-        expected = load_golden(case)
+        actual = _normalize_for_case(case, _run_python(case, fixture))
+        expected = _normalize_for_case(case, load_golden(case))
         try:
             assert_matches(actual, expected, case)
         except AssertionError:

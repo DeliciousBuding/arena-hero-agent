@@ -358,6 +358,39 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
             handle.write("\n")
 
 
+def _write_calibration_run(
+    root: Path, tenant: str, run_name: str, cases: Sequence[Mapping[str, Any]]
+) -> None:
+    """One calibration run with multiple case files (W44 wave 7 intel scans).
+
+    The intel projection scans the last ``INTEL_CASE_LIMIT`` cases per run and
+    orders runs by their highest case tick, so the fixture may span several
+    runs (``calibrationRuns`` key) to exercise run ordering end-to-end.
+    """
+    cases_dir = root / "runtime" / tenant / "calibration" / run_name / "cases"
+    cases_dir.mkdir(parents=True, exist_ok=True)
+    for entry in cases:
+        if not isinstance(entry, dict):
+            continue
+        after = entry.get("after")
+        before = entry.get("before")
+        if not isinstance(after, dict):
+            after = {}
+        if not isinstance(before, dict):
+            before = {}
+        raw_tick = after.get("tick")
+        if raw_tick is None:
+            raw_tick = before.get("tick")
+        if raw_tick is None:
+            raw_tick = entry.get("tick")
+        tick = int(raw_tick or 0)
+        if tick <= 0:
+            continue
+        (cases_dir / f"{tick}.json").write_text(
+            json.dumps(entry, ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+        )
+
+
 def _write_world(root: Path, tenant: str, case: dict[str, Any], tick: int) -> None:
     """Latest calibration run with one case file (TS ``loadWorld`` shape)."""
     cases_dir = root / "runtime" / tenant / "calibration" / "run-1" / "cases"
@@ -374,6 +407,13 @@ def materialize_advice_data_root(fixture: dict[str, Any], root: Path) -> Path:
     """Write the fixture spec into ``root`` as a Command Center data root."""
     root.mkdir(parents=True, exist_ok=True)
     now_ms = int(fixture.get("nowMs", 0))
+    calibration_runs = fixture.get("calibrationRuns") or {}
+    for tenant, runs in calibration_runs.items():
+        if not isinstance(runs, dict):
+            continue
+        for run_name, cases in runs.items():
+            if isinstance(cases, list):
+                _write_calibration_run(root, str(tenant), str(run_name), cases)
     worlds = fixture.get("worlds") or {}
     survey = fixture.get("survey") or {}
     for tenant in TENANTS:
