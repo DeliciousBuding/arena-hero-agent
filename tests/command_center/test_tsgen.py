@@ -29,7 +29,7 @@ from arena_hero_agent.command_center.api.tsgen import (
 TABLE = RouteTable()
 DOC = build_openapi(TABLE)
 
-GOLDEN_SHA256 = "9d6d6cefa6439e71b326e08d55626017ec42389499c4d38bcd49ac16e7dd498b"
+GOLDEN_SHA256 = "df0731b63f420a1775956be5f370179a5f9ab2d9cf8f377d15f8c2cd37b3198d"
 
 
 def _artifact_hash(artifacts: dict[str, str]) -> str:
@@ -78,7 +78,10 @@ def test_stream_params_shaped() -> None:
     assert "export interface GetStreamParams {" in types_ts
     assert "tenant?: Tenant;" in types_ts
     assert "n?: number;" in types_ts
-    assert "export type GetStreamResponse = unknown;" in types_ts
+    # 200 schema landed: the response is no longer unknown.
+    assert "export type GetStreamResponse = unknown;" not in types_ts
+    assert "generatedAt: string" in types_ts
+    assert "tenant: string" in types_ts
 
 
 def test_deeds_journal_params_shaped() -> None:

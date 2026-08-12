@@ -142,6 +142,51 @@ def test_committed_document_regenerates_identically() -> None:
     assert _committed_document() == regenerate()
 
 
+def test_every_200_response_schema_is_non_empty() -> None:
+    """No operation may document an empty (``unknown``) response type anymore."""
+    for path, operations in DOC["paths"].items():
+        for method, operation in operations.items():
+            schema = operation["responses"]["200"]["content"]["application/json"]["schema"]
+            assert schema, f"{method} {path} has an empty 200 schema"
+
+
+def test_main_endpoint_response_schemas_have_real_fields() -> None:
+    stream = DOC["paths"]["/api/stream"]["get"]["responses"]["200"]["content"]["application/json"][
+        "schema"
+    ]
+    assert set(stream["properties"]) == {"tenant", "generatedAt", "rows"}
+    assert stream["required"] == ["tenant", "generatedAt", "rows"]
+
+    map_lod = DOC["paths"]["/api/map/lod"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
+    assert "chunkSize" in map_lod["properties"]
+    assert "chunks" in map_lod["properties"]
+
+    survey = DOC["paths"]["/api/alliance/survey"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
+    assert "tenantSummaries" in survey["properties"]
+    assert "consensusResources" in survey["properties"]
+
+    decisions = DOC["paths"]["/api/audit/decisions"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
+    assert "decision" in decisions["properties"]
+    assert "outcome" in decisions["properties"]
+
+    workers = DOC["paths"]["/api/audit/workers"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
+    assert "totals" in workers["properties"]
+    assert "tenants" in workers["properties"]
+
+    trail = DOC["paths"]["/api/audit/trail"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["schema"]
+    assert set(trail["properties"]) == {"generatedAt", "entries", "counts", "filters", "cachedAt"}
+
+
 def test_committed_document_is_valid_json_object() -> None:
     parsed = json.loads(OPENAPI_PATH.read_text(encoding="utf-8"))
     assert isinstance(parsed, dict)

@@ -14,7 +14,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -48,7 +50,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -82,7 +86,52 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "generatedAtMs": {
+                      "type": "integer"
+                    },
+                    "groups": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "members": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "summary": {
+                      "properties": {
+                        "avgCohesion": {
+                          "type": "number"
+                        },
+                        "groupCount": {
+                          "type": "integer"
+                        },
+                        "isolatedCount": {
+                          "type": "integer"
+                        },
+                        "maxCohesion": {
+                          "type": "number"
+                        },
+                        "memberCount": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "generatedAtMs",
+                    "groups",
+                    "members",
+                    "summary"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -116,7 +165,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -150,7 +201,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -184,7 +237,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -218,7 +273,67 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "assignments": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "currentTick": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "global": {
+                      "properties": {
+                        "assigned": {
+                          "type": "integer"
+                        },
+                        "conflict": {
+                          "type": "integer"
+                        },
+                        "shared": {
+                          "type": "integer"
+                        },
+                        "totalCandidates": {
+                          "type": "integer"
+                        },
+                        "unassigned": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "perTenant": {
+                      "additionalProperties": {
+                        "type": "object"
+                      },
+                      "type": "object"
+                    },
+                    "unassigned": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "assignments",
+                    "perTenant",
+                    "unassigned",
+                    "global",
+                    "cachedAt"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -252,7 +367,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -295,7 +412,98 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "chunks": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "colors": {
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "type": "object"
+                    },
+                    "conflicts": {
+                      "properties": {
+                        "obstacleResourceConflicts": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "resourceOverlaps": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "consensusChunks": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "consensusCores": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "consensusResources": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "enemyCores": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "lifecycle": {
+                      "additionalProperties": {
+                        "nullable": true,
+                        "type": "object"
+                      },
+                      "type": "object"
+                    },
+                    "obstacles": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "resources": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "tenantSummaries": {
+                      "additionalProperties": {
+                        "type": "object"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "generatedAt"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -331,7 +539,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -365,7 +575,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -399,7 +611,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -433,7 +647,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -467,7 +683,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -526,7 +744,111 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "currentTick": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "decision": {
+                      "properties": {
+                        "actionMix": {
+                          "additionalProperties": {
+                            "type": "integer"
+                          },
+                          "type": "object"
+                        },
+                        "intentTop": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "planChurn": {
+                          "nullable": true,
+                          "type": "object"
+                        },
+                        "records": {
+                          "type": "integer"
+                        },
+                        "sourceMix": {
+                          "additionalProperties": {
+                            "type": "integer"
+                          },
+                          "type": "object"
+                        },
+                        "stallTicks": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "outcome": {
+                      "properties": {
+                        "cargoEfficiency": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "coreDeltaPositiveTicks": {
+                          "type": "integer"
+                        },
+                        "coreDeltaSum": {
+                          "type": "number"
+                        },
+                        "depositFailed": {
+                          "type": "integer"
+                        },
+                        "depositSucceeded": {
+                          "type": "integer"
+                        },
+                        "depositSuccessRate": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "harvestFailed": {
+                          "type": "integer"
+                        },
+                        "harvestSucceeded": {
+                          "type": "integer"
+                        },
+                        "humanApplied": {
+                          "type": "integer"
+                        },
+                        "humanRejected": {
+                          "type": "integer"
+                        },
+                        "records": {
+                          "type": "integer"
+                        },
+                        "workerMeanDistFromCore": {
+                          "nullable": true,
+                          "type": "number"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    },
+                    "window": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenant",
+                    "window",
+                    "decision",
+                    "outcome"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -596,7 +918,40 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "currentTick": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "decision": {
+                      "type": "object"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "outcome": {
+                      "type": "object"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    },
+                    "window": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenant",
+                    "window",
+                    "decision",
+                    "outcome"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -658,7 +1013,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -720,7 +1077,56 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "applied": {
+                      "type": "integer"
+                    },
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "commandKinds": {
+                      "additionalProperties": {
+                        "type": "integer"
+                      },
+                      "type": "object"
+                    },
+                    "currentTick": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "rejected": {
+                      "type": "integer"
+                    },
+                    "rejectedRate": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    },
+                    "topRejectedReasons": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "window": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenant",
+                    "window",
+                    "applied",
+                    "rejected"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -773,7 +1179,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -825,7 +1233,63 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "candidates": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "currentTick": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "harvested": {
+                      "type": "integer"
+                    },
+                    "maxGapAgeTicks": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "medianGapAgeTicks": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "medianTimeToFirstHarvest": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "neverHarvested": {
+                      "type": "integer"
+                    },
+                    "staleNever": {
+                      "type": "integer"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    },
+                    "topMines": {
+                      "type": "object"
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "utilizationRate": {
+                      "nullable": true,
+                      "type": "number"
+                    },
+                    "visibleNever": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "tenant",
+                    "total",
+                    "harvested"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -894,7 +1358,43 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "currentTick": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "steps": {
+                      "type": "integer"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    },
+                    "trend": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "window": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenant",
+                    "window",
+                    "steps",
+                    "trend"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -932,7 +1432,67 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "currentTick": {
+                      "nullable": true,
+                      "type": "integer"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "global": {
+                      "properties": {
+                        "assigned": {
+                          "type": "integer"
+                        },
+                        "effectiveRate": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "harvested": {
+                          "type": "integer"
+                        },
+                        "harvestedByOther": {
+                          "type": "integer"
+                        },
+                        "open": {
+                          "type": "integer"
+                        },
+                        "progressRate": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "stale": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "items": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "perTenant": {
+                      "additionalProperties": {
+                        "type": "object"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "items",
+                    "perTenant",
+                    "global"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -966,7 +1526,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1033,7 +1595,46 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "counts": {
+                      "additionalProperties": {
+                        "type": "integer"
+                      },
+                      "type": "object"
+                    },
+                    "entries": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "filters": {
+                      "properties": {
+                        "source": {
+                          "type": "string"
+                        },
+                        "tenant": {
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "entries",
+                    "counts",
+                    "filters"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1096,7 +1697,83 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    },
+                    "tenants": {
+                      "items": {
+                        "properties": {
+                          "affectedWorkers": {
+                            "type": "integer"
+                          },
+                          "byKind": {
+                            "additionalProperties": {
+                              "type": "integer"
+                            },
+                            "type": "object"
+                          },
+                          "currentTick": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "eventCount": {
+                            "type": "integer"
+                          },
+                          "latestByWorker": {
+                            "items": {
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "repeatedWorkers": {
+                            "type": "integer"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "totals": {
+                      "properties": {
+                        "affectedWorkers": {
+                          "type": "integer"
+                        },
+                        "eventCount": {
+                          "type": "integer"
+                        },
+                        "recentWorkers": {
+                          "type": "integer"
+                        },
+                        "repeatedWorkers": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "window": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenant",
+                    "window",
+                    "totals",
+                    "tenants"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1133,7 +1810,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1165,7 +1844,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1199,7 +1880,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1233,7 +1916,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1267,7 +1952,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1316,7 +2003,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1377,7 +2066,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1455,7 +2146,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1519,7 +2212,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1571,7 +2266,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1607,7 +2304,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1641,7 +2340,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1675,7 +2376,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1734,7 +2437,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1771,7 +2476,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1805,7 +2512,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1839,7 +2548,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK",
@@ -1920,7 +2631,59 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "chunkSize": {
+                      "type": "integer"
+                    },
+                    "chunks": {
+                      "items": {
+                        "properties": {
+                          "coreCount": {
+                            "type": "integer"
+                          },
+                          "cx": {
+                            "type": "integer"
+                          },
+                          "cy": {
+                            "type": "integer"
+                          },
+                          "lastTick": {
+                            "type": "integer"
+                          },
+                          "obstacleCount": {
+                            "type": "integer"
+                          },
+                          "resourceCount": {
+                            "type": "integer"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenant",
+                    "chunkSize",
+                    "chunks",
+                    "cachedAt"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -1956,7 +2719,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2005,7 +2770,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2041,7 +2808,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2075,7 +2844,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2109,7 +2880,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2141,7 +2914,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2184,7 +2959,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2218,7 +2995,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2267,7 +3046,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2303,7 +3084,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2337,7 +3120,43 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "lastSnapshotAt": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "productCount": {
+                      "type": "integer"
+                    },
+                    "refreshedAt": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "snapshots": {
+                      "type": "integer"
+                    },
+                    "trends": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "snapshots",
+                    "productCount",
+                    "trends"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2371,7 +3190,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2405,7 +3226,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2439,7 +3262,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2473,7 +3298,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2532,7 +3359,28 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "properties": {
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "rows": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "tenant",
+                    "generatedAt",
+                    "rows"
+                  ],
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2593,7 +3441,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2645,7 +3495,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2681,7 +3533,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2738,7 +3592,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2791,7 +3647,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2827,7 +3685,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"
@@ -2876,7 +3736,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "type": "object"
+                }
               }
             },
             "description": "OK"

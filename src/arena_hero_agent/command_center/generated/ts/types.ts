@@ -10,68 +10,68 @@ export type Tenant = "t1" | "t2" | "t3" | "t4";
 
 /** GET /api/agents - ledger + supervisor + world merge */
 export interface GetAgentsParams {}
-export type GetAgentsResponse = unknown;
+export type GetAgentsResponse = Record<string, unknown>;
 
 /** GET /api/alliance/advice - GET /api/alliance/advice */
 export interface GetAllianceAdviceParams {}
-export type GetAllianceAdviceResponse = unknown;
+export type GetAllianceAdviceResponse = Record<string, unknown>;
 
 /** GET /api/alliance/cluster - GET /api/alliance/cluster */
 export interface GetAllianceClusterParams {}
-export type GetAllianceClusterResponse = unknown;
+export type GetAllianceClusterResponse = {generatedAtMs: number; groups: Array<Record<string, unknown>>; members: Array<Record<string, unknown>>; summary: {avgCohesion?: number; groupCount?: number; isolatedCount?: number; maxCohesion?: number; memberCount?: number}};
 
 /** GET /api/alliance/defense - GET /api/alliance/defense */
 export interface GetAllianceDefenseParams {}
-export type GetAllianceDefenseResponse = unknown;
+export type GetAllianceDefenseResponse = Record<string, unknown>;
 
 /** GET /api/alliance/director - fail-open when supervisor unreachable; mode ASSIST_ONLY, actionOwnership none */
 export interface GetAllianceDirectorParams {}
-export type GetAllianceDirectorResponse = unknown;
+export type GetAllianceDirectorResponse = Record<string, unknown>;
 
 /** GET /api/alliance/exploration - GET /api/alliance/exploration */
 export interface GetAllianceExplorationParams {}
-export type GetAllianceExplorationResponse = unknown;
+export type GetAllianceExplorationResponse = Record<string, unknown>;
 
 /** GET /api/alliance/mining - GET /api/alliance/mining */
 export interface GetAllianceMiningParams {}
-export type GetAllianceMiningResponse = unknown;
+export type GetAllianceMiningResponse = {assignments: Array<Record<string, unknown>>; cachedAt: string; currentTick?: number | null; generatedAt: string; global: {assigned?: number; conflict?: number; shared?: number; totalCandidates?: number; unassigned?: number}; perTenant: {[key: string]: Record<string, unknown>}; unassigned: Array<Record<string, unknown>>};
 
 /** GET /api/alliance/snapshot - GET /api/alliance/snapshot */
 export interface GetAllianceSnapshotParams {}
-export type GetAllianceSnapshotResponse = unknown;
+export type GetAllianceSnapshotResponse = Record<string, unknown>;
 
 /** GET /api/alliance/survey - view=consensus lightweight mode */
 export interface GetAllianceSurveyParams {
   view?: string;
 }
-export type GetAllianceSurveyResponse = unknown;
+export type GetAllianceSurveyResponse = {cachedAt?: string; chunks?: Array<Record<string, unknown>>; colors?: {[key: string]: string}; conflicts?: {obstacleResourceConflicts?: Array<Record<string, unknown>>; resourceOverlaps?: Array<Record<string, unknown>>}; consensusChunks?: Array<Record<string, unknown>>; consensusCores?: Array<Record<string, unknown>>; consensusResources?: Array<Record<string, unknown>>; enemyCores?: Array<Record<string, unknown>>; generatedAt: string; lifecycle?: {[key: string]: Record<string, unknown> | null}; obstacles?: Array<Record<string, unknown>>; resources?: Array<Record<string, unknown>>; tenantSummaries?: {[key: string]: Record<string, unknown>}};
 
 /** POST /api/alliance/survey/arbitrate - validates cell + winnerTenant in t1..t4; invalidates survey cache after write */
 export interface PostAllianceSurveyArbitrateParams {}
-export type PostAllianceSurveyArbitrateResponse = unknown;
+export type PostAllianceSurveyArbitrateResponse = Record<string, unknown>;
 
 /** POST /api/alliance/survey/arbitrate/clear - cell required; invalidates survey cache after write */
 export interface PostAllianceSurveyArbitrateClearParams {}
-export type PostAllianceSurveyArbitrateClearResponse = unknown;
+export type PostAllianceSurveyArbitrateClearResponse = Record<string, unknown>;
 
 /** GET /api/alliance/survey/arbitrations - lists arbitration.jsonl */
 export interface GetAllianceSurveyArbitrationsParams {}
-export type GetAllianceSurveyArbitrationsResponse = unknown;
+export type GetAllianceSurveyArbitrationsResponse = Record<string, unknown>;
 
 /** GET /api/alliance/survey/mining - GET /api/alliance/survey/mining */
 export interface GetAllianceSurveyMiningParams {}
-export type GetAllianceSurveyMiningResponse = unknown;
+export type GetAllianceSurveyMiningResponse = Record<string, unknown>;
 
 /** GET /api/audit/alignment - GET /api/audit/alignment */
 export interface GetAuditAlignmentParams {}
-export type GetAuditAlignmentResponse = unknown;
+export type GetAuditAlignmentResponse = Record<string, unknown>;
 
 /** GET /api/audit/decisions - window 200..20000 */
 export interface GetAuditDecisionsParams {
   tenant?: TenantWithAll;
   window?: number;
 }
-export type GetAuditDecisionsResponse = unknown;
+export type GetAuditDecisionsResponse = {cachedAt?: string; currentTick?: number | null; decision: {actionMix?: {[key: string]: number}; intentTop?: Array<string>; planChurn?: Record<string, unknown> | null; records?: number; sourceMix?: {[key: string]: number}; stallTicks?: number}; generatedAt: string; outcome: {cargoEfficiency?: number | null; coreDeltaPositiveTicks?: number; coreDeltaSum?: number; depositFailed?: number; depositSucceeded?: number; depositSuccessRate?: number | null; harvestFailed?: number; harvestSucceeded?: number; humanApplied?: number; humanRejected?: number; records?: number; workerMeanDistFromCore?: number | null}; tenant: string; window: number};
 
 /** GET /api/audit/decisions/trend - tenant all rejected; window 100..2000, steps 2..12 */
 export interface GetAuditDecisionsTrendParams {
@@ -79,33 +79,33 @@ export interface GetAuditDecisionsTrendParams {
   window?: number;
   steps?: number;
 }
-export type GetAuditDecisionsTrendResponse = unknown;
+export type GetAuditDecisionsTrendResponse = {cachedAt?: string; currentTick?: number | null; decision: Record<string, unknown>; generatedAt: string; outcome: Record<string, unknown>; tenant: string; window: number};
 
 /** GET /api/audit/human - human-command-audit.jsonl tail */
 export interface GetAuditHumanParams {
   tenant?: Tenant;
   limit?: number;
 }
-export type GetAuditHumanResponse = unknown;
+export type GetAuditHumanResponse = Record<string, unknown>;
 
 /** GET /api/audit/human/conflicts - window 200..20000 */
 export interface GetAuditHumanConflictsParams {
   tenant?: TenantWithAll;
   window?: number;
 }
-export type GetAuditHumanConflictsResponse = unknown;
+export type GetAuditHumanConflictsResponse = {applied: number; cachedAt?: string; commandKinds?: {[key: string]: number}; currentTick?: number | null; generatedAt: string; rejected: number; rejectedRate?: number | null; tenant: string; topRejectedReasons?: Array<Record<string, unknown>>; window: number};
 
 /** GET /api/audit/lifecycle - GET /api/audit/lifecycle */
 export interface GetAuditLifecycleParams {
   tenant?: TenantWithAll;
 }
-export type GetAuditLifecycleResponse = unknown;
+export type GetAuditLifecycleResponse = Record<string, unknown>;
 
 /** GET /api/audit/mines - GET /api/audit/mines */
 export interface GetAuditMinesParams {
   tenant?: TenantWithAll;
 }
-export type GetAuditMinesResponse = unknown;
+export type GetAuditMinesResponse = {candidates?: Array<Record<string, unknown>>; currentTick?: number | null; harvested: number; maxGapAgeTicks?: number | null; medianGapAgeTicks?: number | null; medianTimeToFirstHarvest?: number | null; neverHarvested?: number; staleNever?: number; tenant: string; topMines?: Record<string, unknown>; total: number; utilizationRate?: number | null; visibleNever?: number};
 
 /** GET /api/audit/mines/trend - tenant all rejected; window 500..4000, steps 2..10 */
 export interface GetAuditMinesTrendParams {
@@ -113,15 +113,15 @@ export interface GetAuditMinesTrendParams {
   window?: number;
   steps?: number;
 }
-export type GetAuditMinesTrendResponse = unknown;
+export type GetAuditMinesTrendResponse = {cachedAt?: string; currentTick?: number | null; generatedAt: string; steps: number; tenant: string; trend: Array<Record<string, unknown>>; window: number};
 
 /** GET /api/audit/mining-effectiveness - GET /api/audit/mining-effectiveness */
 export interface GetAuditMiningEffectivenessParams {}
-export type GetAuditMiningEffectivenessResponse = unknown;
+export type GetAuditMiningEffectivenessResponse = {cachedAt?: string; currentTick?: number | null; generatedAt: string; global: {assigned?: number; effectiveRate?: number | null; harvested?: number; harvestedByOther?: number; open?: number; progressRate?: number | null; stale?: number}; items: Array<Record<string, unknown>>; perTenant: {[key: string]: Record<string, unknown>}};
 
 /** GET /api/audit/overview - composition of cached sub-audits */
 export interface GetAuditOverviewParams {}
-export type GetAuditOverviewResponse = unknown;
+export type GetAuditOverviewResponse = Record<string, unknown>;
 
 /** GET /api/audit/trail - source in human|command|arbitration|supervisor; limit 1..500 */
 export interface GetAuditTrailParams {
@@ -129,47 +129,47 @@ export interface GetAuditTrailParams {
   source?: string;
   limit?: number;
 }
-export type GetAuditTrailResponse = unknown;
+export type GetAuditTrailResponse = {cachedAt?: string; counts: {[key: string]: number}; entries: Array<Record<string, unknown>>; filters: {source?: string; tenant?: string}; generatedAt: string};
 
 /** GET /api/audit/workers - window 200..20000 */
 export interface GetAuditWorkersParams {
   tenant?: TenantWithAll;
   window?: number;
 }
-export type GetAuditWorkersResponse = unknown;
+export type GetAuditWorkersResponse = {cachedAt?: string; generatedAt: string; tenant: string; tenants: Array<{affectedWorkers?: number; byKind?: {[key: string]: number}; currentTick?: number | null; eventCount?: number; latestByWorker?: Array<Record<string, unknown>>; repeatedWorkers?: number; tenant?: string}>; totals: {affectedWorkers?: number; eventCount?: number; recentWorkers?: number; repeatedWorkers?: number}; window: number};
 
 /** DELETE /api/command - scope all|action|goal; audit append */
 export interface DeleteCommandParams {}
-export type DeleteCommandResponse = unknown;
+export type DeleteCommandResponse = Record<string, unknown>;
 
 /** POST /api/command - validates tenant, unitId, action.type in VALID_ACTION_TYPES (14); core-moving guard -> 409; replace per-unit; audit append */
 export interface PostCommandParams {}
-export type PostCommandResponse = unknown;
+export type PostCommandResponse = Record<string, unknown>;
 
 /** POST /api/command/clear - clears commands+goals; audit append */
 export interface PostCommandClearParams {}
-export type PostCommandClearResponse = unknown;
+export type PostCommandClearResponse = Record<string, unknown>;
 
 /** POST /api/command/goal - validates kind mine|goto; dedupe window 30s; audit append */
 export interface PostCommandGoalParams {}
-export type PostCommandGoalResponse = unknown;
+export type PostCommandGoalResponse = Record<string, unknown>;
 
 /** POST /api/command/mode - mode override|disabled; audit append */
 export interface PostCommandModeParams {}
-export type PostCommandModeResponse = unknown;
+export type PostCommandModeResponse = Record<string, unknown>;
 
 /** GET /api/commands - tenant required; reconciles satisfied/applied/unknown_unit and cancels stuck goals */
 export interface GetCommandsParams {
   tenant?: Tenant;
 }
-export type GetCommandsResponse = unknown;
+export type GetCommandsResponse = Record<string, unknown>;
 
 /** GET /api/deeds - limit clamped 1..200; alliance deeds merged when all */
 export interface GetDeedsParams {
   tenant?: TenantWithAll;
   limit?: number;
 }
-export type GetDeedsResponse = unknown;
+export type GetDeedsResponse = Record<string, unknown>;
 
 /** GET /api/deeds/journal - window 500..50000; filter keys part of cache key */
 export interface GetDeedsJournalParams {
@@ -178,167 +178,167 @@ export interface GetDeedsJournalParams {
   category?: string;
   minStar?: number;
 }
-export type GetDeedsJournalResponse = unknown;
+export type GetDeedsJournalResponse = Record<string, unknown>;
 
 /** GET /api/events - GET /api/events */
 export interface GetEventsParams {
   tenant?: Tenant;
   n?: number;
 }
-export type GetEventsResponse = unknown;
+export type GetEventsResponse = Record<string, unknown>;
 
 /** GET /api/exploration - survey + lifecycle + current world subset */
 export interface GetExplorationParams {
   tenant?: Tenant;
 }
-export type GetExplorationResponse = unknown;
+export type GetExplorationResponse = Record<string, unknown>;
 
 /** GET /api/health/pipeline - may trigger background survey:sync when lag >60 ticks (debounced 60s, lock-guarded) */
 export interface GetHealthPipelineParams {}
-export type GetHealthPipelineResponse = unknown;
+export type GetHealthPipelineResponse = Record<string, unknown>;
 
 /** POST /api/ingest/agents - tenant allowlist t1..t4 + sim-* namespace; event kind allowlist register|connection|tick_summary|disconnected; per-event isolation; idempotent upsert */
 export interface PostIngestAgentsParams {}
-export type PostIngestAgentsResponse = unknown;
+export type PostIngestAgentsResponse = Record<string, unknown>;
 
 /** GET /api/intel - GET /api/intel */
 export interface GetIntelParams {}
-export type GetIntelResponse = unknown;
+export type GetIntelResponse = Record<string, unknown>;
 
 /** GET /api/intel/heat - window 100..50000; tenant validated */
 export interface GetIntelHeatParams {
   tenant?: TenantWithAll;
   window?: number;
 }
-export type GetIntelHeatResponse = unknown;
+export type GetIntelHeatResponse = Record<string, unknown>;
 
 /** GET /api/leaderboard - stale >10min triggers background fetch (not awaited); 404 when snapshot missing */
 export interface GetLeaderboardParams {}
-export type GetLeaderboardResponse = unknown;
+export type GetLeaderboardResponse = Record<string, unknown>;
 
 /** POST /api/leaderboard/refresh - request-driven refresh; 502 on fetch failure */
 export interface PostLeaderboardRefreshParams {}
-export type PostLeaderboardRefreshResponse = unknown;
+export type PostLeaderboardRefreshResponse = Record<string, unknown>;
 
 /** GET /api/map - weak ETag; 304 on if-none-match; full merged map (~642KB) */
 export interface GetMapParams {}
-export type GetMapResponse = unknown;
+export type GetMapResponse = Record<string, unknown>;
 
 /** GET /api/map/lod - chunk-level aggregation; tenant validated */
 export interface GetMapLodParams {
   tenant?: TenantWithAll;
 }
-export type GetMapLodResponse = unknown;
+export type GetMapLodResponse = {cachedAt: string; chunkSize: number; chunks: Array<{coreCount?: number; cx?: number; cy?: number; lastTick?: number; obstacleCount?: number; resourceCount?: number; tenant?: string}>; generatedAt: string; tenant: string};
 
 /** GET /api/overview - merged ledger + outcome.jsonl overview per tenant */
 export interface GetOverviewParams {}
-export type GetOverviewResponse = unknown;
+export type GetOverviewResponse = Record<string, unknown>;
 
 /** GET /api/plan - GET /api/plan */
 export interface GetPlanParams {
   tenant?: Tenant;
 }
-export type GetPlanResponse = unknown;
+export type GetPlanResponse = Record<string, unknown>;
 
 /** POST /api/redeem - stores first 6 chars only; pending status; no external call yet */
 export interface PostRedeemParams {}
-export type PostRedeemResponse = unknown;
+export type PostRedeemResponse = Record<string, unknown>;
 
 /** GET /api/redeem/history - GET /api/redeem/history */
 export interface GetRedeemHistoryParams {}
-export type GetRedeemHistoryResponse = unknown;
+export type GetRedeemHistoryResponse = Record<string, unknown>;
 
 /** GET /api/registry/agents - lists agents + key hashes only; no plaintext */
 export interface GetRegistryAgentsParams {}
-export type GetRegistryAgentsResponse = unknown;
+export type GetRegistryAgentsResponse = Record<string, unknown>;
 
 /** POST /api/registry/agents - mode production|simulation; production requires api_key_tail; simulation issues plaintext simkey once (SHA-256 at rest) */
 export interface PostRegistryAgentsParams {}
-export type PostRegistryAgentsResponse = unknown;
+export type PostRegistryAgentsResponse = Record<string, unknown>;
 
 /** DELETE /api/registry/agents/{id} - soft revoke: agent + active keys set revoked_at */
 export interface DeleteRegistryAgentsIdParams {
   id: string;
 }
-export type DeleteRegistryAgentsIdResponse = unknown;
+export type DeleteRegistryAgentsIdResponse = Record<string, unknown>;
 
 /** POST /api/registry/keys - reissue simkey for simulation non-revoked agent only; plaintext once */
 export interface PostRegistryKeysParams {}
-export type PostRegistryKeysResponse = unknown;
+export type PostRegistryKeysResponse = Record<string, unknown>;
 
 /** GET /api/replay - replay null when absent */
 export interface GetReplayParams {
   tenant?: Tenant;
 }
-export type GetReplayResponse = unknown;
+export type GetReplayResponse = Record<string, unknown>;
 
 /** GET /api/shop - official shop products */
 export interface GetShopParams {}
-export type GetShopResponse = unknown;
+export type GetShopResponse = Record<string, unknown>;
 
 /** GET /api/shop/history - GET /api/shop/history */
 export interface GetShopHistoryParams {}
-export type GetShopHistoryResponse = unknown;
+export type GetShopHistoryResponse = {cachedAt?: string; generatedAt: string; lastSnapshotAt?: string | null; productCount: number; refreshedAt?: string | null; snapshots: number; trends: Array<Record<string, unknown>>};
 
 /** POST /api/shop/history/refresh - request-driven snapshot; 502 on fetch failure */
 export interface PostShopHistoryRefreshParams {}
-export type PostShopHistoryRefreshResponse = unknown;
+export type PostShopHistoryRefreshResponse = Record<string, unknown>;
 
 /** GET /api/shop/me - requires X-Shop-Cookie header; forwarded to official shop */
 export interface GetShopMeParams {}
-export type GetShopMeResponse = unknown;
+export type GetShopMeResponse = Record<string, unknown>;
 
 /** POST /api/shop/order - requires X-Shop-Cookie header; CSRF token extracted from cookie and forwarded */
 export interface PostShopOrderParams {}
-export type PostShopOrderResponse = unknown;
+export type PostShopOrderResponse = Record<string, unknown>;
 
 /** GET /api/shop/orders - requires X-Shop-Cookie header; forwarded to official shop */
 export interface GetShopOrdersParams {}
-export type GetShopOrdersResponse = unknown;
+export type GetShopOrdersResponse = Record<string, unknown>;
 
 /** GET /api/stream - bounded decision-stream tail (n clamped 1..200); poll JSON, not SSE */
 export interface GetStreamParams {
   tenant?: Tenant;
   n?: number;
 }
-export type GetStreamResponse = unknown;
+export type GetStreamResponse = {generatedAt: string; rows: Array<Record<string, unknown>>; tenant: string};
 
 /** GET /api/survey - per-tenant resource/obstacle/core-hunt cells */
 export interface GetSurveyParams {
   tenant?: TenantWithAll;
   states?: string;
 }
-export type GetSurveyResponse = unknown;
+export type GetSurveyResponse = Record<string, unknown>;
 
 /** GET /api/survey/decision-input - tenant validated */
 export interface GetSurveyDecisionInputParams {
   tenant?: Tenant;
 }
-export type GetSurveyDecisionInputResponse = unknown;
+export type GetSurveyDecisionInputResponse = Record<string, unknown>;
 
 /** GET /api/survey/enemy-cores - core_hunts readOnly per tenant + alliance snapshot */
 export interface GetSurveyEnemyCoresParams {}
-export type GetSurveyEnemyCoresResponse = unknown;
+export type GetSurveyEnemyCoresResponse = Record<string, unknown>;
 
 /** GET /api/survey/mine - mine cell + resource timeline */
 export interface GetSurveyMineParams {
   tenant?: Tenant;
   cell?: string;
 }
-export type GetSurveyMineResponse = unknown;
+export type GetSurveyMineResponse = Record<string, unknown>;
 
 /** GET /api/survey/mine-patterns - tenant validated */
 export interface GetSurveyMinePatternsParams {
   tenant?: TenantWithAll;
 }
-export type GetSurveyMinePatternsResponse = unknown;
+export type GetSurveyMinePatternsResponse = Record<string, unknown>;
 
 /** GET /api/tenants - per-tenant live status from supervisor /ready probe; tenant colors */
 export interface GetTenantsParams {}
-export type GetTenantsResponse = unknown;
+export type GetTenantsResponse = Record<string, unknown>;
 
 /** GET /api/world - GET /api/world */
 export interface GetWorldParams {
   tenant?: Tenant;
 }
-export type GetWorldResponse = unknown;
+export type GetWorldResponse = Record<string, unknown>;

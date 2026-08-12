@@ -22,6 +22,309 @@ from .routes import ETAG_PREFIX, ETAG_SUFFIX, MAP_CACHE_CONTROL, Route, RouteTab
 OPENAPI_VERSION = "3.1.0"
 DEFAULT_API_VERSION = "0.1.0"
 
+_STR = {"type": "string"}
+_INT = {"type": "integer"}
+_NUM = {"type": "number"}
+_NULLABLE_INT = {"type": "integer", "nullable": True}
+_NULLABLE_NUM = {"type": "number", "nullable": True}
+_OBJ = {"type": "object"}
+_OBJ_ROWS = {"type": "array", "items": {"type": "object"}}
+_INT_MAP = {"type": "object", "additionalProperties": {"type": "integer"}}
+_STR_MAP = {"type": "object", "additionalProperties": {"type": "string"}}
+
+
+# Minimal 200 response schemas for the main Command Center read endpoints.
+# Field names mirror the real payloads produced by the P5-4 projections and the
+# request pipeline; nested payload rows stay generic where a projection emits
+# heterogeneous records. Every route without a dedicated entry falls back to a
+# non-empty object schema, so no operation documents an empty (``unknown``)
+# response type and generated TS clients stop being ``unknown``.
+_RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
+    ("GET", "/api/stream"): {
+        "type": "object",
+        "properties": {
+            "tenant": _STR,
+            "generatedAt": _STR,
+            "rows": {"type": "array", "items": _OBJ},
+        },
+        "required": ["tenant", "generatedAt", "rows"],
+    },
+    ("GET", "/api/map"): _OBJ,
+    ("GET", "/api/map/lod"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenant": _STR,
+            "chunkSize": _INT,
+            "chunks": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "cx": _INT,
+                        "cy": _INT,
+                        "tenant": _STR,
+                        "resourceCount": _INT,
+                        "obstacleCount": _INT,
+                        "coreCount": _INT,
+                        "lastTick": _INT,
+                    },
+                },
+            },
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt", "tenant", "chunkSize", "chunks", "cachedAt"],
+    },
+    ("GET", "/api/alliance/survey"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "colors": _STR_MAP,
+            "tenantSummaries": {"type": "object", "additionalProperties": _OBJ},
+            "enemyCores": _OBJ_ROWS,
+            "resources": _OBJ_ROWS,
+            "obstacles": _OBJ_ROWS,
+            "chunks": _OBJ_ROWS,
+            "lifecycle": {"type": "object", "additionalProperties": {"type": "object", "nullable": True}},
+            "conflicts": {
+                "type": "object",
+                "properties": {
+                    "resourceOverlaps": _OBJ_ROWS,
+                    "obstacleResourceConflicts": _OBJ_ROWS,
+                },
+            },
+            "consensusResources": _OBJ_ROWS,
+            "consensusCores": _OBJ_ROWS,
+            "consensusChunks": _OBJ_ROWS,
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt"],
+    },
+    ("GET", "/api/alliance/cluster"): {
+        "type": "object",
+        "properties": {
+            "generatedAtMs": _INT,
+            "groups": _OBJ_ROWS,
+            "members": _OBJ_ROWS,
+            "summary": {
+                "type": "object",
+                "properties": {
+                    "memberCount": _INT,
+                    "groupCount": _INT,
+                    "isolatedCount": _INT,
+                    "maxCohesion": _NUM,
+                    "avgCohesion": _NUM,
+                },
+            },
+        },
+        "required": ["generatedAtMs", "groups", "members", "summary"],
+    },
+    ("GET", "/api/alliance/mining"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "currentTick": _NULLABLE_INT,
+            "assignments": _OBJ_ROWS,
+            "perTenant": {"type": "object", "additionalProperties": _OBJ},
+            "unassigned": _OBJ_ROWS,
+            "global": {
+                "type": "object",
+                "properties": {
+                    "totalCandidates": _INT,
+                    "assigned": _INT,
+                    "shared": _INT,
+                    "conflict": _INT,
+                    "unassigned": _INT,
+                },
+            },
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt", "assignments", "perTenant", "unassigned", "global", "cachedAt"],
+    },
+    ("GET", "/api/audit/decisions"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenant": _STR,
+            "window": _INT,
+            "currentTick": _NULLABLE_INT,
+            "decision": {
+                "type": "object",
+                "properties": {
+                    "records": _INT,
+                    "actionMix": _INT_MAP,
+                    "intentTop": {"type": "array", "items": _STR},
+                    "sourceMix": _INT_MAP,
+                    "planChurn": {"type": "object", "nullable": True},
+                    "stallTicks": _INT,
+                },
+            },
+            "outcome": {
+                "type": "object",
+                "properties": {
+                    "records": _INT,
+                    "coreDeltaSum": _NUM,
+                    "coreDeltaPositiveTicks": _INT,
+                    "depositSucceeded": _INT,
+                    "depositFailed": _INT,
+                    "harvestSucceeded": _INT,
+                    "harvestFailed": _INT,
+                    "depositSuccessRate": _NULLABLE_NUM,
+                    "cargoEfficiency": _NULLABLE_NUM,
+                    "workerMeanDistFromCore": _NULLABLE_NUM,
+                    "humanApplied": _INT,
+                    "humanRejected": _INT,
+                },
+            },
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt", "tenant", "window", "decision", "outcome"],
+    },
+    ("GET", "/api/audit/decisions/trend"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenant": _STR,
+            "window": _INT,
+            "currentTick": _NULLABLE_INT,
+            "decision": _OBJ,
+            "outcome": _OBJ,
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt", "tenant", "window", "decision", "outcome"],
+    },
+    ("GET", "/api/audit/workers"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenant": _STR,
+            "window": _INT,
+            "totals": {
+                "type": "object",
+                "properties": {
+                    "eventCount": _INT,
+                    "affectedWorkers": _INT,
+                    "repeatedWorkers": _INT,
+                    "recentWorkers": _INT,
+                },
+            },
+            "tenants": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "tenant": _STR,
+                        "currentTick": _NULLABLE_INT,
+                        "eventCount": _INT,
+                        "affectedWorkers": _INT,
+                        "repeatedWorkers": _INT,
+                        "byKind": _INT_MAP,
+                        "latestByWorker": _OBJ_ROWS,
+                    },
+                },
+            },
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt", "tenant", "window", "totals", "tenants"],
+    },
+    ("GET", "/api/audit/trail"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "entries": _OBJ_ROWS,
+            "counts": _INT_MAP,
+            "filters": {"type": "object", "properties": {"tenant": _STR, "source": _STR}},
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt", "entries", "counts", "filters"],
+    },
+    ("GET", "/api/audit/human/conflicts"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenant": _STR,
+            "window": _INT,
+            "currentTick": _NULLABLE_INT,
+            "applied": _INT,
+            "rejected": _INT,
+            "rejectedRate": _NULLABLE_NUM,
+            "topRejectedReasons": _OBJ_ROWS,
+            "commandKinds": _INT_MAP,
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt", "tenant", "window", "applied", "rejected"],
+    },
+    ("GET", "/api/audit/mines"): {
+        "type": "object",
+        "properties": {
+            "tenant": _STR,
+            "currentTick": _NULLABLE_INT,
+            "total": _INT,
+            "harvested": _INT,
+            "neverHarvested": _INT,
+            "visibleNever": _INT,
+            "staleNever": _INT,
+            "utilizationRate": _NULLABLE_NUM,
+            "medianTimeToFirstHarvest": _NULLABLE_NUM,
+            "maxGapAgeTicks": _NULLABLE_INT,
+            "medianGapAgeTicks": _NULLABLE_NUM,
+            "candidates": _OBJ_ROWS,
+            "topMines": _OBJ,
+        },
+        "required": ["tenant", "total", "harvested"],
+    },
+    ("GET", "/api/audit/mines/trend"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenant": _STR,
+            "window": _INT,
+            "steps": _INT,
+            "currentTick": _NULLABLE_INT,
+            "trend": _OBJ_ROWS,
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt", "tenant", "window", "steps", "trend"],
+    },
+    ("GET", "/api/audit/mining-effectiveness"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "currentTick": _NULLABLE_INT,
+            "items": _OBJ_ROWS,
+            "perTenant": {"type": "object", "additionalProperties": _OBJ},
+            "global": {
+                "type": "object",
+                "properties": {
+                    "assigned": _INT,
+                    "harvested": _INT,
+                    "harvestedByOther": _INT,
+                    "open": _INT,
+                    "stale": _INT,
+                    "effectiveRate": _NULLABLE_NUM,
+                    "progressRate": _NULLABLE_NUM,
+                },
+            },
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt", "items", "perTenant", "global"],
+    },
+    ("GET", "/api/shop/history"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "snapshots": _INT,
+            "productCount": _INT,
+            "lastSnapshotAt": {"type": "string", "nullable": True},
+            "trends": _OBJ_ROWS,
+            "refreshedAt": {"type": "string", "nullable": True},
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt", "snapshots", "productCount", "trends"],
+    },
+}
+
+
 _ETAG_HEADERS = {
     "ETag": {"schema": {"type": "string", "example": f"{ETAG_PREFIX}<map-sig>{ETAG_SUFFIX}"}},
     "Cache-Control": {"schema": {"type": "string", "example": MAP_CACHE_CONTROL}},
@@ -83,8 +386,9 @@ def _path_parameters(route: Route) -> list[dict[str, Any]]:
 
 
 def _responses(route: Route) -> dict[str, Any]:
+    schema = _RESPONSE_SCHEMAS.get((route.method, route.path), {"type": "object"})
     responses: dict[str, Any] = {
-        "200": {"description": "OK", "content": {"application/json": {"schema": {}}}},
+        "200": {"description": "OK", "content": {"application/json": {"schema": schema}}},
         "400": {"description": "Invalid query parameters or tenant"},
         "404": {"description": "Route not found"},
         "500": {"description": "Internal error"},
