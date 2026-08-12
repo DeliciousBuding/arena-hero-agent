@@ -366,6 +366,46 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
         },
         "required": ["generatedAt"],
     },
+    ("GET", "/api/exploration"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "world": {
+                "type": "object",
+                "properties": {
+                    "chunkSize": _INT,
+                    "observedSpan": {"type": "object", "nullable": True},
+                    "spanChunks": _INT,
+                    "exploredChunks": _INT,
+                    "coveragePct": _NULLABLE_NUM,
+                },
+                "required": ["chunkSize", "spanChunks", "exploredChunks"],
+            },
+            "perTenant": {"type": "object", "additionalProperties": _OBJ},
+            "alliance": {
+                "type": "object",
+                "properties": {
+                    "unionChunks": _INT,
+                    "unionRecent": _INT,
+                    "coveragePct": _NULLABLE_NUM,
+                    "exclusiveByTenant": _INT_MAP,
+                },
+                "required": ["unionChunks", "unionRecent", "exclusiveByTenant"],
+            },
+            "gaps": _OBJ_ROWS,
+            "resurveyTargets": _OBJ_ROWS,
+            "cachedAt": _STR,
+        },
+        "required": [
+            "generatedAt",
+            "world",
+            "perTenant",
+            "alliance",
+            "gaps",
+            "resurveyTargets",
+            "cachedAt",
+        ],
+    },
     ("GET", "/api/alliance/cluster"): {
         "type": "object",
         "properties": {

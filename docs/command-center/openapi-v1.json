@@ -2727,6 +2727,94 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "alliance": {
+                      "properties": {
+                        "coveragePct": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "exclusiveByTenant": {
+                          "additionalProperties": {
+                            "type": "integer"
+                          },
+                          "type": "object"
+                        },
+                        "unionChunks": {
+                          "type": "integer"
+                        },
+                        "unionRecent": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "unionChunks",
+                        "unionRecent",
+                        "exclusiveByTenant"
+                      ],
+                      "type": "object"
+                    },
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "gaps": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "perTenant": {
+                      "additionalProperties": {
+                        "type": "object"
+                      },
+                      "type": "object"
+                    },
+                    "resurveyTargets": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "world": {
+                      "properties": {
+                        "chunkSize": {
+                          "type": "integer"
+                        },
+                        "coveragePct": {
+                          "nullable": true,
+                          "type": "number"
+                        },
+                        "exploredChunks": {
+                          "type": "integer"
+                        },
+                        "observedSpan": {
+                          "nullable": true,
+                          "type": "object"
+                        },
+                        "spanChunks": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "chunkSize",
+                        "spanChunks",
+                        "exploredChunks"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "world",
+                    "perTenant",
+                    "alliance",
+                    "gaps",
+                    "resurveyTargets",
+                    "cachedAt"
+                  ],
                   "type": "object"
                 }
               }

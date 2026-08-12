@@ -33,6 +33,7 @@ from ..paths import resolve_data_root, telemetry_dir, validate_tenant, write_api
 from ..projections import (
     load_alliance_advice,
     load_alliance_defense,
+    load_alliance_exploration,
     load_alliance_snapshot,
 )
 from ..projections._common import current_epoch_ms
@@ -143,6 +144,7 @@ class CommandCenterApp:
             ("GET", "/api/alliance/snapshot"): self._handle_alliance_snapshot,
             ("GET", "/api/alliance/defense"): self._handle_alliance_defense,
             ("GET", "/api/alliance/advice"): self._handle_alliance_advice,
+            ("GET", "/api/exploration"): self._handle_exploration,
         }
         if handlers:
             self._handlers.update(handlers)
@@ -306,6 +308,16 @@ class CommandCenterApp:
     ) -> dict[str, Any]:
         del request, match, query, tenant
         return load_alliance_advice(self._data_root, now_ms=self._now_ms())
+
+    def _handle_exploration(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        return load_alliance_exploration(self._data_root, now_ms=self._now_ms())
 
 
 __all__ = [

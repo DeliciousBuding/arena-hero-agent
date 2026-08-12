@@ -1,0 +1,40 @@
+{
+  "nowMs": 1752000000000,
+  "worlds": {
+    "t1": {
+      "tick": 5000,
+      "state": {
+        "objects": [
+          {"id": "core-t1", "kind": "CORE", "controlled": true, "position": [0, 0], "hp": 500}
+        ]
+      }
+    },
+    "t2": {
+      "tick": 5000,
+      "state": {
+        "objects": [
+          {"id": "core-t2", "kind": "CORE", "controlled": true, "position": [160, 160], "hp": 500}
+        ]
+      }
+    },
+    "t3": {},
+    "t4": {}
+  },
+  "survey": {
+    "t1": {
+      "chunks": [
+        {"chunk_key": "0,0", "last_seen_tick": 4900},
+        {"chunk_key": "1,0", "last_seen_tick": 2000},
+        {"chunk_key": "2,0", "last_seen_tick": 100}
+      ]
+    },
+    "t2": {
+      "chunks": [
+        {"chunk_key": "0,0", "last_seen_tick": 4000},
+        {"chunk_key": "10,10", "last_seen_tick": 5000}
+      ]
+    },
+    "t3": {},
+    "t4": {}
+  }
+}
