@@ -90,6 +90,7 @@ class SqliteTickRecorder:
             self._process_lock = acquire_process_lock(self._lock_path)
             self._connection = sqlite3.connect(self._path)
             self._connection.execute(f"PRAGMA busy_timeout = {config.busy_timeout_ms}")
+            self._verify_existing_database()
             self._connection.executescript(_SCHEMA)
             self._connection.commit()
         except RecorderError:
@@ -102,6 +103,55 @@ class SqliteTickRecorder:
             self._cleanup_partial_init()
             raise
         self._closed = False
+
+    _EXPECTED_TABLES = ("tick_records", "loop_records")
+
+    def _verify_existing_database(self) -> None:
+        """Fail closed on a torn/truncated pre-existing database.
+
+        ``CREATE TABLE IF NOT EXISTS`` silently rebuilds a missing schema, so a
+        torn write that destroyed the recorder tables would otherwise be masked
+        as a brand-new database while the old rows are lost. Before creating
+        anything, verify that a pre-existing non-empty file is a healthy
+        recorder database: ``PRAGMA quick_check`` must be ``ok`` and the
+        expected tables must be present. An empty file is indistinguishable
+        from a fresh database (for example a crash before the first write) and
+        is initialized normally.
+        """
+        if not self._path.exists() or self._path.stat().st_size == 0:
+            return
+        connection = self._connection
+        if connection is None:
+            return
+        try:
+            rows = connection.execute("PRAGMA quick_check").fetchall()
+        except sqlite3.Error as exc:
+            raise RecorderError(
+                f"recorder database integrity check failed for {self._path}: {exc}"
+            ) from exc
+        if rows != [("ok",)]:
+            raise RecorderError(
+                f"recorder database integrity check failed for {self._path}: "
+                "database is torn or truncated; refusing to silently recreate it"
+            )
+        try:
+            tables = {
+                str(row[0])
+                for row in connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                ).fetchall()
+            }
+        except sqlite3.Error as exc:
+            raise RecorderError(
+                f"recorder database integrity check failed for {self._path}: {exc}"
+            ) from exc
+        missing = [name for name in self._EXPECTED_TABLES if name not in tables]
+        if missing:
+            raise RecorderError(
+                f"recorder database {self._path} is missing expected tables "
+                f"{missing}; refusing to silently recreate the schema after a "
+                "truncated or torn write"
+            )
 
     def _cleanup_partial_init(self) -> None:
         if self._connection is not None:

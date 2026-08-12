@@ -56,7 +56,7 @@ def test_sqlite_garbage_db_fails_closed_on_open(tmp_path: Path) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(b"this is not a sqlite database at all")
 
-    with pytest.raises(RecorderError, match="failed to open recorder database"):
+    with pytest.raises(RecorderError, match="integrity check failed"):
         SqliteTickRecorder(config)
     # Fail-closed: the damaged file is left untouched for forensics.
     assert target.read_bytes() == b"this is not a sqlite database at all"

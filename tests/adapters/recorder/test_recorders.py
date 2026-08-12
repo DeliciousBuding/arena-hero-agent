@@ -401,8 +401,47 @@ def test_sqlite_corrupt_database_fails_loudly_on_open(tmp_path: Path) -> None:
     with SqliteTickRecorder(config) as recorder:
         recorder.record_tick(_accepted(1))
     _sqlite_target(tmp_path).write_bytes(b"this is not a sqlite database")
-    with pytest.raises(RecorderError, match="failed to open recorder database"):
+    with pytest.raises(RecorderError, match="integrity check failed"):
         SqliteTickRecorder(config)
+
+
+def test_sqlite_truncated_database_fails_closed_on_open(tmp_path: Path) -> None:
+    """A torn write that truncates a live database must fail at open, never silently rebuild."""
+    config = RecorderConfig(data_root=tmp_path, tenant_id=TENANT)
+    with SqliteTickRecorder(config) as recorder:
+        recorder.record_tick(_accepted(1))
+        recorder.record_tick(_accepted(2))
+    target = _sqlite_target(tmp_path)
+    raw = target.read_bytes()
+    target.write_bytes(raw[: len(raw) // 2])
+
+    with pytest.raises(RecorderError, match="integrity check failed"):
+        SqliteTickRecorder(config)
+
+
+def test_sqlite_foreign_schema_fails_closed_on_open(tmp_path: Path) -> None:
+    """A valid-but-foreign SQLite file must not be silently converted into a recorder DB."""
+    config = RecorderConfig(data_root=tmp_path, tenant_id=TENANT)
+    target = _sqlite_target(tmp_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(target)
+    connection.execute("CREATE TABLE unrelated (x INTEGER)")
+    connection.commit()
+    connection.close()
+
+    with pytest.raises(RecorderError, match="missing expected tables"):
+        SqliteTickRecorder(config)
+
+
+def test_sqlite_empty_existing_file_initializes_freshly(tmp_path: Path) -> None:
+    """A zero-byte pre-existing file is a fresh database (crash before first write)."""
+    config = RecorderConfig(data_root=tmp_path, tenant_id=TENANT)
+    target = _sqlite_target(tmp_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"")
+    with SqliteTickRecorder(config) as recorder:
+        recorder.record_tick(_accepted(1))
+        assert [tick.tick for tick in recorder.read_ticks()] == [1]
 
 
 def test_sqlite_single_writer_same_target_raises(tmp_path: Path) -> None:
