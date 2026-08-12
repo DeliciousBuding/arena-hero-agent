@@ -5,9 +5,9 @@ multiple tenants, and exposing an operator-facing control plane. The repository 
 engine independent from transport, storage, and deployment details so it can be tested offline and
 integrated through replaceable adapters.
 
-> **Status:** early architecture foundation with a working offline turn-to-decision adapter chain.
-> Production game behavior, persistent storage, and deployment integration are still under
-> development.
+> **Status:** v0.1.4, offline turn-to-decision adapter chain stable (1788 tests). Production
+> game behavior and deployment integration are implemented but not yet promoted beyond the
+> t4 canary; see `PROGRESS.md`.
 
 ## Current capabilities
 
@@ -67,7 +67,7 @@ per-record decision content (`ticks`) digest stays identical. Re-using an
 explicit run id inside the same tenant directory fails closed with a clear
 error instead of appending ambiguous records.
 
-## Planned capabilities
+## Capabilities
 
 - deterministic strategy and planning pipelines;
 - tenant-scoped lifecycle, lease fencing, recovery, and audit trails;

@@ -6,8 +6,8 @@ The SDK adapter implements the application-owned `GameClient` port with the publ
 `arena-hero` Python distribution. It keeps SDK event, command, and acknowledgement models owned by
 the SDK; the Agent does not copy `Turn`, action, event, or wire schemas.
 
-Supported dependency range is `arena-hero>=0.2.9,<0.3`. The lock file currently resolves exactly
-`0.2.9`. At composition time, the adapter validates these public names:
+Pinned dependency is `arena-hero==0.3.0a4` (see `pyproject.toml` / `uv.lock`). At composition
+time, the adapter validates these public names:
 
 - `AsyncArenaHeroClient`, whose `events()` iterator yields `Tick`, `AsyncTurn`, and `Received`;
 - `CommandPlan` submitted by `AsyncArenaHeroClient.submit(..., idempotency_key=...)`;

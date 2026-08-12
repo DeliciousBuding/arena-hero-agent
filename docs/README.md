@@ -1,4 +1,4 @@
 # docs
 
-本仓文档按 root workspace `docs/design/python-first/` 计划推进。骨架期仅保留
-本索引；架构/API/runbook 在实现阶段按文档卫生纪律沉淀。
+本仓文档按实现进度沉淀：架构见 `architecture.md`，SDK 边界见 `sdk-adapter.md`，
+Command Center 见 `command-center/`；当前实现与测试状态以 `PROGRESS.md` 为准。
