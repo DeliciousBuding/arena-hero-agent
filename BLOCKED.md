@@ -10,6 +10,10 @@
   `http://127.0.0.1:8120/alliance-director`（非投影移植项，运维接线，Python 部署无 8120）。
 - **W44 遗留**：三端点 Node golden 对拍（`run-arena-report` + `.golden.json`）待做；
   现为纯 Python fixture 级验证（`fixtures/cc_wiring/`，W25-A now_ms 注入 + fail-open 钉死）。
+- **路由映射裁决（2026-08-12 captain）**：联盟探索覆盖 canonical 路由是
+  `/api/alliance/exploration`（TS `loadAllianceExploration`）；`/api/exploration`
+  （TS `loadTenantSurveyCached`：per-tenant survey+lifecycle+current）Python 未移植，
+  保持 501（已注册+校验，非 404），待后续 port。
 - **mapEngine / RedeemPanel / IntelPanel 调用方迁移：继续 SKIP**（2026-08-12 Meitner 调查）：
   目标写端点（`/api/command*`、`/api/shop/order`、`/api/redeem`）Python 后端全部 501
   （P5-9 写门就绪但无实现），现在迁移会指向死 API；正确顺序 = 后端写端点落地 →

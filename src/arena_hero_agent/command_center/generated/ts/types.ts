@@ -30,7 +30,7 @@ export type GetAllianceDirectorResponse = Record<string, unknown>;
 
 /** GET /api/alliance/exploration - GET /api/alliance/exploration */
 export interface GetAllianceExplorationParams {}
-export type GetAllianceExplorationResponse = Record<string, unknown>;
+export type GetAllianceExplorationResponse = {alliance: {coveragePct?: number | null; exclusiveByTenant: {[key: string]: number}; unionChunks: number; unionRecent: number}; cachedAt: string; gaps: Array<Record<string, unknown>>; generatedAt: string; perTenant: {[key: string]: Record<string, unknown>}; resurveyTargets: Array<Record<string, unknown>>; world: {chunkSize: number; coveragePct?: number | null; exploredChunks: number; observedSpan?: Record<string, unknown> | null; spanChunks: number}};
 
 /** GET /api/alliance/mining - GET /api/alliance/mining */
 export interface GetAllianceMiningParams {}
@@ -191,7 +191,7 @@ export type GetEventsResponse = Record<string, unknown>;
 export interface GetExplorationParams {
   tenant?: Tenant;
 }
-export type GetExplorationResponse = {alliance: {coveragePct?: number | null; exclusiveByTenant: {[key: string]: number}; unionChunks: number; unionRecent: number}; cachedAt: string; gaps: Array<Record<string, unknown>>; generatedAt: string; perTenant: {[key: string]: Record<string, unknown>}; resurveyTargets: Array<Record<string, unknown>>; world: {chunkSize: number; coveragePct?: number | null; exploredChunks: number; observedSpan?: Record<string, unknown> | null; spanChunks: number}};
+export type GetExplorationResponse = Record<string, unknown>;
 
 /** GET /api/health/pipeline - may trigger background survey:sync when lag >60 ticks (debounced 60s, lock-guarded) */
 export interface GetHealthPipelineParams {}

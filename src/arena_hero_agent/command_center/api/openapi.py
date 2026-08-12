@@ -366,7 +366,7 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
         },
         "required": ["generatedAt"],
     },
-    ("GET", "/api/exploration"): {
+    ("GET", "/api/alliance/exploration"): {
         "type": "object",
         "properties": {
             "generatedAt": _STR,

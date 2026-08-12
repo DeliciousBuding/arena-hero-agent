@@ -146,7 +146,7 @@ class CommandCenterApp:
             ("GET", "/api/alliance/snapshot"): self._handle_alliance_snapshot,
             ("GET", "/api/alliance/defense"): self._handle_alliance_defense,
             ("GET", "/api/alliance/advice"): self._handle_alliance_advice,
-            ("GET", "/api/exploration"): self._handle_exploration,
+            ("GET", "/api/alliance/exploration"): self._handle_exploration,
             ("GET", "/api/survey/mine-patterns"): self._handle_mine_patterns,
             ("GET", "/api/alliance/survey/mining"): self._handle_consensus_mining,
         }

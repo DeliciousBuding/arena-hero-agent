@@ -34,7 +34,7 @@ def test_exploration_route_is_registered() -> None:
 
 
 def test_exploration_empty_root_returns_200_payload(tmp_path: Path) -> None:
-    response = _app(tmp_path).handle(ApiRequest("GET", "/api/exploration"))
+    response = _app(tmp_path).handle(ApiRequest("GET", "/api/alliance/exploration"))
     assert response.status == 200
     body = _json_body(response)
     assert set(body) == {
@@ -63,7 +63,7 @@ def test_exploration_fixture_root_returns_200_payload(tmp_path: Path) -> None:
         ).read_text(encoding="utf-8")
     )
     materialize_advice_data_root(fixture, tmp_path)
-    response = _app(tmp_path).handle(ApiRequest("GET", "/api/exploration"))
+    response = _app(tmp_path).handle(ApiRequest("GET", "/api/alliance/exploration"))
     assert response.status == 200
     body = _json_body(response)
     assert body["world"]["exploredChunks"] == 4
@@ -79,7 +79,7 @@ def test_exploration_invalid_tenant_returns_400(tmp_path: Path) -> None:
 
 def test_exploration_openapi_schema_is_non_empty() -> None:
     doc = build_openapi(RouteTableImpl())
-    schema = doc["paths"]["/api/exploration"]["get"]["responses"]["200"]["content"][
+    schema = doc["paths"]["/api/alliance/exploration"]["get"]["responses"]["200"]["content"][
         "application/json"
     ]["schema"]
     assert schema["type"] == "object"
@@ -98,3 +98,11 @@ def test_exploration_openapi_schema_is_non_empty() -> None:
         "unionRecent",
         "exclusiveByTenant",
     }
+
+
+def test_exploration_route_unwired_returns_501(tmp_path: Path) -> None:
+    # /api/exploration (per-tenant survey+lifecycle+current) has no Python port yet:
+    # registered + validated, but unwired -> 501 (parity gap, not 404/200).
+    response = _app(tmp_path).handle(ApiRequest("GET", "/api/exploration"))
+    assert response.status == 501
+    assert _json_body(response) == {"error": "not implemented"}
