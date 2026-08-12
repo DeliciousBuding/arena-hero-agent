@@ -57,6 +57,7 @@ KIND_BY_FIXTURE: dict[str, str] = {
     "human_audit_basic": "humanAudit",
     "alliance_advice_basic": "advice",
     "alliance_advice_full": "advice",
+    "alignment_basic": "alignment",
     "exploration_coverage_basic": "explorationCoverage",
     "mine_patterns_predict_basic": "minePatternsPredict",
     "mine_patterns_predict_absences_basic": "minePatternsPredictAbsences",

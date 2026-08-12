@@ -33,6 +33,7 @@ from arena_hero_agent.command_center.projections import (
     aggregate_map_lod,
     aggregate_mine_utilization,
     aggregate_mine_utilization_trend,
+    aggregate_alignment,
     aggregate_shop_history,
     aggregate_worker_liveness,
     assign_alliance_mining,
@@ -281,6 +282,15 @@ def _run_python(name: str, fixture: dict[str, Any]) -> object:
             root = Path(root_dir)
             materialize_advice_data_root(fixture, root)
             return load_alliance_advice(root, now_ms=int(fixture["nowMs"]))
+    if name == "alignment_basic":
+        return aggregate_alignment(
+            fixture["decisions"],
+            fixture["mines"],
+            fixture["effectiveness"],
+            fixture["trends"],
+            fixture["workersByTenant"],
+            now_ms=NOW_MS,
+        )
     if name == "exploration_coverage_basic":
         return compute_exploration_stats(
             fixture["chunksByTenant"],
@@ -378,6 +388,7 @@ CASES = [
     "human_audit_basic",
     "alliance_advice_basic",
     "alliance_advice_full",
+    "alignment_basic",
     "exploration_coverage_basic",
     "mine_patterns_predict_basic",
     "mine_patterns_predict_absences_basic",

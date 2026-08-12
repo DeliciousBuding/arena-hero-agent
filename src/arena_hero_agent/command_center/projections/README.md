@@ -13,6 +13,7 @@ projections to Python on top of the P5-3 data base (`paths` / `jsonl` /
 
 | Module | Endpoint family | Source artifacts |
 |--------|-----------------|------------------|
+| `alignment.py` | `/api/audit/alignment` | decision-audit + mine-utilization (+ trend) + mining-effectiveness + alliance snapshot |
 | `decisions.py` | `/api/audit/decisions` (+ trend) | `telemetry/<t>/decision.jsonl`, `outcome.jsonl` |
 | `workers.py` | `/api/audit/workers` | `telemetry/<t>/runtime.jsonl` |
 | `human.py` | `/api/audit/human` | `runtime/human-command-audit.jsonl` |

@@ -64,7 +64,7 @@ export type GetAllianceSurveyMiningResponse = {cachedAt: string; colors: {[key: 
 
 /** GET /api/audit/alignment - GET /api/audit/alignment */
 export interface GetAuditAlignmentParams {}
-export type GetAuditAlignmentResponse = Record<string, unknown>;
+export type GetAuditAlignmentResponse = {cachedAt?: string; generatedAt: string; global: {aligned?: number; dataGap?: number; misaligned?: number; unfulfilledAssignments?: number}; tenants: {[key: string]: {assigned: number; depositActionRate?: number | null; gapTrendDelta?: number | null; grade: string; harvestActionRate?: number | null; harvested: number; open: number; reasons: Array<string>; stale: number; tenant: string; visibleNever: number; workers?: number | null}}};
 
 /** GET /api/audit/decisions - window 200..20000 */
 export interface GetAuditDecisionsParams {

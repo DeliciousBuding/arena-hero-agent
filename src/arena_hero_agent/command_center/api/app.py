@@ -41,6 +41,7 @@ from ..projections import (
     load_alliance_snapshot,
     load_alliance_survey,
     load_audit_trail,
+    load_alignment_audit,
     load_consensus_mining,
     load_decision_audit,
     load_decision_input,
@@ -204,6 +205,7 @@ class CommandCenterApp:
             ("GET", "/api/alliance/survey/arbitrations"): self._handle_arbitrations,
             ("GET", "/api/audit/decisions"): self._handle_decision_audit,
             ("GET", "/api/audit/decisions/trend"): self._handle_decision_trend,
+            ("GET", "/api/audit/alignment"): self._handle_audit_alignment,
             ("GET", "/api/audit/human/conflicts"): self._handle_human_conflict,
             ("GET", "/api/audit/mines"): self._handle_mine_utilization,
             ("GET", "/api/audit/mines/trend"): self._handle_mine_utilization_trend,
@@ -573,6 +575,16 @@ class CommandCenterApp:
     ) -> dict[str, Any]:
         del request, match, query, tenant
         return load_shop_history(self._data_root)
+
+    def _handle_audit_alignment(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        return load_alignment_audit(self._data_root, now_ms=self._now_ms())
 
     def _handle_audit_human(
         self,

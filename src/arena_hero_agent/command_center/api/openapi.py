@@ -811,6 +811,53 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
         },
         "required": ["generatedAt", "entries", "counts", "filters"],
     },
+    ("GET", "/api/audit/alignment"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "tenants": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                        "tenant": _STR,
+                        "harvestActionRate": _NULLABLE_NUM,
+                        "depositActionRate": _NULLABLE_NUM,
+                        "visibleNever": _INT,
+                        "gapTrendDelta": _NULLABLE_INT,
+                        "assigned": _INT,
+                        "open": _INT,
+                        "stale": _INT,
+                        "harvested": _INT,
+                        "workers": _NULLABLE_INT,
+                        "grade": _STR,
+                        "reasons": {"type": "array", "items": _STR},
+                    },
+                    "required": [
+                        "tenant",
+                        "visibleNever",
+                        "assigned",
+                        "open",
+                        "stale",
+                        "harvested",
+                        "grade",
+                        "reasons",
+                    ],
+                },
+            },
+            "global": {
+                "type": "object",
+                "properties": {
+                    "aligned": _INT,
+                    "misaligned": _INT,
+                    "dataGap": _INT,
+                    "unfulfilledAssignments": _INT,
+                },
+            },
+            "cachedAt": _STR,
+        },
+        "required": ["generatedAt", "tenants", "global"],
+    },
     ("GET", "/api/audit/human"): {
         "type": "object",
         "properties": {

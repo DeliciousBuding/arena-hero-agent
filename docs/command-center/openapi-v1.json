@@ -1348,6 +1348,97 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "global": {
+                      "properties": {
+                        "aligned": {
+                          "type": "integer"
+                        },
+                        "dataGap": {
+                          "type": "integer"
+                        },
+                        "misaligned": {
+                          "type": "integer"
+                        },
+                        "unfulfilledAssignments": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "tenants": {
+                      "additionalProperties": {
+                        "properties": {
+                          "assigned": {
+                            "type": "integer"
+                          },
+                          "depositActionRate": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "gapTrendDelta": {
+                            "nullable": true,
+                            "type": "integer"
+                          },
+                          "grade": {
+                            "type": "string"
+                          },
+                          "harvestActionRate": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "harvested": {
+                            "type": "integer"
+                          },
+                          "open": {
+                            "type": "integer"
+                          },
+                          "reasons": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "stale": {
+                            "type": "integer"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          },
+                          "visibleNever": {
+                            "type": "integer"
+                          },
+                          "workers": {
+                            "nullable": true,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "tenant",
+                          "visibleNever",
+                          "assigned",
+                          "open",
+                          "stale",
+                          "harvested",
+                          "grade",
+                          "reasons"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "tenants",
+                    "global"
+                  ],
                   "type": "object"
                 }
               }

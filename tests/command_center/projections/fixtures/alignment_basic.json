@@ -1,0 +1,89 @@
+{
+  "nowMs": 1752000000000,
+  "decisions": {
+    "t1": {
+      "decision": {
+        "actionMix": {
+          "move": 2,
+          "harvest": 5,
+          "deposit": 1,
+          "wait": 2,
+          "repair": 0
+        }
+      }
+    },
+    "t2": {
+      "decision": {
+        "actionMix": {
+          "move": 3,
+          "harvest": 0,
+          "deposit": 0,
+          "wait": 0,
+          "repair": 0
+        }
+      }
+    },
+    "t3": {
+      "decision": {
+        "actionMix": {
+          "move": 20,
+          "harvest": 0,
+          "deposit": 0,
+          "wait": 1,
+          "repair": 0
+        }
+      }
+    }
+  },
+  "mines": {
+    "t1": {
+      "visibleNever": 5
+    },
+    "t2": {
+      "visibleNever": 2
+    },
+    "t3": {
+      "visibleNever": 15
+    },
+    "t4": {
+      "visibleNever": 0
+    }
+  },
+  "effectiveness": {
+    "perTenant": {
+      "t1": {
+        "assigned": 3,
+        "open": 1,
+        "stale": 0,
+        "harvested": 2
+      },
+      "t2": {
+        "assigned": 4,
+        "open": 2,
+        "stale": 1,
+        "harvested": 0
+      },
+      "t3": {
+        "assigned": 0,
+        "open": 0,
+        "stale": 0,
+        "harvested": 0
+      }
+    }
+  },
+  "trends": {
+    "t1": {
+      "visibleNever": 5,
+      "visibleNeverPrev": 3
+    },
+    "t3": {
+      "visibleNever": 15,
+      "visibleNeverPrev": 8
+    }
+  },
+  "workersByTenant": {
+    "t1": 8,
+    "t3": 6,
+    "t4": null
+  }
+}

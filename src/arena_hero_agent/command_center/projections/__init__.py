@@ -23,6 +23,7 @@ from .alliance_cluster import (
 from .alliance_defense import build_alliance_defense_payload, load_alliance_defense
 from .alliance_mining import assign_alliance_mining, build_observers_by_cell, load_alliance_mining
 from .alliance_snapshot import build_alliance_snapshot_payload, load_alliance_snapshot
+from .alignment import aggregate_alignment, load_alignment_audit
 from .alliance_survey import TENANT_COLORS, aggregate_alliance_survey, load_alliance_survey
 from .arbitrations import arbitration_file, list_arbitrations, load_arbitrations
 from .conflicts import DEFAULT_WINDOW as CONFLICT_DEFAULT_WINDOW
@@ -94,6 +95,8 @@ from .workers import aggregate_worker_liveness, load_worker_liveness_audit
 
 __all__ = [
     "AUDIT_SOURCES",
+    "aggregate_alignment",
+    "load_alignment_audit",
     "CLUSTER_LINK_DIST",
     "build_alliance_defense_payload",
     "build_alliance_snapshot_payload",
