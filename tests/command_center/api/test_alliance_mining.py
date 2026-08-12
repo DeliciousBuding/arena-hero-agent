@@ -88,7 +88,19 @@ def test_alliance_mining_fixture_root_assigns_nearest_observer(tmp_path: Path) -
     assert body["perTenant"]["t1"]["workers"] == 2
 
 
-def test_alliance_mining_openapi_schema_is_explicit() -> None:
+def test_alliance_mining_refills_predictions_from_mine_patterns(tmp_path: Path) -> None:
+    """wave-3 registered gap: predictedNextTick/dueInTicks now come from mine-patterns."""
+    root = materialize_advice_data_root(_fixture("alliance_mining_basic"), tmp_path)
+    response = _app(root).handle(ApiRequest("GET", "/api/alliance/mining"))
+    assert response.status == 200
+    body = _json_body(response)
+    by_cell = {item["cell"]: item for item in body["assignments"]}
+    assert by_cell["10,10"]["predictedNextTick"] == 7000
+    assert by_cell["10,10"]["dueInTicks"] == 2000
+    # cells without a mine-patterns prediction stay null fail-open
+    assert by_cell["170,170"]["predictedNextTick"] is None
+    assert by_cell["170,170"]["dueInTicks"] is None
+
     schema = _openapi_200("/api/alliance/mining")
     assert schema["type"] == "object"
     assert {"generatedAt", "assignments", "perTenant", "unassigned", "global", "cachedAt"} <= set(

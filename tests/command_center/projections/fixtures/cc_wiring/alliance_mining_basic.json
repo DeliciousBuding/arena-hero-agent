@@ -141,7 +141,33 @@
         }
       ],
       "unitsSeen": [],
-      "resourceEvents": []
+      "resourceEvents": [],
+      "resourceSeenHistory": [
+        {
+          "cell": "10,10",
+          "tick": 1000
+        },
+        {
+          "cell": "10,10",
+          "tick": 1001
+        },
+        {
+          "cell": "10,10",
+          "tick": 1002
+        },
+        {
+          "cell": "10,10",
+          "tick": 4000
+        },
+        {
+          "cell": "10,10",
+          "tick": 4001
+        },
+        {
+          "cell": "10,10",
+          "tick": 4002
+        }
+      ]
     },
     "t2": {
       "syncMeta": [
