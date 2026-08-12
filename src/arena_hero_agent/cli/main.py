@@ -1040,6 +1040,10 @@ async def _execute_live(
                 tenant_id=tenant,
                 tick_budget=DeadlineBudget.from_milliseconds(args.tick_budget_ms),
                 max_reconnects=args.max_reconnects,
+                # The live writer must survive a single slow decision tick:
+                # record the selection timeout and keep collecting instead of
+                # ending the whole session (availability over fail-closed).
+                continue_on_selection_timeout=True,
             ),
             recorder=recorder,
             telemetry=sink,

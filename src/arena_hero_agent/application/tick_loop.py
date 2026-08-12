@@ -229,6 +229,7 @@ class TickLoopConfig:
     tick_budget: DeadlineBudget
     max_reconnects: int = 3
     continue_on_gap: bool = True
+    continue_on_selection_timeout: bool = False
     submit_error_policy: SubmitErrorPolicy = SubmitErrorPolicy.CONTINUE
     backoff: Backoff = field(default_factory=lambda: exponential_backoff)
     clock: Clock = field(default_factory=SystemClock)
@@ -244,6 +245,8 @@ class TickLoopConfig:
             raise ValueError("max_reconnects cannot be negative")
         if not isinstance(self.continue_on_gap, bool):
             raise TypeError("continue_on_gap must be a boolean")
+        if not isinstance(self.continue_on_selection_timeout, bool):
+            raise TypeError("continue_on_selection_timeout must be a boolean")
         if not isinstance(self.submit_error_policy, SubmitErrorPolicy):
             raise TypeError("submit_error_policy must be a SubmitErrorPolicy")
 
@@ -368,7 +371,6 @@ class SingleTenantTickLoop:
                 decision = decide(observation, budget)
                 remaining = budget.consume(config.clock.monotonic_ns() - started)
                 if remaining.exhausted:
-                    stopped_reason = StoppedReason.SELECTION_TIMEOUT
                     result = TickResult(
                         tick=tick,
                         decision_id=decision_id,
@@ -377,7 +379,14 @@ class SingleTenantTickLoop:
                     )
                     outcomes.append(result)
                     await _notify_on_tick(on_tick, result)
-                    break
+                    if not config.continue_on_selection_timeout:
+                        stopped_reason = StoppedReason.SELECTION_TIMEOUT
+                        break
+                    # Tolerated: record the timed-out tick and continue the
+                    # stream, advancing last_tick so gap accounting stays
+                    # correct. The live writer must survive one slow tick.
+                    last_tick = tick
+                    continue
 
                 outcome = await submit(decision, observation)
                 if outcome.accepted:
