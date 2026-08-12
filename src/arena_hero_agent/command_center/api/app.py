@@ -30,6 +30,7 @@ from ..errors import CommandCenterError
 from ..goal_store import iso_utc
 from ..jsonl import read_jsonl_tail
 from ..paths import resolve_data_root, telemetry_dir, validate_tenant, write_api_audit_path
+from ..projections import load_alliance_snapshot
 from ..projections._common import current_epoch_ms
 from ..projections.map_lod import load_map_lod
 from .map import load_merged_map
@@ -135,6 +136,7 @@ class CommandCenterApp:
             ("GET", "/api/stream"): self._handle_stream,
             ("GET", "/api/map"): self._handle_map,
             ("GET", "/api/map/lod"): self._handle_map_lod,
+            ("GET", "/api/alliance/snapshot"): self._handle_alliance_snapshot,
         }
         if handlers:
             self._handlers.update(handlers)
@@ -268,6 +270,16 @@ class CommandCenterApp:
     ) -> dict[str, Any]:
         del request, match, query
         return load_map_lod(self._data_root, tenant or "all")
+
+    def _handle_alliance_snapshot(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        return load_alliance_snapshot(self._data_root, now_ms=self._now_ms())
 
 
 __all__ = [

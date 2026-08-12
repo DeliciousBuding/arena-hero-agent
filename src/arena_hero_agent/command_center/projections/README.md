@@ -22,6 +22,7 @@ projections to Python on top of the P5-3 data base (`paths` / `jsonl` /
 | `mining_effectiveness.py` | `/api/audit/mining-effectiveness` | alliance mining assignments + harvest stats |
 | `map_lod.py` | `/api/map/lod` | survey `resources` / `obstacles` / `core_hunts` |
 | `alliance_survey.py` | `/api/alliance/survey` | survey tables + arbitration log |
+| `alliance_snapshot.py` | `/api/alliance/snapshot` | calibration world cases + survey-db `core_hunts` + leaderboard snapshot (canonical alliance domain model: members/sightings/counts/intel/threat/threatSummaries; W20) |
 | `alliance_mining.py` | `/api/alliance/mining` | alliance survey/snapshot/mines inputs |
 | `alliance_cluster.py` | `/api/alliance/cluster` | none (pure member input) |
 | `arbitrations.py` | `/api/alliance/survey/arbitrations` | `runtime/survey/arbitration.jsonl` |
@@ -62,3 +63,4 @@ P5-8 处置结论：前端 `apps/command-center-web/src/engine/` 的规则投影
 | `mapEngine.ts:tactRenderHud` 内联测绘/生命周期聚合 | `mines.py` / `mining_effectiveness.py` | 渲染内联展示派生，不迁移；数据级聚合已由本模块覆盖 |
 | `utils.ts:bucketScale/gridStepFor`（视口 LOD） | 无等价（`map_lod.py` 是数据 16×16 分块） | 保留前端（视口参数，无迁移面） |
 | `commands.ts:squadSummary` 等交互聚合 | 无等价 | 保留前端（交互多选瞬时派生） |
+

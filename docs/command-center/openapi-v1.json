@@ -368,6 +368,195 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "cachedAt": {
+                      "type": "string"
+                    },
+                    "counts": {
+                      "properties": {
+                        "currentVisibleCombat": {
+                          "type": "integer"
+                        },
+                        "estimatedForce": {
+                          "type": "number"
+                        },
+                        "historicalSightingCount": {
+                          "type": "integer"
+                        },
+                        "recentUniqueCombat": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "currentVisibleCombat",
+                        "recentUniqueCombat",
+                        "historicalSightingCount",
+                        "estimatedForce"
+                      ],
+                      "type": "object"
+                    },
+                    "currentTick": {
+                      "type": "integer"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "intel": {
+                      "properties": {
+                        "counts": {
+                          "properties": {
+                            "currentEnemyCores": {
+                              "type": "integer"
+                            },
+                            "currentEnemyUnits": {
+                              "type": "integer"
+                            },
+                            "historicalEnemyCores": {
+                              "type": "integer"
+                            },
+                            "historicalEnemyUnits": {
+                              "type": "integer"
+                            },
+                            "recentEnemyCores": {
+                              "type": "integer"
+                            },
+                            "recentEnemyUnits": {
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "currentEnemyUnits",
+                            "currentEnemyCores",
+                            "recentEnemyUnits",
+                            "recentEnemyCores",
+                            "historicalEnemyUnits",
+                            "historicalEnemyCores"
+                          ],
+                          "type": "object"
+                        },
+                        "currentTick": {
+                          "type": "integer"
+                        },
+                        "currentlyVisible": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "historicalKnown": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "memberReports": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "recentFused": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "currentTick",
+                        "memberReports",
+                        "currentlyVisible",
+                        "recentFused",
+                        "historicalKnown",
+                        "counts"
+                      ],
+                      "type": "object"
+                    },
+                    "leaderboardAggression": {
+                      "additionalProperties": {
+                        "type": "number"
+                      },
+                      "type": "object"
+                    },
+                    "members": {
+                      "additionalProperties": {
+                        "type": "object"
+                      },
+                      "type": "object"
+                    },
+                    "revision": {
+                      "type": "integer"
+                    },
+                    "sightings": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "threat": {
+                      "properties": {
+                        "cellCount": {
+                          "type": "integer"
+                        },
+                        "estimatedCombatForce": {
+                          "type": "number"
+                        },
+                        "generatedAtMs": {
+                          "type": "integer"
+                        },
+                        "maxDirect": {
+                          "nullable": true,
+                          "type": "object"
+                        },
+                        "tickWindow": {
+                          "items": {
+                            "type": "integer"
+                          },
+                          "maxItems": 2,
+                          "minItems": 2,
+                          "type": "array"
+                        },
+                        "topCells": {
+                          "items": {
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "topCells",
+                        "cellCount",
+                        "maxDirect",
+                        "estimatedCombatForce",
+                        "tickWindow",
+                        "generatedAtMs"
+                      ],
+                      "type": "object"
+                    },
+                    "threatSummaries": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "treasuryTenant": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "cachedAt",
+                    "currentTick",
+                    "revision",
+                    "members",
+                    "sightings",
+                    "counts",
+                    "intel",
+                    "threat",
+                    "threatSummaries",
+                    "treasuryTenant",
+                    "leaderboardAggression"
+                  ],
                   "type": "object"
                 }
               }

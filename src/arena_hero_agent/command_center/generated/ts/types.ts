@@ -38,7 +38,7 @@ export type GetAllianceMiningResponse = {assignments: Array<Record<string, unkno
 
 /** GET /api/alliance/snapshot - GET /api/alliance/snapshot */
 export interface GetAllianceSnapshotParams {}
-export type GetAllianceSnapshotResponse = Record<string, unknown>;
+export type GetAllianceSnapshotResponse = {cachedAt: string; counts: {currentVisibleCombat: number; estimatedForce: number; historicalSightingCount: number; recentUniqueCombat: number}; currentTick: number; generatedAt: string; intel: {counts: {currentEnemyCores: number; currentEnemyUnits: number; historicalEnemyCores: number; historicalEnemyUnits: number; recentEnemyCores: number; recentEnemyUnits: number}; currentTick: number; currentlyVisible: Array<Record<string, unknown>>; historicalKnown: Array<Record<string, unknown>>; memberReports: Array<Record<string, unknown>>; recentFused: Array<Record<string, unknown>>}; leaderboardAggression: {[key: string]: number}; members: {[key: string]: Record<string, unknown>}; revision: number; sightings: Array<Record<string, unknown>>; threat: {cellCount: number; estimatedCombatForce: number; generatedAtMs: number; maxDirect: Record<string, unknown> | null; tickWindow: Array<number>; topCells: Array<Record<string, unknown>>}; threatSummaries: Array<Record<string, unknown>>; treasuryTenant: string};
 
 /** GET /api/alliance/survey - view=consensus lightweight mode */
 export interface GetAllianceSurveyParams {
