@@ -1,5 +1,16 @@
 # BLOCKED — W22 当前待办（2026-08-12）
 
+## Captain 终裁（2026-08-13）：CC 只读可移植面收口（41/66）
+
+剩余 10 条 GET 501 均为**非纯投影**，不属于 CC 只读可移植范围，本轮不迁；对应
+里程碑单独做。CC 只读计数钉在 **41/66**，后续不再按“501 缺失”追。
+
+- **8120 supervisor 类（Python 部署无 8120）**：/api/tenants、/api/agents、
+  /api/overview、/api/audit/overview、/api/health/pipeline、
+  /api/alliance/director → 归运维桥/遥测管线里程碑，不归只读投影。
+- **外部官方商店代理（敏感面，X-Shop-Cookie）**：/api/shop、/api/shop/me、
+  /api/shop/orders → 单独 shop 集成里程碑，不在只读面。
+- **写回契约**：/api/commands（read + reconcile 会写回 cleanup，P5-9 is_write_route 未 gate）→ 归写侧里程碑；只读面不得暴露无门禁写回，**维持 501**。
 ## SKIP / 已解除（W44 更新，2026-08-12）
 
 - **alliance exploration / survey-mining → 已解除（W44，w44/cc-wiring 已合入）**：
