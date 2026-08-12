@@ -22,7 +22,7 @@ export type GetAllianceClusterResponse = {generatedAtMs: number; groups: Array<R
 
 /** GET /api/alliance/defense - GET /api/alliance/defense */
 export interface GetAllianceDefenseParams {}
-export type GetAllianceDefenseResponse = Record<string, unknown>;
+export type GetAllianceDefenseResponse = {advice: Array<{category: string; detail: string; evidence: Array<{label: string; value: string}>; id: string; relatedTenants: Array<string>; severity: string; tenant: string; title: string}>; endangered: Array<{military: number; tenantId: string; threatScore: number}>; generatedAtMs: number; pockets: Array<{centroid: Array<number>; enemyCores: Array<{owner: string | null; position: Array<number>}>; id: string; minDistance: number; threatenedTenants: Array<string>}>};
 
 /** GET /api/alliance/director - fail-open when supervisor unreachable; mode ASSIST_ONLY, actionOwnership none */
 export interface GetAllianceDirectorParams {}

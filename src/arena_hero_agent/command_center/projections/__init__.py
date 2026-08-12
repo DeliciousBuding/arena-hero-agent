@@ -17,6 +17,7 @@ from .alliance_cluster import (
     COHESION_MAX_DIST,
     build_alliance_cluster_view,
 )
+from .alliance_defense import build_alliance_defense_payload, load_alliance_defense
 from .alliance_mining import assign_alliance_mining, build_observers_by_cell
 from .alliance_snapshot import build_alliance_snapshot_payload, load_alliance_snapshot
 from .alliance_survey import TENANT_COLORS, aggregate_alliance_survey, load_alliance_survey
@@ -64,6 +65,7 @@ from .workers import aggregate_worker_liveness, load_worker_liveness_audit
 __all__ = [
     "AUDIT_SOURCES",
     "CLUSTER_LINK_DIST",
+    "build_alliance_defense_payload",
     "build_alliance_snapshot_payload",
     "COHESION_MAX_DIST",
     "CONFLICT_DEFAULT_WINDOW",
@@ -96,6 +98,7 @@ __all__ = [
     "build_alliance_cluster_view",
     "build_observers_by_cell",
     "list_arbitrations",
+    "load_alliance_defense",
     "load_alliance_survey",
     "load_alliance_snapshot",
     "load_arbitrations",

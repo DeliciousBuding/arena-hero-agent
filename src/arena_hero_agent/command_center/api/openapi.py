@@ -177,6 +177,98 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
             "leaderboardAggression",
         ],
     },
+    ("GET", "/api/alliance/defense"): {
+        "type": "object",
+        "properties": {
+            "generatedAtMs": _INT,
+            "advice": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": _STR,
+                        "category": _STR,
+                        "severity": _STR,
+                        "title": _STR,
+                        "detail": _STR,
+                        "tenant": _STR,
+                        "relatedTenants": {"type": "array", "items": _STR},
+                        "evidence": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {"label": _STR, "value": _STR},
+                                "required": ["label", "value"],
+                            },
+                        },
+                    },
+                    "required": [
+                        "id",
+                        "category",
+                        "severity",
+                        "title",
+                        "detail",
+                        "tenant",
+                        "relatedTenants",
+                        "evidence",
+                    ],
+                },
+            },
+            "endangered": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "tenantId": _STR,
+                        "military": _INT,
+                        "threatScore": _NUM,
+                    },
+                    "required": ["tenantId", "military", "threatScore"],
+                },
+            },
+            "pockets": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": _STR,
+                        "centroid": {
+                            "type": "array",
+                            "items": _INT,
+                            "minItems": 2,
+                            "maxItems": 2,
+                        },
+                        "enemyCores": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "owner": {"type": "string", "nullable": True},
+                                    "position": {
+                                        "type": "array",
+                                        "items": _INT,
+                                        "minItems": 2,
+                                        "maxItems": 2,
+                                    },
+                                },
+                                "required": ["owner", "position"],
+                            },
+                        },
+                        "threatenedTenants": {"type": "array", "items": _STR},
+                        "minDistance": _INT,
+                    },
+                    "required": [
+                        "id",
+                        "centroid",
+                        "enemyCores",
+                        "threatenedTenants",
+                        "minDistance",
+                    ],
+                },
+            },
+        },
+        "required": ["generatedAtMs", "advice", "endangered", "pockets"],
+    },
     ("GET", "/api/alliance/survey"): {
         "type": "object",
         "properties": {

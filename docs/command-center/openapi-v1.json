@@ -166,6 +166,158 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "advice": {
+                      "items": {
+                        "properties": {
+                          "category": {
+                            "type": "string"
+                          },
+                          "detail": {
+                            "type": "string"
+                          },
+                          "evidence": {
+                            "items": {
+                              "properties": {
+                                "label": {
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "label",
+                                "value"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "relatedTenants": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "severity": {
+                            "type": "string"
+                          },
+                          "tenant": {
+                            "type": "string"
+                          },
+                          "title": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "category",
+                          "severity",
+                          "title",
+                          "detail",
+                          "tenant",
+                          "relatedTenants",
+                          "evidence"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "endangered": {
+                      "items": {
+                        "properties": {
+                          "military": {
+                            "type": "integer"
+                          },
+                          "tenantId": {
+                            "type": "string"
+                          },
+                          "threatScore": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "tenantId",
+                          "military",
+                          "threatScore"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "generatedAtMs": {
+                      "type": "integer"
+                    },
+                    "pockets": {
+                      "items": {
+                        "properties": {
+                          "centroid": {
+                            "items": {
+                              "type": "integer"
+                            },
+                            "maxItems": 2,
+                            "minItems": 2,
+                            "type": "array"
+                          },
+                          "enemyCores": {
+                            "items": {
+                              "properties": {
+                                "owner": {
+                                  "nullable": true,
+                                  "type": "string"
+                                },
+                                "position": {
+                                  "items": {
+                                    "type": "integer"
+                                  },
+                                  "maxItems": 2,
+                                  "minItems": 2,
+                                  "type": "array"
+                                }
+                              },
+                              "required": [
+                                "owner",
+                                "position"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "minDistance": {
+                            "type": "integer"
+                          },
+                          "threatenedTenants": {
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "centroid",
+                          "enemyCores",
+                          "threatenedTenants",
+                          "minDistance"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "generatedAtMs",
+                    "advice",
+                    "endangered",
+                    "pockets"
+                  ],
                   "type": "object"
                 }
               }
