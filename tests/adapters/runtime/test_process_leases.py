@@ -463,3 +463,66 @@ def test_crashed_holder_fails_closed_then_exact_fence_replacement(tmp_path: Path
         await replacement.release()
 
     asyncio.run(probe())
+
+
+def test_observed_writer_lease_none_for_fresh_tenant(tmp_path: Path) -> None:
+    clock = ManualWallClock()
+    coordinator = _coord(tmp_path, clock)
+    assert coordinator.observed_writer_lease(TENANT) is None
+
+
+async def test_observed_writer_lease_reflects_active_holder(tmp_path: Path) -> None:
+    clock = ManualWallClock()
+    coordinator = _coord(tmp_path, clock, holder_id="live-holder")
+
+    handle = await coordinator.acquire_writer(TENANT, Generation(1), BUDGET)
+    assert handle is not None
+    observed = coordinator.observed_writer_lease(TENANT)
+    assert observed is not None
+    assert observed.tenant_id == TENANT.value
+    assert observed.generation == Generation(1)
+    assert observed.fencing_token == FencingToken(1)
+    assert observed.holder_id == "live-holder"
+    assert observed.expires_at_ns == clock.now + LEASE_DURATION_NS
+    await handle.release()
+
+
+async def test_observed_writer_lease_survives_release_and_enables_replace(tmp_path: Path) -> None:
+    clock = ManualWallClock()
+    coordinator = _coord(tmp_path, clock)
+
+    first = await coordinator.acquire_writer(TENANT, Generation(1), BUDGET)
+    assert first is not None
+    observed = coordinator.observed_writer_lease(TENANT)
+    assert observed is not None
+    assert observed.fencing_token == FencingToken(1)
+    await first.release()
+
+    # The durable record is never deleted, so the fencing evidence stays;
+    # release marks it immediately expired but keeps the fencing token.
+    after_release = coordinator.observed_writer_lease(TENANT)
+    assert after_release is not None
+    assert after_release.tenant_id == observed.tenant_id
+    assert after_release.generation == observed.generation
+    assert after_release.fencing_token == observed.fencing_token
+    assert after_release.holder_id == observed.holder_id
+    assert after_release.expires_at_ns == 0
+    second = await coordinator.replace_writer(
+        TENANT,
+        Generation(2),
+        expected_fencing_token=observed.fencing_token,
+        budget=BUDGET,
+    )
+    assert second is not None
+    assert second.fencing_token == FencingToken(2)
+    await second.release()
+
+
+def test_observed_writer_lease_malformed_record_fails_closed(tmp_path: Path) -> None:
+    clock = ManualWallClock()
+    coordinator = _coord(tmp_path, clock)
+    record_path = _record_path(tmp_path)
+    record_path.parent.mkdir(parents=True, exist_ok=True)
+    record_path.write_text("{not json", encoding="utf-8")
+    with pytest.raises(WriterLeaseError, match="malformed"):
+        coordinator.observed_writer_lease(TENANT)

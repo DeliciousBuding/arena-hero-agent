@@ -13,6 +13,7 @@ from .errors import (
     SdkPermanentError,
     SdkRetryableError,
 )
+from .live import LiveSubmitter, LiveTurnSource
 from .mapping import from_sdk_direction, to_sdk_direction
 from .plans import build_command_plan, command_plan_payload
 from .turns import adapt_async_turn
@@ -30,6 +31,8 @@ __all__ = [
     "command_plan_payload",
     "create_sdk_game_client",
     "from_sdk_direction",
+    "LiveSubmitter",
+    "LiveTurnSource",
     "load_sdk_bindings",
     "to_sdk_direction",
 ]

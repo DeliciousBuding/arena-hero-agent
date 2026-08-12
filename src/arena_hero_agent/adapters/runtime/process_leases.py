@@ -76,6 +76,23 @@ class _LeaseRecord:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class WriterLeaseRecord:
+    """Publicly observable durable writer-lease evidence for one tenant.
+
+    Exposed so a live writer can take over an expired holder with the exact
+    observed fence (``replace_writer`` requires it); the record is never
+    deleted, so the fencing token stays monotonic across restarts.
+    """
+
+    schema_version: int
+    tenant_id: str
+    generation: Generation
+    fencing_token: FencingToken
+    holder_id: str
+    expires_at_ns: int
+
+
 def _read_record(path: Path) -> _LeaseRecord | None:
     """Read the versioned record, or ``None`` when the tenant has no record yet.
 
@@ -346,6 +363,28 @@ class FileWriterLeaseCoordinator:
                 release_process_lock(handle._lock)
                 handle._lock = None
 
+    def observed_writer_lease(self, tenant_id: TenantId) -> WriterLeaseRecord | None:
+        """Return the durable lease evidence, or None for a fresh tenant.
+
+        A missing record means the tenant has no fencing evidence yet; any
+        present-but-unreadable or unsupported record fails closed (raises
+        :class:`WriterLeaseError`) instead of guessing a fence.
+        """
+
+        if not isinstance(tenant_id, TenantId):
+            raise TypeError("tenant_id must be a TenantId")
+        record = _read_record(self._record_path(tenant_id))
+        if record is None:
+            return None
+        return WriterLeaseRecord(
+            schema_version=record.schema_version,
+            tenant_id=record.tenant_id,
+            generation=Generation(record.generation),
+            fencing_token=FencingToken(record.fencing_token),
+            holder_id=record.holder_id,
+            expires_at_ns=record.expires_at_ns,
+        )
+
     def _record_path(self, tenant_id: TenantId) -> Path:
         return self._root / tenant_id.value / _RECORD_FILENAME
 
@@ -357,4 +396,5 @@ __all__ = [
     "FileWriterLeaseCoordinator",
     "FileWriterLeaseHandle",
     "WriterLeaseError",
+    "WriterLeaseRecord",
 ]
