@@ -45,13 +45,17 @@ from ..projections import (
     load_decision_audit,
     load_decision_trend,
     load_enemy_heat,
+    load_events,
     load_human_conflict,
     load_mine_patterns,
     load_mine_utilization,
     load_mine_utilization_trend,
     load_mining_effectiveness,
+    load_plan,
+    load_redeem_history,
     load_shop_history,
     load_worker_liveness_audit,
+    load_world,
     read_human_audit,
 )
 from ..projections._common import current_epoch_ms
@@ -209,6 +213,10 @@ class CommandCenterApp:
             ("GET", "/api/alliance/cluster"): self._handle_alliance_cluster,
             ("GET", "/api/alliance/mining"): self._handle_alliance_mining,
             ("GET", "/api/registry/agents"): self._handle_registry_agents,
+            ("GET", "/api/events"): self._handle_events,
+            ("GET", "/api/plan"): self._handle_plan,
+            ("GET", "/api/world"): self._handle_world,
+            ("GET", "/api/redeem/history"): self._handle_redeem_history,
         }
         if handlers:
             self._handlers.update(handlers)
@@ -619,6 +627,48 @@ class CommandCenterApp:
             item["keys"] = [asdict(key) for key in raw_keys]
             serialized.append(item)
         return {"generatedAt": iso_utc(self._now_ms()), "agents": serialized}
+
+    def _handle_events(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match
+        tenant_value = tenant or "t1"
+        n = _clamp_int(query, "n", 60, 1, 200)
+        return load_events(self._data_root, tenant_value, n, now_ms=self._now_ms())
+
+    def _handle_plan(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query
+        return load_plan(self._data_root, tenant or "t1", now_ms=self._now_ms())
+
+    def _handle_world(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query
+        return load_world(self._data_root, tenant or "t1", now_ms=self._now_ms())
+
+    def _handle_redeem_history(
+        self,
+        request: ApiRequest,
+        match: MatchedRoute,
+        query: dict[str, str],
+        tenant: str | None,
+    ) -> dict[str, Any]:
+        del request, match, query, tenant
+        return load_redeem_history(self._data_root, now_ms=self._now_ms())
 
 
 __all__ = [

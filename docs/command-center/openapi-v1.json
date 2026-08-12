@@ -3121,6 +3121,72 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "events": {
+                      "items": {
+                        "properties": {
+                          "actor": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "amount": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "capacity": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "destroyedBy": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "hp": {
+                            "nullable": true,
+                            "type": "number"
+                          },
+                          "kind": {
+                            "type": "string"
+                          },
+                          "position": {
+                            "items": {
+                              "type": "number"
+                            },
+                            "nullable": true,
+                            "type": "array"
+                          },
+                          "reason": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "source": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "target": {
+                            "nullable": true,
+                            "type": "string"
+                          },
+                          "tick": {
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "tenant",
+                    "generatedAt",
+                    "events"
+                  ],
                   "type": "object"
                 }
               }
@@ -3741,6 +3807,31 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "plan": {
+                      "nullable": true,
+                      "type": "object"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    },
+                    "tick": {
+                      "nullable": true,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "tenant",
+                    "generatedAt",
+                    "plan",
+                    "tick"
+                  ],
                   "type": "object"
                 }
               }
@@ -3815,6 +3906,25 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "records": {
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": [
+                    "generatedAt",
+                    "records",
+                    "count"
+                  ],
                   "type": "object"
                 }
               }
@@ -4812,6 +4922,39 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "caseFile": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "generatedAt": {
+                      "type": "string"
+                    },
+                    "runId": {
+                      "nullable": true,
+                      "type": "string"
+                    },
+                    "state": {
+                      "nullable": true,
+                      "type": "object"
+                    },
+                    "tenant": {
+                      "type": "string"
+                    },
+                    "tick": {
+                      "nullable": true,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "tenant",
+                    "generatedAt",
+                    "state",
+                    "caseFile"
+                  ],
                   "type": "object"
                 }
               }

@@ -39,6 +39,7 @@ from .decisions import (
     load_decision_trend,
 )
 from .enemy_heat import load_enemy_heat
+from .events import EVENT_KINDS, load_events
 from .exploration_coverage import (
     CHUNK_SIZE,
     RESURVEY_CAP,
@@ -66,6 +67,8 @@ from .mining_effectiveness import (
     aggregate_allocation_effectiveness,
     load_mining_effectiveness,
 )
+from .redeem import MAX_KEEP as REDEEM_MAX_KEEP
+from .redeem import load_redeem_history
 from .shop_history import (
     aggregate_shop_history,
     load_shop_history,
@@ -74,6 +77,7 @@ from .shop_history import (
     should_append,
     snapshot_signature,
 )
+from .snapshots import load_plan, load_world
 from .trail import DEFAULT_LIMIT as TRAIL_DEFAULT_LIMIT
 from .trail import SOURCES as AUDIT_SOURCES
 from .trail import load_audit_trail, merge_audit_trails, normalize_audit_trails
@@ -89,6 +93,7 @@ __all__ = [
     "COHESION_MAX_DIST",
     "CONFLICT_DEFAULT_WINDOW",
     "DECISION_TREND_STEPS",
+    "EVENT_KINDS",
     "DECISION_TREND_WINDOW",
     "DEFAULT_RECORDS",
     "DEFAULT_TREND_STEPS",
@@ -97,6 +102,7 @@ __all__ = [
     "HUMAN_AUDIT_DEFAULT_LIMIT",
     "HUMAN_AUDIT_MAX_KEEP",
     "MAP_LOD_CHUNK",
+    "REDEEM_MAX_KEEP",
     "RESOURCE_FRESH_WINDOW_TICKS",
     "TENANT_COLORS",
     "TRAIL_DEFAULT_LIMIT",
@@ -126,6 +132,7 @@ __all__ = [
     "load_arbitrations",
     "load_audit_trail",
     "load_decision_audit",
+    "load_events",
     "load_decision_trend",
     "load_human_audit",
     "load_human_conflict",
@@ -147,13 +154,16 @@ __all__ = [
     "load_leaderboard_intel",
     "load_mine_patterns",
     "load_mining_effectiveness",
+    "load_plan",
     "load_shop_history",
+    "load_redeem_history",
     "load_shop_history_entries",
     "load_worker_liveness_audit",
     "merge_audit_trails",
     "normalize_audit_trails",
     "normalize_products",
     "read_human_audit",
+    "load_world",
     "should_append",
     "snapshot_signature",
 ]

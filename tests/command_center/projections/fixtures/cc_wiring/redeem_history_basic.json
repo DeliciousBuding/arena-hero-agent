@@ -1,0 +1,8 @@
+{
+  "nowMs": 1752000000000,
+  "redeemLog": [
+    {"codeMask": "ABC123***", "at": "2025-07-08T18:00:00.000Z", "ip": "127.0.0.1", "status": "pending", "note": null},
+    {"codeMask": "XYZ789***", "at": "2025-07-08T18:10:00.000Z", "ip": "127.0.0.1", "status": "done"},
+    {"codeMask": "broken", "at": "not-a-date", "status": "failed"}
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "nowMs": 1752000000000,
+  "worlds": {
+    "t1": {
+      "cases": [
+        {
+          "tick": 100,
+          "before": {
+            "tick": 100,
+            "state": {
+              "objects": [],
+              "events": []
+            }
+          },
+          "after": {
+            "tick": 100,
+            "state": {
+              "objects": [
+                {
+                  "id": "w1",
+                  "kind": "WORKER",
+                  "position": [
+                    3,
+                    4
+                  ]
+                }
+              ],
+              "events": [
+                {
+                  "tick": 100,
+                  "event_type": "HARVEST_SUCCEEDED",
+                  "actor_id": "w1",
+                  "values": {
+                    "amount": 5
+                  }
+                },
+                {
+                  "tick": 100,
+                  "event_type": "SHOT_HIT",
+                  "actor_id": "w2",
+                  "target_id": "e1",
+                  "values": {
+                    "damage": 12
+                  }
+                },
+                {
+                  "tick": 100,
+                  "event_type": "CUSTOM_UNKNOWN",
+                  "actor_id": "w3",
+                  "values": {}
+                }
+              ]
+            }
+          }
+        },
+        {
+          "tick": 110,
+          "before": {
+            "tick": 110,
+            "state": {
+              "objects": [],
+              "events": []
+            }
+          },
+          "after": {
+            "tick": 110,
+            "state": {
+              "objects": [
+                {
+                  "id": "w1",
+                  "kind": "WORKER",
+                  "position": [
+                    5,
+                    5
+                  ]
+                },
+                {
+                  "id": "c1",
+                  "kind": "CORE",
+                  "controlled": true,
+                  "position": [
+                    10,
+                    10
+                  ]
+                }
+              ],
+              "events": [
+                {
+                  "tick": 110,
+                  "event_type": "DEPOSIT_SUCCEEDED",
+                  "actor_id": "w1",
+                  "values": {
+                    "amount": 5
+                  }
+                },
+                {
+                  "tick": 110,
+                  "event_type": "UNIT_MOVE_FAILED",
+                  "actor_id": "w2",
+                  "reason_code": "blocked"
+                },
+                {
+                  "tick": 110,
+                  "event_type": "WAIT",
+                  "actor_id": "w3"
+                }
+              ]
+            }
+          },
+          "plan": {
+            "tick": 110,
+            "unitActions": {
+              "w1": {
+                "action": "MOVE",
+                "target": [
+                  5,
+                  5
+                ]
+              }
+            },
+            "coreAction": null,
+            "intents": {}
+          }
+        }
+      ]
+    }
+  }
+}

@@ -338,6 +338,29 @@ def materialize_advice_data_root(fixture: dict[str, Any], root: Path) -> Path:
     survey = fixture.get("survey") or {}
     for tenant in TENANTS:
         case = worlds.get(tenant) or {}
+        if isinstance(case, dict) and isinstance(case.get("cases"), list):
+            for entry in case["cases"]:
+                if not isinstance(entry, dict):
+                    continue
+                tick = 0
+                after = entry.get("after")
+                before = entry.get("before")
+                if not isinstance(after, dict):
+                    after = {}
+                if not isinstance(before, dict):
+                    before = {}
+                raw_tick = after.get("tick")
+                if raw_tick is None:
+                    raw_tick = before.get("tick")
+                if raw_tick is None:
+                    raw_tick = entry.get("tick")
+                tick = int(raw_tick or 0)
+                if tick > 0:
+                    _write_world(root, tenant, entry, tick)
+            _write_survey_db(
+                root / "runtime" / "survey" / f"{tenant}.db", tenant, survey.get(tenant) or {}
+            )
+            continue
         tick = 0
         if isinstance(case, dict):
             after = case.get("after")
@@ -397,6 +420,9 @@ def materialize_advice_data_root(fixture: dict[str, Any], root: Path) -> Path:
     shop_history = fixture.get("shopHistory") or ()
     if shop_history:
         _write_jsonl(root / "runtime" / "shop-history.jsonl", shop_history)
+    redeem_log = fixture.get("redeemLog") or ()
+    if redeem_log:
+        _write_jsonl(root / "runtime" / "redeem-log.jsonl", redeem_log)
     registry = fixture.get("registry")
     if isinstance(registry, dict):
         _write_registry(

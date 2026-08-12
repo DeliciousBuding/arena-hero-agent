@@ -185,7 +185,7 @@ export interface GetEventsParams {
   tenant?: Tenant;
   n?: number;
 }
-export type GetEventsResponse = Record<string, unknown>;
+export type GetEventsResponse = {events: Array<{actor?: string | null; amount?: number | null; capacity?: number | null; destroyedBy?: string | null; hp?: number | null; kind?: string; position?: Array<number> | null; reason?: string | null; source?: string | null; target?: string | null; tick?: number}>; generatedAt: string; tenant: string};
 
 /** GET /api/exploration - survey + lifecycle + current world subset */
 export interface GetExplorationParams {
@@ -238,7 +238,7 @@ export type GetOverviewResponse = Record<string, unknown>;
 export interface GetPlanParams {
   tenant?: Tenant;
 }
-export type GetPlanResponse = Record<string, unknown>;
+export type GetPlanResponse = {error?: string; generatedAt: string; plan: Record<string, unknown> | null; tenant: string; tick: number | null};
 
 /** POST /api/redeem - stores first 6 chars only; pending status; no external call yet */
 export interface PostRedeemParams {}
@@ -246,7 +246,7 @@ export type PostRedeemResponse = Record<string, unknown>;
 
 /** GET /api/redeem/history - GET /api/redeem/history */
 export interface GetRedeemHistoryParams {}
-export type GetRedeemHistoryResponse = Record<string, unknown>;
+export type GetRedeemHistoryResponse = {count: number; generatedAt: string; records: Array<Record<string, unknown>>};
 
 /** GET /api/registry/agents - lists agents + key hashes only; no plaintext */
 export interface GetRegistryAgentsParams {}
@@ -341,4 +341,4 @@ export type GetTenantsResponse = Record<string, unknown>;
 export interface GetWorldParams {
   tenant?: Tenant;
 }
-export type GetWorldResponse = Record<string, unknown>;
+export type GetWorldResponse = {caseFile: string | null; error?: string; generatedAt: string; runId?: string | null; state: Record<string, unknown> | null; tenant: string; tick?: number | null};

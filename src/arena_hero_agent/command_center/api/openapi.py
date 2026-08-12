@@ -118,6 +118,66 @@ _RESPONSE_SCHEMAS: dict[tuple[str, str], dict[str, Any]] = {
         },
         "required": ["tenant", "generatedAt", "rows"],
     },
+    ("GET", "/api/events"): {
+        "type": "object",
+        "properties": {
+            "tenant": _STR,
+            "generatedAt": _STR,
+            "events": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "tick": _INT,
+                        "kind": _STR,
+                        "reason": {"type": "string", "nullable": True},
+                        "actor": {"type": "string", "nullable": True},
+                        "target": {"type": "string", "nullable": True},
+                        "position": {"type": "array", "items": _NUM, "nullable": True},
+                        "amount": _NULLABLE_NUM,
+                        "hp": _NULLABLE_NUM,
+                        "source": {"type": "string", "nullable": True},
+                        "capacity": _NULLABLE_NUM,
+                        "destroyedBy": {"type": "string", "nullable": True},
+                    },
+                },
+            },
+        },
+        "required": ["tenant", "generatedAt", "events"],
+    },
+    ("GET", "/api/plan"): {
+        "type": "object",
+        "properties": {
+            "tenant": _STR,
+            "generatedAt": _STR,
+            "plan": {"type": "object", "nullable": True},
+            "tick": _NULLABLE_INT,
+            "error": _STR,
+        },
+        "required": ["tenant", "generatedAt", "plan", "tick"],
+    },
+    ("GET", "/api/world"): {
+        "type": "object",
+        "properties": {
+            "tenant": _STR,
+            "generatedAt": _STR,
+            "runId": {"type": "string", "nullable": True},
+            "caseFile": {"type": "string", "nullable": True},
+            "tick": _NULLABLE_INT,
+            "state": {"type": "object", "nullable": True},
+            "error": _STR,
+        },
+        "required": ["tenant", "generatedAt", "state", "caseFile"],
+    },
+    ("GET", "/api/redeem/history"): {
+        "type": "object",
+        "properties": {
+            "generatedAt": _STR,
+            "records": {"type": "array", "items": _OBJ},
+            "count": _INT,
+        },
+        "required": ["generatedAt", "records", "count"],
+    },
     ("GET", "/api/map"): _OBJ,
     ("GET", "/api/map/lod"): {
         "type": "object",
