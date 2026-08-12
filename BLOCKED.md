@@ -35,6 +35,38 @@
 
 
 
+## W44 第八波只读接线（w44/cc-wave8，2026-08-13）
+
+replay + deeds + deeds/journal 三路由接线（needs-new-data-source 关闭），
+并补齐四个投影核的 Node golden 对拍：
+
+- `GET /api/replay` **501 → 200**：`replay.py` 移植 `loadReplay`（最新 run 的
+  单位/核心每 tick 轨迹 + 事件帧）；空根 fail-open 200 `{tenant, generatedAt,
+  replay: null}`（TS 同形状，不 500）。OpenAPI 200 schema + golden MATCH。
+- `GET /api/deeds` **501 → 200**：`deeds.py` 移植 `loadDeeds`（★3-4 稀有事件
+  扫描 + ★2 survey-db 里程碑 + ★1 常规限流）+ `alliance_deeds.py` 移植
+  `loadAllianceDeeds`（新敌核/热区/抢矿/资源濒危）；tenant=all 合并联盟事迹；
+  `?limit` clamp 1..200。空根 fail-open。OpenAPI 200 schema + golden MATCH。
+- `GET /api/deeds/journal` **501 → 200**：`deeds_journal.py` 移植 `loadDeedsJournal`
+  核心（tick 窗口头条/分类计数/分租户统计/中文叙事/上一窗口 delta +
+  window/category/minStar 筛选）；空根 fail-open。OpenAPI 200 schema + golden MATCH。
+- **Node golden 对拍（4 新 case 全 MATCH）**：`replay_basic` / `deeds_basic` /
+  `alliance_deeds_basic` / `deeds_journal_basic` 物化 calibration runs + survey-db，
+  跑真实 TS `loadReplay` / `loadDeeds` / `loadAllianceDeeds` / `loadDeedsJournal`；
+  oracle harness 在 `~/tmp/cc-oracle-replay.mjs` / `cc-oracle-deeds.mjs` /
+  `cc-oracle-alliance-deeds.mjs` / `cc-oracle-deeds-journal.mjs`（仓外，TS checkout 只读）。
+  现 47 个 golden case。
+- **注册 divergence**：
+  - deeds / deeds-journal 的 45s / 30s 内存缓存不移植（Python 每次重算，输出同形状）；
+  - `buildAuditDeeds`（AUDIT_INSIGHT 日记层）不移植——依赖 `loadAuditOverview`
+    （8120 supervisor pipeline，仍 501），日记不含审计洞察；
+  - deeds-journal `tenant=all` 的叙事富化行（商店/测绘覆盖/决策健康/威胁/采矿执行/
+    管线健康）不移植——依赖外部商店 fetch 与 8120/写副作用管线投影；
+  - replay 45s 缓存不移植（每次重算，输出同形状）。
+- 维持 SKIP（不变，10 条）：`/api/audit/overview`、`/api/health/pipeline`、
+  `/api/overview`、`/api/tenants`、`/api/agents`、`/api/shop`、`/api/shop/me`、
+  `/api/shop/orders`、`/api/commands`、`/api/alliance/director`。
+
 ## W44 第六波只读接线（w44/cc-wave6，2026-08-12）
 
 survey-db 数据源扩展 + 三路由接线（needs-new-data-source 关闭）：
@@ -97,8 +129,8 @@ intel + leaderboard 两路由接线（needs-new-data-source / needs-new-projecti
   - intel/leaderboard 30s 内存缓存不移植（Python 每次重算，输出同形状，无后台刷新）；
   - `history.jsonl` 仅由 POST `/api/leaderboard/refresh` 追加，不在 GET payload 内（server.ts
     核实），GET 不读。
-- 维持 SKIP（不变）：`/api/deeds`、`/api/deeds/journal`、`/api/audit/overview`（8120 pipeline）、
-  `/api/health/pipeline`（surveySync 写副作用）、`/api/replay`、`/api/tenants`、`/api/agents`、
+- 维持 SKIP（不变）：`/api/audit/overview`（8120 pipeline）、
+  `/api/health/pipeline`（surveySync 写副作用）、`/api/tenants`、`/api/agents`、
   `/api/shop`、`/api/shop/me`、`/api/shop/orders`（外部商店 cookie 契约）、`/api/commands`
   （reconcile 写回契约）、`/api/alliance/director`（8120）；mapEngine 调用方迁移顺序不变。
 
@@ -179,12 +211,12 @@ agents / shop / me / orders / commands / director。
 | needs-new-projection | `/api/survey/decision-input` | （wave-4 已接线） `decision-input.ts`（矿刷新预测 dueInTicks + chunk 覆盖）——依赖 mine-patterns predictions（Python 恒空）+ chunks 表 |
 | ~~needs-new-data-source~~ → **已接线（w44/cc-wave6）** | `/api/audit/lifecycle` | `lifecycle.py` 移植（AGENT_SCHEMA 已补 `unit_lifecycle`/`core_spends`/`notable_events`），501→200；OpenAPI 200 + 8 测试 |
 | needs-new-data-source | `/api/audit/overview` | 组合含 lifecycle（wave-6 已可用）+ pipeline（8120 supervisor 输入）两个输入——pipeline 仍未移植，**维持 501 不接线** |
-| needs-new-data-source | `/api/deeds` | 事迹扫描（★3-4 稀有 + ★2 survey-db 里程碑 + 联盟事迹）+ 45s 缓存，全新产品能力 |
-| needs-new-data-source | `/api/deeds/journal` | 事迹流日记聚合 + category/minStar 筛选 |
+| ~~needs-new-data-source~~ → **已接线（w44/cc-wave8）** | `/api/deeds` | `deeds.py` 移植 `loadDeeds`（★3-4 稀有 + ★2 survey-db 里程碑 + 联盟事迹扫描），501→200；OpenAPI 200 + golden MATCH |
+| ~~needs-new-data-source~~ → **已接线（w44/cc-wave8）** | `/api/deeds/journal` | `deeds_journal.py` 移植 `loadDeedsJournal`（事迹流日记聚合 + window/category/minStar 筛选），501→200；OpenAPI 200 + golden MATCH |
 | needs-new-data-source | `/api/health/pipeline` | survey-db 水位 vs live tick + `surveySync` 桥状态；且 TS 请求路径会触发惰性 survey:sync（写副作用，Python P5-9 已 gate 该路由） |
 | ~~needs-new-data-source~~ → **已接线（w44/cc-wave7）** | `/api/intel` | `intel.py` 移植 `loadAllianceIntel`（enemy core 扫描 + raid-risk + 信标载者 + enemyUnitMemory）+ `loadBeaconTrail` + `buildEncounteredIndex`，501→200；OpenAPI 200 + golden MATCH |
 | needs-new-data-source | `/api/overview` | supervisor 8120 + agents 台账 + outcome.jsonl 双源合并，未移植 |
-| needs-new-data-source | `/api/replay` | 回放轨迹重建（calibration cases → replay 序列）未移植 |
+| ~~needs-new-data-source~~ → **已接线（w44/cc-wave8）** | `/api/replay` | `replay.py` 移植 `loadReplay`（calibration cases → 单位/核心轨迹 + 事件帧），501→200；OpenAPI 200 + golden MATCH |
 | needs-new-data-source | `/api/tenants` | supervisor /ready 探活（8120）；Python 无 supervisor 桥，接了一律 live=false |
 | needs-new-data-source | `/api/agents` | supervisor + overview + agent db + world 合并（`/api/agents` 大组合） |
 | ~~needs-new-data-source~~ → **已接线（w44/cc-wave6）** | `/api/survey` | `survey.py` 移植（AGENT_SCHEMA 已补 `lifecycle`/`chunks`/`spends`/`resource_events` 表），501→200；OpenAPI 200 + 13 测试 |
