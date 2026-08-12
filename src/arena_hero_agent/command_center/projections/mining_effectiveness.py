@@ -8,15 +8,19 @@ resolved/progress rates and a global effective rate. ``/api/audit/mining-effecti
 
 from __future__ import annotations
 
+import os
+import sqlite3
+from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 from ..goal_store import iso_utc
-from ..paths import TENANTS
+from ..paths import TENANTS, survey_db_path, validate_data_root
 from ._common import current_epoch_ms, num
 
 FRESH_TICKS = 2000
 
-__all__ = ["FRESH_TICKS", "aggregate_allocation_effectiveness"]
+__all__ = ["FRESH_TICKS", "aggregate_allocation_effectiveness", "load_mining_effectiveness"]
 
 
 def aggregate_allocation_effectiveness(
@@ -155,3 +159,183 @@ def aggregate_allocation_effectiveness(
         },
         "cachedAt": at,
     }
+
+
+# --- thin loader over the P5-3 data base (W25) ----------------------------
+
+
+def _read_harvest_map(path: Path) -> dict[str, dict[str, Any]]:
+    """Survey-db resource_events -> per-cell harvest stats (TS ``readTenantHarvestMap``)."""
+    out: dict[str, dict[str, Any]] = {}
+    if not path.is_file():
+        return out
+    try:
+        connection = sqlite3.connect(f"file:{path.as_posix()}?mode=ro", uri=True)
+    except sqlite3.Error:
+        return out
+    try:
+        rows = connection.execute(
+            "SELECT cell, tick, event_type AS e, amount FROM resource_events"
+        ).fetchall()
+    except sqlite3.Error:
+        return out
+    finally:
+        connection.close()
+    for row in rows:
+        cell = str(row[0])
+        event_type = str(row[2])
+        is_ok = event_type == "HARVEST_SUCCEEDED"
+        is_fail = event_type == "HARVEST_FAILED"
+        if not is_ok and not is_fail:
+            continue
+        stat = out.setdefault(
+            cell,
+            {"ok": 0, "fail": 0, "amount": 0, "first": None, "last": None},
+        )
+        if is_ok:
+            stat["ok"] += 1
+            stat["amount"] += num(row[3])
+            if stat["first"] is None:
+                stat["first"] = num(row[1])
+            stat["last"] = num(row[1])
+        else:
+            stat["fail"] += 1
+    return out
+
+
+def _observers_by_cell(survey: Mapping[str, Any]) -> dict[str, list[str]]:
+    """Alliance-survey resource rows -> observers per cell (TS ``buildObserversByCell``)."""
+    from .alliance_mining import build_observers_by_cell
+
+    resources = survey.get("resources") or ()
+    return build_observers_by_cell([dict(row) for row in resources if isinstance(row, Mapping)])
+
+
+def _conflict_cells(survey: Mapping[str, Any]) -> set[str]:
+    """Survey conflict overlaps -> cell set (TS ``conflictCells``)."""
+    conflicts = survey.get("conflicts") or {}
+    overlaps = conflicts.get("resourceOverlaps") or ()
+    cells: set[str] = set()
+    for overlap in overlaps:
+        if isinstance(overlap, Mapping):
+            cell = str(overlap.get("cell") or "")
+            if cell:
+                cells.add(cell)
+    return cells
+
+
+def load_mining_effectiveness(
+    data_root: str | os.PathLike[str],
+    *,
+    now_ms: int | None = None,
+) -> dict[str, Any]:
+    """Load the ``/api/audit/mining/effectiveness`` payload from the P5-3 base.
+
+    Composes the same chain the TS ``loadMiningEffectiveness`` reads: alliance
+    mining assignments (snapshot cores/workers + survey resources + mine
+    utilization candidates + mine-pattern predictions + enemy heat) aligned
+    against each tenant's survey-db harvest events.
+    """
+    from .alliance_mining import assign_alliance_mining
+    from .alliance_snapshot import load_alliance_snapshot
+    from .alliance_survey import load_alliance_survey
+    from .enemy_heat import load_enemy_heat
+    from .mine_patterns import load_mine_patterns
+    from .mines import load_mine_utilization
+
+    root = validate_data_root(data_root)
+    now = now_ms if now_ms is not None else current_epoch_ms()
+    snapshot = load_alliance_snapshot(root, now_ms=now)
+    survey = load_alliance_survey(root, now_ms=now)
+    mines = load_mine_utilization(root, "all")
+    members = snapshot.get("members") or {}
+    cores: dict[str, tuple[int | float, int | float] | None] = {}
+    workers: dict[str, int | float | None] = {}
+    for tenant in TENANTS:
+        member = members.get(tenant)
+        core = member.get("core") if isinstance(member, Mapping) else None
+        position = (
+            core.get("position")
+            if isinstance(core, Mapping) and isinstance(core.get("position"), (list, tuple))
+            else None
+        )
+        cores[tenant] = (
+            (num(position[0]), num(position[1])) if position and len(position) >= 2 else None
+        )
+        workers[tenant] = (
+            num(member.get("workers"))
+            if isinstance(member, Mapping) and member.get("workers") is not None
+            else None
+        )
+    candidates_by_tenant: dict[str, list[dict[str, Any]]] = {}
+    mine_tenants = mines.get("tenants") or {}
+    for tenant in TENANTS:
+        tenant_mines = mine_tenants.get(tenant) if isinstance(mine_tenants, Mapping) else None
+        candidates_by_tenant[tenant] = []
+        if isinstance(tenant_mines, Mapping):
+            for candidate in tenant_mines.get("candidates") or ():
+                if not isinstance(candidate, Mapping):
+                    continue
+                candidates_by_tenant[tenant].append(
+                    {
+                        "cell": str(candidate.get("cell") or ""),
+                        "x": num(candidate.get("x")),
+                        "y": num(candidate.get("y")),
+                        "lastSeenTick": candidate.get("lastSeenTick"),
+                    }
+                )
+    observers_by_cell = _observers_by_cell(survey)
+    conflict_cells = _conflict_cells(survey)
+    patterns = load_mine_patterns(root, "all", now_ms=now)
+    pattern_tenants = patterns.get("tenants") or {}
+    meta_by_cell: dict[str, dict[str, Any]] = {}
+    for tenant in TENANTS:
+        tenant_pattern = (
+            pattern_tenants.get(tenant) if isinstance(pattern_tenants, Mapping) else None
+        )
+        for prediction in (
+            (tenant_pattern.get("predictions") or ()) if isinstance(tenant_pattern, Mapping) else ()
+        ):
+            if not isinstance(prediction, Mapping):
+                continue
+            cell = str(prediction.get("cell") or "")
+            if not cell:
+                continue
+            current = meta_by_cell.setdefault(cell, {})
+            if prediction.get("predictedNextTick") is not None:
+                current["predictedNextTick"] = prediction.get("predictedNextTick")
+            if prediction.get("dueInTicks") is not None:
+                current["dueInTicks"] = prediction.get("dueInTicks")
+    heat = load_enemy_heat(root, "all", now_ms=now)
+    heat_by_bucket: dict[str, dict[str, Any]] = {}
+    for bucket in heat.get("buckets") or ():
+        if not isinstance(bucket, Mapping):
+            continue
+        key = f"{bucket.get('bx')},{bucket.get('by')}"
+        current = heat_by_bucket.setdefault(key, {"combatCount": 0, "count": 0, "lastTick": 0})
+        current["combatCount"] += num(bucket.get("combatCount"))
+        current["count"] += num(bucket.get("count"))
+        if num(bucket.get("lastTick")) > num(current["lastTick"]):
+            current["lastTick"] = num(bucket.get("lastTick"))
+    mining = assign_alliance_mining(
+        cores,
+        workers,
+        candidates_by_tenant,
+        observers_by_cell,
+        conflict_cells,
+        meta_by_cell,
+        heat_by_bucket,
+        now_ms=now,
+    )
+    current_tick = snapshot.get("currentTick")
+    harvest_by_tenant_cell: dict[str, dict[str, dict[str, Any]]] = {}
+    for tenant in TENANTS:
+        harvest_by_tenant_cell[tenant] = _read_harvest_map(survey_db_path(root, tenant))
+    payload = aggregate_allocation_effectiveness(
+        list(mining.get("assignments") or ()),
+        harvest_by_tenant_cell,
+        current_tick,
+        now_ms=now,
+    )
+    payload["currentTick"] = current_tick
+    return payload
