@@ -74,7 +74,12 @@ from arena_hero_agent.planning import (
     UnitAction as PlanningUnitAction,
 )
 
-from .economy_budget import heal_reserve, projected_core_resources, unit_max_health
+from .economy_budget import (
+    heal_reserve,
+    projected_core_resources,
+    unit_max_health,
+    worker_expansion_threshold,
+)
 from .movement_guard import (
     DEFAULT_CARGO_CORE_DISTANCE,
     DEFAULT_CARGO_SPIN_BUDGET,
@@ -174,6 +179,10 @@ _CORE_ACTION_TYPES: Final[dict[CoreActionType, ApplicationCoreAction]] = {
 }
 
 
+EXPANSION_SURVEY_CAP: Final = 3
+EXPANSION_EARLY_RESERVE: Final = 0
+
+
 @dataclass(frozen=True, slots=True)
 class ComposedDeciderConfig:
     """Immutable inputs for the composed live decider.
@@ -199,6 +208,7 @@ class ComposedDeciderConfig:
     movement_cargo_spin_budget: int = DEFAULT_CARGO_SPIN_BUDGET
     movement_cargo_core_distance: int = DEFAULT_CARGO_CORE_DISTANCE
     economy_budget_enabled: bool = False
+    economy_expansion_enabled: bool = False
     raid_quota_enabled: bool = False
     raid_min_observations: int = RAID_MIN_OBSERVATIONS
     raid_max_distance: int = RAID_MAX_DISTANCE
@@ -230,6 +240,7 @@ class ComposedDeciderConfig:
         for name in (
             "movement_guard_enabled",
             "economy_budget_enabled",
+            "economy_expansion_enabled",
             "raid_quota_enabled",
         ):
             if not isinstance(getattr(self, name), bool):
@@ -803,6 +814,61 @@ class ComposedDecider:
             core_action=PlanningCoreAction(type=CoreActionType.WAIT),
         )
 
+    def _economy_expansion_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
+        """Aggressively grow workers: spawn on projected resources, stepped reserve.
+
+        When the economy-expansion research switch is enabled this hook replaces
+        the worker-production gate below ``worker_target`` with the
+        ``worker_expansion_threshold`` schedule at a lowered early reserve and
+        counts same-tick deposits into the affordability check, so early workers
+        spawn as soon as the Core can pay for them.
+        """
+
+        if snapshot.core_state != "normal":
+            return plan
+        workers = sum(1 for unit in snapshot.units if unit.unit_role is UnitRole.WORKER)
+        if workers >= self._safety.config.worker_target:
+            return plan
+        deposit_cargo = 0
+        core = snapshot.core_position
+        if core is not None:
+            for unit in snapshot.units:
+                if (
+                    unit.unit_role is UnitRole.WORKER
+                    and unit.position == core
+                    and unit.cargo > 0
+                ):
+                    deposit_cargo += unit.cargo
+        projected = projected_core_resources(
+            resources=snapshot.resources,
+            resource_space=snapshot.resource_space,
+            deposit_cargo=deposit_cargo,
+            healing_reserve=0,
+        )
+        threshold = worker_expansion_threshold(
+            worker_count=workers,
+            worker_target=self._safety.config.worker_target,
+            resource_capacity=snapshot.resource_capacity,
+            population=snapshot.population,
+            core_resource_reserve=EXPANSION_EARLY_RESERVE,
+            base_worker_target=self._safety.config.worker_target,
+            late_expansion_reserve=0,
+        )
+        if projected >= threshold:
+            return Plan(
+                tick=plan.tick,
+                unit_actions=plan.unit_actions,
+                core_action=PlanningCoreAction(
+                    type=CoreActionType.SPAWN,
+                    unit_role=UnitRole.WORKER,
+                ),
+            )
+        return Plan(
+            tick=plan.tick,
+            unit_actions=plan.unit_actions,
+            core_action=PlanningCoreAction(type=CoreActionType.WAIT),
+        )
+
     @staticmethod
     def _raid_tenant_id(snapshot: PlanningSnapshot) -> str:
         """Return a stable tenant id for squad formation."""
@@ -965,10 +1031,20 @@ class ComposedDecider:
                 self._movement_guard_hook(snapshot, blocked_cells)
             )
 
+        worker_config = self._config.worker_config
+        if self._config.economy_expansion_enabled:
+            worker_config = replace(
+                worker_config,
+                mission=replace(
+                    worker_config.mission,
+                    survey_worker_cap=EXPANSION_SURVEY_CAP,
+                ),
+            )
+
         result = assign_worker_tasks(
             snapshot,
             self._previous_assignments,
-            config=self._config.worker_config,
+            config=worker_config,
             survey_burst_active=self._config.survey_burst_active,
             claims=self._claims,
             blocked_cells=blocked_cells,
@@ -989,6 +1065,9 @@ class ComposedDecider:
 
         if self._config.economy_budget_enabled:
             plan = self._economy_budget_hook(snapshot, plan)
+
+        if self._config.economy_expansion_enabled:
+            plan = self._economy_expansion_hook(snapshot, plan)
 
         if self._config.raid_quota_enabled:
             plan = self._raid_quota_hook(snapshot, plan)

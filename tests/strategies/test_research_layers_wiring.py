@@ -119,6 +119,7 @@ def test_research_flags_default_off() -> None:
     config = ComposedDeciderConfig()
     assert config.movement_guard_enabled is False
     assert config.economy_budget_enabled is False
+    assert config.economy_expansion_enabled is False
     assert config.raid_quota_enabled is False
 
 
@@ -149,6 +150,7 @@ def test_default_byte_identical_to_explicit_all_false() -> None:
         ComposedDeciderConfig(
             movement_guard_enabled=False,
             economy_budget_enabled=False,
+            economy_expansion_enabled=False,
             raid_quota_enabled=False,
         )
     )
@@ -444,3 +446,55 @@ def test_raid_replacement_queue_tracks_unit_churn() -> None:
 def test_cargo_spin_config_validates() -> None:
     with pytest.raises(ValueError, match="movement_cargo_spin_ticks"):
         ComposedDeciderConfig(movement_cargo_spin_ticks=0)
+
+
+def test_economy_expansion_routes_idle_workers_to_explore() -> None:
+    def make() -> PlanningSnapshot:
+        return _snapshot(
+            tick=1,
+            units=(_worker("w1", 0, 0), _worker("w2", 1, 0), _worker("w3", 2, 0)),
+            core_position=Coordinate(0, 0),
+        )
+
+    default = ComposedDecider().decide_snapshot(make())
+    enabled = ComposedDecider(
+        ComposedDeciderConfig(economy_expansion_enabled=True)
+    ).decide_snapshot(make())
+
+    for unit_id in ("w1", "w2", "w3"):
+        assert _action(default, unit_id) is UnitActionType.WAIT
+        assert _action(enabled, unit_id) is UnitActionType.MOVE
+
+
+def test_economy_expansion_spawns_worker_from_inflight_deposit() -> None:
+    snapshot = _snapshot(
+        tick=1,
+        units=(_worker("w1", 0, 0, cargo=1),),
+        resources=4,
+        population=1,
+        core_position=Coordinate(0, 0),
+    )
+    default = ComposedDecider().decide_snapshot(snapshot)
+    enabled = ComposedDecider(
+        ComposedDeciderConfig(economy_expansion_enabled=True)
+    ).decide_snapshot(snapshot)
+
+    assert default.core_action is None
+    assert enabled.core_action is not None
+    assert enabled.core_action.type is CoreActionType.SPAWN
+    assert enabled.core_action.unit_role is UnitRole.WORKER
+
+
+def test_economy_expansion_waits_when_unaffordable() -> None:
+    snapshot = _snapshot(
+        tick=1,
+        units=(_worker("w1", 0, 0),),
+        resources=3,
+        population=1,
+        core_position=Coordinate(0, 0),
+    )
+    enabled = ComposedDecider(
+        ComposedDeciderConfig(economy_expansion_enabled=True)
+    ).decide_snapshot(snapshot)
+    assert enabled.core_action is not None
+    assert enabled.core_action.type is CoreActionType.WAIT
