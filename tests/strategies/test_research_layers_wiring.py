@@ -276,3 +276,171 @@ def test_research_config_validates() -> None:
         ComposedDeciderConfig(raid_min_fighters=0)
     with pytest.raises(ValueError, match="raid_max_distance"):
         ComposedDeciderConfig(raid_max_distance=-1)
+
+
+def test_cargo_spin_core_self_heal_starts_core_move() -> None:
+    positions = [Coordinate(10, 0), Coordinate(10, 1)] * 8
+
+    def run(decider: ComposedDecider) -> Plan:
+        for index, position in enumerate(positions, start=1):
+            plan = decider.decide_snapshot(
+                _snapshot(
+                    tick=index,
+                    units=(_worker("w1", position.x, position.y, cargo=1),),
+                    core_position=Coordinate(0, 0),
+                )
+            )
+        return plan
+
+    disabled = run(ComposedDecider())
+    enabled = run(ComposedDecider(ComposedDeciderConfig(movement_guard_enabled=True)))
+
+    assert (
+        disabled.core_action is None
+        or disabled.core_action.type is not CoreActionType.START_MOVE
+    )
+    assert enabled.core_action is not None
+    assert enabled.core_action.type is CoreActionType.START_MOVE
+    assert enabled.core_action.direction is Direction.EAST
+
+
+def test_raid_target_stays_stable_after_confirmation() -> None:
+    units = (
+        _vanguard("v1", 0, 0),
+        _vanguard("v2", 1, 0),
+        _vanguard("v3", 0, 1),
+        _ranger("r1", 1, 1),
+        _ranger("r2", -1, 1),
+        _ranger("r3", 0, -1),
+    )
+
+    def make(tick: int) -> PlanningSnapshot:
+        return _snapshot(
+            tick=tick,
+            units=units,
+            enemy_cells=frozenset({"5,5"}),
+            core_position=Coordinate(0, 0),
+        )
+
+    decider = ComposedDecider(ComposedDeciderConfig(raid_quota_enabled=True))
+    decider.decide_snapshot(make(1))
+    decider.decide_snapshot(make(2))
+    decider.decide_snapshot(make(3))
+
+    assert decider.raid_state.enabled is True
+    assert decider.raid_state.core_position == Coordinate(5, 5)
+    assert decider.raid_state.acquired_tick == 3
+
+    decider.decide_snapshot(make(4))
+    # The target is retained across ticks instead of being re-acquired.
+    assert decider.raid_state.core_position == Coordinate(5, 5)
+    assert decider.raid_state.acquired_tick == 3
+
+
+def test_raid_target_clears_when_enemy_vanishes() -> None:
+    units = (
+        _vanguard("v1", 0, 0),
+        _vanguard("v2", 1, 0),
+        _vanguard("v3", 0, 1),
+        _ranger("r1", 1, 1),
+        _ranger("r2", -1, 1),
+        _ranger("r3", 0, -1),
+    )
+
+    decider = ComposedDecider(ComposedDeciderConfig(raid_quota_enabled=True))
+    for tick in (1, 2, 3):
+        decider.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=units,
+                enemy_cells=frozenset({"5,5"}),
+                core_position=Coordinate(0, 0),
+            )
+        )
+    assert decider.raid_state.enabled is True
+
+    plan = decider.decide_snapshot(
+        _snapshot(
+            tick=4,
+            units=units,
+            enemy_cells=frozenset(),
+            core_position=Coordinate(0, 0),
+        )
+    )
+    assert decider.raid_state.enabled is False
+    assert decider.raid_state.core_position is None
+    assert all(action.type is not UnitActionType.SHOOT for action in plan.unit_actions)
+
+
+def test_raid_recalls_when_fighters_drop_below_minimum() -> None:
+    full_units = (
+        _vanguard("v1", 0, 0),
+        _vanguard("v2", 1, 0),
+        _vanguard("v3", 0, 1),
+        _ranger("r1", 1, 1),
+        _ranger("r2", -1, 1),
+        _ranger("r3", 0, -1),
+    )
+    decider = ComposedDecider(ComposedDeciderConfig(raid_quota_enabled=True))
+    for tick in (1, 2, 3):
+        decider.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=full_units,
+                enemy_cells=frozenset({"5,5"}),
+                core_position=Coordinate(0, 0),
+            )
+        )
+    assert decider.raid_state.enabled is True
+
+    decider.decide_snapshot(
+        _snapshot(
+            tick=4,
+            units=(_vanguard("v1", 0, 0), _ranger("r1", 1, 1)),
+            enemy_cells=frozenset({"5,5"}),
+            core_position=Coordinate(0, 0),
+        )
+    )
+    assert decider.raid_state.recall is True
+    assert decider.raid_state.core_position is None
+
+
+def test_raid_replacement_queue_tracks_unit_churn() -> None:
+    decider = ComposedDecider(ComposedDeciderConfig(raid_quota_enabled=True))
+
+    decider.decide_snapshot(
+        _snapshot(
+            tick=1,
+            units=(
+                _vanguard("v1", 0, 0),
+                _vanguard("v2", 1, 0),
+                _ranger("r1", 1, 1),
+            ),
+        )
+    )
+    assert decider.replacement_queue.to_mapping() == {}
+
+    decider.decide_snapshot(
+        _snapshot(
+            tick=2,
+            units=(_vanguard("v1", 0, 0), _vanguard("v2", 1, 0)),
+        )
+    )
+    assert decider.replacement_queue.to_mapping() == {"ranger": 1}
+
+    decider.decide_snapshot(
+        _snapshot(
+            tick=3,
+            units=(
+                _vanguard("v1", 0, 0),
+                _vanguard("v2", 1, 0),
+                _ranger("r2", 1, 1),
+            ),
+        )
+    )
+    assert decider.replacement_queue.to_mapping() == {}
+
+
+def test_cargo_spin_config_validates() -> None:
+    with pytest.raises(ValueError, match="movement_cargo_spin_ticks"):
+        ComposedDeciderConfig(movement_cargo_spin_ticks=0)

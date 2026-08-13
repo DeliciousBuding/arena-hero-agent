@@ -28,7 +28,7 @@ at 8cf5cbb.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Final
 
 from arena_hero_agent.application import (
@@ -76,6 +76,9 @@ from arena_hero_agent.planning import (
 
 from .economy_budget import heal_reserve, projected_core_resources, unit_max_health
 from .movement_guard import (
+    DEFAULT_CARGO_CORE_DISTANCE,
+    DEFAULT_CARGO_SPIN_BUDGET,
+    DEFAULT_CARGO_SPIN_TICKS,
     DEFAULT_DEPOSIT_REPATH_STREAK,
     DEFAULT_DEPOSIT_STALL_TICKS,
     DEFAULT_LOOP_MIN_UNIQUE,
@@ -83,6 +86,7 @@ from .movement_guard import (
     DepositProgress,
     LoopTrail,
     MoveBackoffState,
+    cargo_spin_self_heal,
     deposit_escape_needed,
     detect_spatial_loop,
     forced_escape_step,
@@ -98,12 +102,19 @@ from .raid_quota import (
     RAID_MAX_DISTANCE,
     RAID_MIN_FIGHTERS,
     RAID_MIN_OBSERVATIONS,
+    RaidState,
+    ReplacementQueue,
     StationaryCore,
     StrikeGroup,
+    acquire_raid_target,
+    clear_raid_target,
     core_assault_quota,
     pick_raid_target,
+    raid_active,
     raid_fighters_ready,
     raid_guard_ids,
+    recall_raid,
+    reconcile_replacement_queue,
     select_strike_group,
 )
 from .safety_planner import SafetyPlanner, step_toward, worker_dense_direction
@@ -184,6 +195,9 @@ class ComposedDeciderConfig:
     movement_loop_min_unique: int = DEFAULT_LOOP_MIN_UNIQUE
     movement_deposit_stall_ticks: int = DEFAULT_DEPOSIT_STALL_TICKS
     movement_deposit_repath_streak: int = DEFAULT_DEPOSIT_REPATH_STREAK
+    movement_cargo_spin_ticks: int = DEFAULT_CARGO_SPIN_TICKS
+    movement_cargo_spin_budget: int = DEFAULT_CARGO_SPIN_BUDGET
+    movement_cargo_core_distance: int = DEFAULT_CARGO_CORE_DISTANCE
     economy_budget_enabled: bool = False
     raid_quota_enabled: bool = False
     raid_min_observations: int = RAID_MIN_OBSERVATIONS
@@ -225,6 +239,9 @@ class ComposedDeciderConfig:
             "movement_loop_min_unique",
             "movement_deposit_stall_ticks",
             "movement_deposit_repath_streak",
+            "movement_cargo_spin_ticks",
+            "movement_cargo_spin_budget",
+            "movement_cargo_core_distance",
             "raid_min_observations",
             "raid_min_fighters",
         ):
@@ -263,6 +280,29 @@ def _dense_to_cardinal(dense_index: int) -> Direction:
     if abs(dx) >= abs(dy):
         return Direction.EAST if dx > 0 else Direction.WEST
     return Direction.SOUTH if dy > 0 else Direction.NORTH
+
+
+def _cargo_heal_direction(
+    core: Coordinate,
+    target: Coordinate,
+    obstacles: frozenset[str],
+) -> Direction:
+    """Step Core toward the spinning worker, skipping blocked cells."""
+
+    primary = step_toward(core, target)
+    if core.step(primary).cell_key not in obstacles:
+        return primary
+    best_direction: Direction | None = None
+    best_distance: int | None = None
+    for direction in (Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST):
+        next_cell = core.step(direction)
+        if next_cell.cell_key in obstacles:
+            continue
+        distance = manhattan(next_cell, target)
+        if best_distance is None or distance < best_distance:
+            best_distance = distance
+            best_direction = direction
+    return primary if best_direction is None else best_direction
 
 
 def _worker_ordinal(snapshot: PlanningSnapshot, unit: PlanningUnit) -> int:
@@ -497,10 +537,22 @@ class ComposedDecider:
         self._previous_move_actions: dict[str, bool] = {}
         self._squad_by_unit: dict[str, str] = {}
         self._stationary_cores: dict[str, StationaryCore] = {}
+        self._cargo_spin_history: dict[str, tuple[Coordinate, ...]] = {}
+        self._raid_state = RaidState()
+        self._replacement_queue = ReplacementQueue()
+        self._previous_unit_roles: dict[str, str] = {}
 
     @property
     def config(self) -> ComposedDeciderConfig:
         return self._config
+
+    @property
+    def raid_state(self) -> RaidState:
+        return self._raid_state
+
+    @property
+    def replacement_queue(self) -> ReplacementQueue:
+        return self._replacement_queue
 
     def __call__(
         self,
@@ -682,7 +734,42 @@ class ComposedDecider:
                     progress = record_deposit_repath(progress, repathed=False)
                 self._deposit_progress[unit_id] = progress
             self._loop_trails[unit_id] = trail
-        return blocked_cells, escape_steps, frozenset(pause_ids)
+
+        spin_ticks = self._config.movement_cargo_spin_ticks
+        self._cargo_spin_history = {
+            unit.id.value: (
+                self._cargo_spin_history.get(unit.id.value, ()) + (unit.position,)
+            )[-spin_ticks:]
+            for unit in snapshot.units
+            if unit.unit_role is UnitRole.WORKER
+        }
+
+        core_action = self._cargo_spin_core_action(snapshot)
+        return blocked_cells, escape_steps, frozenset(pause_ids), core_action
+
+    def _cargo_spin_core_action(self, snapshot: PlanningSnapshot) -> PlanningCoreAction | None:
+        """Return a Core START_MOVE toward a spinning loaded worker, or None."""
+
+        core = snapshot.core_position
+        if core is None or snapshot.core_state != "normal":
+            return None
+        for unit in snapshot.units:
+            if unit.unit_role is not UnitRole.WORKER or unit.cargo <= 0:
+                continue
+            history = self._cargo_spin_history.get(unit.id.value, ())
+            if cargo_spin_self_heal(
+                history,
+                unit.cargo,
+                core,
+                spin_ticks=self._config.movement_cargo_spin_ticks,
+                spin_budget=self._config.movement_cargo_spin_budget,
+                core_distance_threshold=self._config.movement_cargo_core_distance,
+            ):
+                return PlanningCoreAction(
+                    type=CoreActionType.START_MOVE,
+                    direction=_cargo_heal_direction(core, unit.position, snapshot.obstacle_cells),
+                )
+        return None
 
     def _economy_budget_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
         """Skip Core SPAWN when same-tick deposits minus heal reserve cannot pay."""
@@ -735,8 +822,34 @@ class ComposedDecider:
         self._stationary_cores = stationary
         return stationary
 
+    def _reconcile_replacement_queue(self, snapshot: PlanningSnapshot) -> None:
+        """Enqueue lost-unit roles and drain produced roles from the backlog."""
+
+        current_by_unit = {unit.id.value: unit.unit_role.value for unit in snapshot.units}
+        self._replacement_queue = reconcile_replacement_queue(
+            self._previous_unit_roles,
+            current_by_unit,
+            self._replacement_queue,
+        )
+        self._previous_unit_roles = current_by_unit
+
+    def _raid_target_confirmed(
+        self,
+        position: Coordinate,
+        stationary: dict[str, StationaryCore],
+    ) -> bool:
+        """Return whether an active raid target still meets the confirmation bar."""
+
+        candidate = stationary.get(position.cell_key)
+        return (
+            candidate is not None
+            and candidate.observations >= self._config.raid_min_observations
+        )
+
     def _raid_quota_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
-        """Form squads and, when a raid is ready, point the strike group at Core."""
+        """Form squads and run the confirmed-raid lifecycle state machine."""
+
+        self._reconcile_replacement_queue(snapshot)
 
         membership = reconcile_tactical_squads(
             snapshot.units,
@@ -750,11 +863,13 @@ class ComposedDecider:
         )
         guard_ids = raid_guard_ids(home_squad)
 
-        target: Coordinate | None = None
-        if snapshot.core_position is not None:
-            target = pick_raid_target(
-                self._advance_stationary_cores(snapshot),
-                snapshot.core_position,
+        core = snapshot.core_position
+        stationary = self._advance_stationary_cores(snapshot)
+        confirmed: Coordinate | None = None
+        if core is not None:
+            confirmed = pick_raid_target(
+                stationary,
+                core,
                 min_observations=self._config.raid_min_observations,
                 max_distance=self._config.raid_max_distance,
             )
@@ -765,8 +880,8 @@ class ComposedDecider:
             if unit.unit_role in (UnitRole.VANGUARD, UnitRole.RANGER)
         )
         if not raid_fighters_ready(fighter_count, min_fighters=self._config.raid_min_fighters):
-            return plan
-        if target is None:
+            if raid_active(self._raid_state):
+                self._raid_state = recall_raid(self._raid_state)
             return plan
 
         vanguard_ids = [
@@ -785,10 +900,52 @@ class ComposedDecider:
             home_vanguards=0,
             home_rangers=0,
         )
-        strike = select_strike_group(vanguard_ids, ranger_ids, quota)
-        if not strike.member_ids:
+
+        state = self._raid_state
+
+        # A confirmed raid target stays stable across ticks until it vanishes.
+        if raid_active(state) and state.core_position is not None:
+            if self._raid_target_confirmed(state.core_position, stationary):
+                strike = select_strike_group(vanguard_ids, ranger_ids, quota)
+                if strike.member_ids:
+                    self._raid_state = replace(
+                        state,
+                        vanguard_ids=frozenset(strike.vanguard_ids),
+                        ranger_ids=frozenset(strike.ranger_ids),
+                    )
+                    return _apply_raid_strike(plan, snapshot, state.core_position, strike)
+            self._raid_state = clear_raid_target(
+                replace(
+                    state,
+                    enabled=False,
+                    recall=False,
+                    vanguard_ids=frozenset(),
+                    ranger_ids=frozenset(),
+                )
+            )
             return plan
-        return _apply_raid_strike(plan, snapshot, target, strike)
+
+        # Engage a freshly confirmed target.
+        if confirmed is not None:
+            strike = select_strike_group(vanguard_ids, ranger_ids, quota)
+            if strike.member_ids:
+                engaged = replace(
+                    state,
+                    enabled=True,
+                    recall=False,
+                    vanguard_ids=frozenset(strike.vanguard_ids),
+                    ranger_ids=frozenset(strike.ranger_ids),
+                )
+                self._raid_state = acquire_raid_target(
+                    engaged,
+                    confirmed.cell_key,
+                    confirmed,
+                    snapshot.tick,
+                )
+                return _apply_raid_strike(plan, snapshot, confirmed, strike)
+
+        self._raid_state = state
+        return plan
 
     def decide_snapshot(self, snapshot: PlanningSnapshot) -> Plan:
         """Produce one merged plan for a planning snapshot (pure aside from state)."""
@@ -802,10 +959,10 @@ class ComposedDecider:
 
         escape_steps: dict[str, Direction] = {}
         pause_ids: frozenset[str] = frozenset()
+        movement_core_action: PlanningCoreAction | None = None
         if self._config.movement_guard_enabled:
-            blocked_cells, escape_steps, pause_ids = self._movement_guard_hook(
-                snapshot,
-                blocked_cells,
+            blocked_cells, escape_steps, pause_ids, movement_core_action = (
+                self._movement_guard_hook(snapshot, blocked_cells)
             )
 
         result = assign_worker_tasks(
@@ -823,6 +980,12 @@ class ComposedDecider:
 
         if self._config.movement_guard_enabled:
             plan = _apply_movement_overrides(plan, escape_steps, pause_ids)
+            if movement_core_action is not None:
+                plan = Plan(
+                    tick=plan.tick,
+                    unit_actions=plan.unit_actions,
+                    core_action=movement_core_action,
+                )
 
         if self._config.economy_budget_enabled:
             plan = self._economy_budget_hook(snapshot, plan)
