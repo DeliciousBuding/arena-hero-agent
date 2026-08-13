@@ -131,6 +131,12 @@ from .raid_quota import (
     reconcile_replacement_queue,
     select_strike_group,
 )
+from .respawn_recovery import (
+    DEFAULT_DETECTION_DISTANCE,
+    DEFAULT_RECOVERY_WORKERS,
+    RespawnRecoveryState,
+    detect_respawn,
+)
 from .safety_planner import SafetyPlanner, step_toward, worker_dense_direction
 from .safety_planner_config import DEFAULT_SAFETY_CONFIG, SafetyPlannerConfig
 from .stuck_guard import (
@@ -220,6 +226,9 @@ class ComposedDeciderConfig:
     economy_expansion_enabled: bool = False
     raid_quota_enabled: bool = False
     exploration_v2_enabled: bool = False
+    respawn_recovery_enabled: bool = False
+    respawn_worker_target: int = DEFAULT_RECOVERY_WORKERS
+    respawn_detection_distance: int = DEFAULT_DETECTION_DISTANCE
     raid_min_observations: int = RAID_MIN_OBSERVATIONS
     raid_max_distance: int = RAID_MAX_DISTANCE
     raid_min_fighters: int = RAID_MIN_FIGHTERS
@@ -253,6 +262,7 @@ class ComposedDeciderConfig:
             "economy_expansion_enabled",
             "raid_quota_enabled",
             "exploration_v2_enabled",
+            "respawn_recovery_enabled",
         ):
             if not isinstance(getattr(self, name), bool):
                 raise TypeError(f"{name} must be a boolean")
@@ -266,6 +276,8 @@ class ComposedDeciderConfig:
             "movement_cargo_core_distance",
             "raid_min_observations",
             "raid_min_fighters",
+            "respawn_worker_target",
+            "respawn_detection_distance",
         ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int):
@@ -633,6 +645,8 @@ class ComposedDecider:
         self._replacement_queue = ReplacementQueue()
         self._previous_unit_roles: dict[str, str] = {}
         self._exploration_state = ExplorationState()
+        self._respawn_state = RespawnRecoveryState()
+        self._previous_core_position: Coordinate | None = None
 
     @property
     def config(self) -> ComposedDeciderConfig:
@@ -862,6 +876,67 @@ class ComposedDecider:
                     direction=_cargo_heal_direction(core, unit.position, snapshot.obstacle_cells),
                 )
         return None
+
+    def _respawn_recovery_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
+        """Force Worker production after a detected Core respawn (economy-first).
+
+        Tracks the Core position across ticks; a single-tick teleport beyond the
+        configured detection distance is a destroy-then-respawn signal. While the
+        recovery latch is active, SPAWN is forced to WORKER until the recovery
+        worker target is reached, using projected same-tick resources at a zero
+        reserve so the fresh Core can start rolling its economy immediately.
+        """
+
+        current_core = snapshot.core_position
+        if current_core is not None:
+            if detect_respawn(
+                self._previous_core_position,
+                current_core,
+                detection_distance=self._config.respawn_detection_distance,
+            ):
+                self._respawn_state.note_respawn(snapshot.tick)
+            self._previous_core_position = current_core
+
+        if not self._config.respawn_recovery_enabled:
+            return plan
+        if not self._respawn_state.active:
+            return plan
+        if snapshot.core_state != "normal":
+            # A moving (migrating) Core is handled by migration; do not fight it.
+            return plan
+
+        workers = sum(1 for unit in snapshot.units if unit.unit_role is UnitRole.WORKER)
+        if workers >= self._config.respawn_worker_target:
+            self._respawn_state.note_recovered()
+            return plan
+
+        deposit_cargo = 0
+        core = snapshot.core_position
+        if core is not None:
+            for unit in snapshot.units:
+                if unit.unit_role is UnitRole.WORKER and unit.position == core and unit.cargo > 0:
+                    deposit_cargo += unit.cargo
+        projected = projected_core_resources(
+            resources=snapshot.resources,
+            resource_space=snapshot.resource_space,
+            deposit_cargo=deposit_cargo,
+            healing_reserve=0,
+        )
+        cost = unit_price(UnitRole.WORKER, snapshot.population, snapshot.rules_version)
+        if projected >= cost:
+            return Plan(
+                tick=plan.tick,
+                unit_actions=plan.unit_actions,
+                core_action=PlanningCoreAction(
+                    type=CoreActionType.SPAWN,
+                    unit_role=UnitRole.WORKER,
+                ),
+            )
+        return Plan(
+            tick=plan.tick,
+            unit_actions=plan.unit_actions,
+            core_action=PlanningCoreAction(type=CoreActionType.WAIT),
+        )
 
     def _economy_budget_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
         """Skip Core SPAWN when same-tick deposits minus heal reserve cannot pay."""
@@ -1171,6 +1246,9 @@ class ComposedDecider:
 
         if self._config.economy_expansion_enabled:
             plan = self._economy_expansion_hook(snapshot, plan)
+
+        if self._config.respawn_recovery_enabled:
+            plan = self._respawn_recovery_hook(snapshot, plan)
 
         if self._config.raid_quota_enabled:
             plan = self._raid_quota_hook(snapshot, plan)
