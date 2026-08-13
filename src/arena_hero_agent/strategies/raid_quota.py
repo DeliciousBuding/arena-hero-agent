@@ -163,8 +163,8 @@ def select_strike_group(
     ordered_v = tuple(sorted(vanguard_ids))
     ordered_r = tuple(sorted(ranger_ids))
     return StrikeGroup(
-        vanguard_ids=ordered_v[-quota.vanguard_count:] if quota.vanguard_count else (),
-        ranger_ids=ordered_r[-quota.ranger_count:] if quota.ranger_count else (),
+        vanguard_ids=ordered_v[-quota.vanguard_count :] if quota.vanguard_count else (),
+        ranger_ids=ordered_r[-quota.ranger_count :] if quota.ranger_count else (),
     )
 
 

@@ -677,7 +677,7 @@ class ComposedDecider:
         self,
         snapshot: PlanningSnapshot,
         blocked_cells: frozenset[str],
-    ) -> tuple[frozenset[str], dict[str, Direction], frozenset[str]]:
+    ) -> tuple[frozenset[str], dict[str, Direction], frozenset[str], PlanningCoreAction | None]:
         """Fold one tick of movement observations into escape/pause overrides."""
 
         escape_steps: dict[str, Direction] = {}
@@ -823,7 +823,10 @@ class ComposedDecider:
             deposit_cargo=deposit_cargo,
             healing_reserve=heal_reserve(healing_roles),
         )
-        cost = unit_price(core_action.unit_role, snapshot.population, snapshot.rules_version)
+        role = core_action.unit_role
+        if role is None:
+            return plan
+        cost = unit_price(role, snapshot.population, snapshot.rules_version)
         if projected >= cost:
             return plan
         return Plan(

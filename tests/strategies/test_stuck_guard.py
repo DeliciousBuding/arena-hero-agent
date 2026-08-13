@@ -14,12 +14,14 @@ import pytest
 from arena_hero_agent.domain import (
     CURRENT_RULES_VERSION,
     Coordinate,
+    Direction,
     EntityId,
     UnitRole,
 )
 from arena_hero_agent.planning import (
     Assignment,
     BeaconInfo,
+    Plan,
     PlanningSnapshot,
     PlanningUnit,
     ResourceCellInfo,
@@ -81,12 +83,12 @@ def _snapshot(
     )
 
 
-def _action(plan: object, unit_id: str) -> UnitActionType | None:
+def _action(plan: Plan, unit_id: str) -> UnitActionType | None:
     action = plan.action_for(unit_id)
     return None if action is None else action.type
 
 
-def _direction(plan: object, unit_id: str) -> object:
+def _direction(plan: Plan, unit_id: str) -> Direction | None:
     action = plan.action_for(unit_id)
     return None if action is None else action.direction
 
@@ -167,7 +169,9 @@ def test_stuck_guard_disabled_keeps_default_behavior() -> None:
         plan_explicit = explicit.decide_snapshot(snapshot)
         assert plan_default == plan_explicit
         assert _action(plan_default, "w1") is UnitActionType.MOVE
-        assert _direction(plan_default, "w1").value == "east"
+        direction = _direction(plan_default, "w1")
+        assert direction is not None
+        assert direction.value == "east"
 
 
 def test_stuck_guard_enabled_reassigns_spinning_unit() -> None:

@@ -168,9 +168,7 @@ def full_capacity_worker_route(
             staging_goal=staging_goal,
         )
 
-    full_cells = frozenset(
-        cell for cell, count in counts.items() if count >= cell_capacity
-    )
+    full_cells = frozenset(cell for cell, count in counts.items() if count >= cell_capacity)
     for offset_index in range(len(HOME_PATROL_OFFSETS)):
         offset = HOME_PATROL_OFFSETS[(worker_index + offset_index) % len(HOME_PATROL_OFFSETS)]
         goal = _add(core, offset)
@@ -275,6 +273,7 @@ def worker_expansion_threshold(
 
 
 # --- Mechanism 4: full-cargo home return ignoring unit occupancy ---------------
+
 
 @dataclass(frozen=True, slots=True)
 class HomeRoute:

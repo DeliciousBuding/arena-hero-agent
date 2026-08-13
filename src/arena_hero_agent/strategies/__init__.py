@@ -44,6 +44,7 @@ from .safety_planner_config import (
     ThreatTier,
     tier_of_damage_rank,
 )
+from .stuck_guard import detect_stuck_unit_ids
 from .tactical_squads import (
     EMPTY_SQUAD_MEMBERSHIP,
     RALLY_MEMBER_RING_COUNT,
@@ -59,7 +60,6 @@ from .tactical_squads import (
     rally_slot_for_squad,
     reconcile_tactical_squads,
 )
-from .stuck_guard import detect_stuck_unit_ids
 from .variant_registry import (
     VARIANT_PRODUCTION,
     VARIANT_SAFETY_CONFIG,

@@ -223,9 +223,9 @@ def test_economy_budget_skips_spawn_when_heal_reserve_short() -> None:
     assert baseline.core_action is not None
     assert baseline.core_action.type is CoreActionType.SPAWN
 
-    gated = ComposedDecider(
-        ComposedDeciderConfig(economy_budget_enabled=True)
-    ).decide_snapshot(snapshot)
+    gated = ComposedDecider(ComposedDeciderConfig(economy_budget_enabled=True)).decide_snapshot(
+        snapshot
+    )
     assert gated.core_action is not None
     assert gated.core_action.type is CoreActionType.WAIT
 
@@ -257,7 +257,9 @@ def test_raid_quota_strikes_confirmed_stationary_core() -> None:
 
     final = plans[2]
     assert _action(final, "r2") is UnitActionType.SHOOT
-    assert final.action_for("r2").expected_cell == Coordinate(5, 5)
+    r2_action = final.action_for("r2")
+    assert r2_action is not None
+    assert r2_action.expected_cell == Coordinate(5, 5)
     assert _action(final, "r3") is UnitActionType.SHOOT
     assert _action(final, "v3") is UnitActionType.MOVE
     # Home-defense members stay behind and keep their baseline actions.
@@ -298,8 +300,7 @@ def test_cargo_spin_core_self_heal_starts_core_move() -> None:
     enabled = run(ComposedDecider(ComposedDeciderConfig(movement_guard_enabled=True)))
 
     assert (
-        disabled.core_action is None
-        or disabled.core_action.type is not CoreActionType.START_MOVE
+        disabled.core_action is None or disabled.core_action.type is not CoreActionType.START_MOVE
     )
     assert enabled.core_action is not None
     assert enabled.core_action.type is CoreActionType.START_MOVE
