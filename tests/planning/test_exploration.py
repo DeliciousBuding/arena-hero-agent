@@ -197,6 +197,19 @@ def test_build_targets_hungry_extends_beyond_thirty() -> None:
     assert manhattan(targets[unit_id], core) == 64
 
 
+def test_build_targets_rejects_unreachable_ring_candidate() -> None:
+    unit_id = "w1"
+    # A vertical wall at x=1 (taller than the flood radius) separates the worker
+    # from the first ring candidates (8, 0) and (4, 4).  Those are not blocked
+    # themselves, so the old validity check would accept them and stall; the
+    # reachability gate must reject them and pick the first reachable ring point
+    # on the worker's side, (0, 8).
+    wall = frozenset(Coordinate(1, y).cell_key for y in range(-100, 101))
+    snapshot = _snapshot(units=(_worker(unit_id, 0, 0),), obstacles=wall)
+    targets = build_exploration_targets(snapshot, ExplorationState())
+    assert targets[unit_id] == Coordinate(0, 8)
+
+
 def test_build_targets_bfs_frontier_fallback_in_maze() -> None:
     unit_id = "w1"
     core = Coordinate(0, 0)

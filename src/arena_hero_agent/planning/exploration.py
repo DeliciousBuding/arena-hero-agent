@@ -313,7 +313,7 @@ def _ring_band_candidates(core: Coordinate, radii: tuple[int, ...]):
             yield Coordinate(core.x + vx * scale, core.y + vy * scale)
 
 
-def _bfs_nearest_frontier(
+def _bfs_frontier_flood(
     start: Coordinate,
     blocked: frozenset[str],
     visited: Mapping[str, int],
@@ -321,17 +321,19 @@ def _bfs_nearest_frontier(
     *,
     search_radius: int = _FRONTIER_RADIUS,
     node_budget: int = _FRONTIER_NODE_BUDGET,
-) -> Coordinate | None:
-    """Return the nearest reachable, unvisited, unclaimed cell via BFS.
+) -> tuple[Coordinate | None, frozenset[str]]:
+    """Flood-fill from ``start``; return (nearest frontier, reachable keys).
 
     Four-way BFS from ``start`` in the oracle's fixed (E, S, W, N) order.
     ``blocked`` cells are impassable; ``visited`` (recorded scout arrivals)
     and ``taken`` (already claimed this tick) cells are traversable but not
     valid targets.  The search is Chebyshev-bounded and node-budget-bounded.
-    This is the frontier-expansion counterpart to the fixed-radius
-    directional ring: when the ring points all land inside walls (a maze),
-    the scout still gets a reachable nearest-unvisited target instead of
-    stalling.
+
+    Returns the nearest reachable, unvisited, unclaimed cell in BFS order plus
+    the full set of reachable non-blocked keys.  Callers use the reachable set
+    as a path-awareness gate for directional-ring candidates: a ring point that
+    sits inside a wall pocket (unreachable) is rejected instead of producing a
+    stall, and the nearest frontier becomes the guaranteed fallback.
     """
 
     if not isinstance(start, Coordinate):
@@ -349,7 +351,8 @@ def _bfs_nearest_frontier(
 
     start_key = start.cell_key
     queue: deque[Coordinate] = deque([start])
-    seen = {start_key}
+    seen: set[str] = {start_key}
+    nearest: Coordinate | None = None
     head = 0
     while head < len(queue) and head < node_budget:
         current = queue[head]
@@ -362,10 +365,10 @@ def _bfs_nearest_frontier(
             if key in seen or key in blocked:
                 continue
             seen.add(key)
-            if key not in visited and key not in taken:
-                return neighbor
+            if nearest is None and key not in visited and key not in taken:
+                nearest = neighbor
             queue.append(neighbor)
-    return None
+    return nearest, frozenset(seen)
 
 
 def build_exploration_targets(
@@ -412,6 +415,12 @@ def build_exploration_targets(
     radii = sweep_radii(hungry)
 
     for unit in workers:
+        nearest, reachable = _bfs_frontier_flood(
+            unit.position,
+            blocked,
+            state.point_visited,
+            taken,
+        )
         best: Coordinate | None = None
         for candidate in (*due_anchors, *_ring_band_candidates(core, radii)):
             cell = candidate.cell_key
@@ -423,19 +432,24 @@ def build_exploration_targets(
                 or cell in state.point_visited
             ):
                 continue
+            # Path-awareness gate: only reject a candidate the flood could
+            # actually reach.  Targets beyond the flood radius (e.g. a distant
+            # refill anchor) are not gated here; the route-aware merge handles
+            # their pathing and a far anchor is trustworthy history.
+            within_flood = (
+                max(abs(candidate.x - unit.position.x), abs(candidate.y - unit.position.y))
+                <= _FRONTIER_RADIUS
+            )
+            if within_flood and cell not in reachable:
+                continue
             best = candidate
             break
         if best is None:
-            # Maze/stall fallback: every refill anchor and directional ring
-            # candidate is blocked, visited, or already claimed.  BFS-expand
-            # from the worker to the nearest reachable, unvisited, unclaimed
-            # cell so a scout always has a frontier target instead of stalling.
-            best = _bfs_nearest_frontier(
-                unit.position,
-                blocked,
-                state.point_visited,
-                taken,
-            )
+            # Every refill anchor and directional-ring candidate is blocked,
+            # visited, already claimed, or unreachable from this worker.  Use
+            # the BFS nearest reachable frontier so a scout always gets a
+            # path-aware target instead of stalling against a wall pocket.
+            best = nearest
         if best is not None:
             targets[unit.id.value] = best
             taken.add(best.cell_key)
