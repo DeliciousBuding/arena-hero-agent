@@ -183,8 +183,8 @@ def next_step_toward(
     target: Coordinate,
     obstacles: frozenset[str],
     *,
-    search_radius: int = ASSIGNMENT_ROUTE_RADIUS,
-    node_budget: int = ASSIGNMENT_ROUTE_NODE_BUDGET,
+    search_radius: int = 64,
+    node_budget: int = 16384,
 ) -> Direction | None:
     """Return the first cardinal step of a BFS route from ``start`` to ``target``.
 
