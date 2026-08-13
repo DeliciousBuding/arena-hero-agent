@@ -415,12 +415,19 @@ def build_exploration_targets(
     radii = sweep_radii(hungry)
 
     for unit in workers:
-        nearest, reachable = _bfs_frontier_flood(
-            unit.position,
-            blocked,
-            state.point_visited,
-            taken,
-        )
+        # Skip the flood entirely in open terrain: with no obstacles or known
+        # enemy cells, every in-bounds candidate is reachable, so the
+        # reachability gate cannot reject anything.  This keeps the common
+        # case cheap while the maze path still pays for path-aware targets.
+        nearest: Coordinate | None = None
+        reachable: frozenset[str] | None = None
+        if blocked:
+            nearest, reachable = _bfs_frontier_flood(
+                unit.position,
+                blocked,
+                state.point_visited,
+                taken,
+            )
         best: Coordinate | None = None
         for candidate in (*due_anchors, *_ring_band_candidates(core, radii)):
             cell = candidate.cell_key
@@ -440,7 +447,7 @@ def build_exploration_targets(
                 max(abs(candidate.x - unit.position.x), abs(candidate.y - unit.position.y))
                 <= _FRONTIER_RADIUS
             )
-            if within_flood and cell not in reachable:
+            if within_flood and reachable is not None and cell not in reachable:
                 continue
             best = candidate
             break
