@@ -22,6 +22,7 @@ from arena_hero_agent.planning import (
     observe_exploration,
     refill_tick_at_or_after,
     ring_radii,
+    with_memory_resource_cells,
 )
 from arena_hero_agent.planning.exploration import HUNGER_TICKS
 
@@ -155,39 +156,45 @@ def test_build_targets_lie_on_normal_ring_band() -> None:
     targets = build_exploration_targets(snapshot, ExplorationState())
     assert set(targets) == {"w1", "w2", "w3"}
     for target in targets.values():
-        assert manhattan(target, Coordinate(0, 0)) in (10, 20, 30, 40)
+        assert manhattan(target, Coordinate(0, 0)) in (8, 16, 24, 32, 40, 48)
 
 
-def test_build_targets_skip_obstacle_and_pick_farther_ring() -> None:
-    core = Coordinate(0, 0)
+def test_build_targets_skip_obstacle_and_pick_next_valid_direction() -> None:
     unit_id = "w1"
-    candidates = _candidates(unit_id, core)
-    obstacles = frozenset(candidate.cell_key for candidate in candidates[:-1])
-    snapshot = _snapshot(units=(_worker(unit_id, 0, 0),), obstacles=obstacles)
+    # First ring-band candidate (8,0) is blocked; the next valid candidate is
+    # a different direction at the same radius instead of the blocked cell.
+    snapshot = _snapshot(units=(_worker(unit_id, 0, 0),), obstacles=frozenset({"8,0"}))
     targets = build_exploration_targets(snapshot, ExplorationState())
-    assert targets[unit_id] == candidates[-1]
+    assert targets[unit_id] == Coordinate(4, 4)
 
 
-def test_build_targets_advance_outward_when_visited() -> None:
+def test_build_targets_advance_outward_after_full_ring() -> None:
     core = Coordinate(0, 0)
     unit_id = "w1"
     state = ExplorationState()
     snapshot = _snapshot(units=(_worker(unit_id, 0, 0),))
-    first = build_exploration_targets(snapshot, state)[unit_id]
-    state.point_visited[first.cell_key] = snapshot.tick
-    second = build_exploration_targets(snapshot, state)[unit_id]
-    assert manhattan(second, core) > manhattan(first, core)
+    # Visit every ring-8 point; the next target must fall on ring 16.
+    for vx, vy in _DIRS:
+        scale = 8 // (abs(vx) + abs(vy))
+        point = Coordinate(core.x + vx * scale, core.y + vy * scale)
+        state.point_visited[point.cell_key] = snapshot.tick
+    target = build_exploration_targets(snapshot, state)[unit_id]
+    assert manhattan(target, core) == 16
 
 
 def test_build_targets_hungry_extends_beyond_thirty() -> None:
     core = Coordinate(0, 0)
     unit_id = "w1"
-    candidates = _candidates(unit_id, core, hungry=True)
-    assert max(manhattan(candidate, core) for candidate in candidates) == 40
-    obstacles = frozenset(candidate.cell_key for candidate in candidates[:-1])
-    snapshot = _snapshot(units=(_worker(unit_id, 0, 0),), obstacles=obstacles)
+    # Hungry mode extends the sweep to 64; block everything up to 56 so the
+    # only valid target is the outer 64 ring.
+    blocked = set()
+    for radius in (8, 16, 24, 32, 40, 48, 56):
+        for vx, vy in _DIRS:
+            scale = radius // (abs(vx) + abs(vy))
+            blocked.add(Coordinate(core.x + vx * scale, core.y + vy * scale).cell_key)
+    snapshot = _snapshot(units=(_worker(unit_id, 0, 0),), obstacles=frozenset(blocked))
     targets = build_exploration_targets(snapshot, ExplorationState(), hungry=True)
-    assert manhattan(targets[unit_id], core) == 40
+    assert manhattan(targets[unit_id], core) == 64
 
 
 def test_observe_exploration_marks_visible_chunk_seen() -> None:
@@ -250,3 +257,33 @@ def test_mark_reached_ignores_non_explore_and_far_targets() -> None:
     mark_reached(snapshot, (far, harvest), state)
     assert state.point_visited == {}
     assert state.chunk_last_probe_tick == {}
+
+
+def test_with_memory_resource_cells_merges_remembered_cells() -> None:
+    state = ExplorationState()
+    remembered = Coordinate(30, 0)
+    state.cell_positions[remembered.cell_key] = remembered
+    state.cell_last_seen[remembered.cell_key] = 5
+    visible = ResourceCellInfo(position=Coordinate(0, 0), visible=True, last_seen_tick=7)
+    snapshot = _snapshot(tick=7, resource_cells={visible.position.cell_key: visible})
+    merged = with_memory_resource_cells(snapshot, state)
+    assert merged.resource_cells[visible.position.cell_key].visible is True
+    remembered_cell = merged.resource_cells[remembered.cell_key]
+    assert remembered_cell.visible is False
+    assert remembered_cell.position == remembered
+    assert remembered_cell.last_seen_tick == 5
+
+
+def test_observe_exploration_removes_harvested_cell_from_memory() -> None:
+    state = ExplorationState()
+    resource = Coordinate(10, 0)
+    state.cell_positions[resource.cell_key] = resource
+    state.cell_last_seen[resource.cell_key] = 4
+    state.prev_cargo["w1"] = 0
+    unit = _worker("w1", 10, 0, cargo=1)
+    snapshot = _snapshot(tick=5, units=(unit,))
+    observe_exploration(snapshot, (), state)
+    assert resource.cell_key not in state.cell_positions
+    assert state.chunk_harvest_count[chunk_of(resource)] == 1
+    assert state.chunk_next_refill_tick[chunk_of(resource)] == 8
+    assert state.prev_cargo["w1"] == 1

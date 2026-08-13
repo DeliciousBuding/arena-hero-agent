@@ -11,7 +11,7 @@ from typing import Any, cast
 
 import pytest
 
-from arena_hero_agent.domain import CURRENT_RULES_VERSION, Coordinate, EntityId, UnitRole
+from arena_hero_agent.domain import CURRENT_RULES_VERSION, Coordinate, Direction, EntityId, UnitRole
 from arena_hero_agent.planning import (
     Assignment,
     BeaconInfo,
@@ -26,6 +26,7 @@ from arena_hero_agent.planning import (
     WorkerTaskPlannerConfig,
     apply_sticky_bonus,
     assign_worker_tasks,
+    next_step_toward,
     progress_decay,
     shortest_path_distances,
 )
@@ -348,3 +349,21 @@ def test_shortest_path_distances_validates_inputs() -> None:
         )
     with pytest.raises(TypeError, match="obstacles"):
         shortest_path_distances(Coordinate(0, 0), (), cast(frozenset[str], []))  # type: ignore[arg-type]
+
+
+def test_next_step_toward_routes_around_obstacle() -> None:
+    start = Coordinate(0, 0)
+    target = Coordinate(2, 0)
+    # Block the straight east path, forcing a detour.
+    obstacles = frozenset({"1,0"})
+    step = next_step_toward(start, target, obstacles)
+    assert step in (Direction.NORTH, Direction.SOUTH)
+
+
+def test_next_step_toward_straight_when_clear() -> None:
+    step = next_step_toward(Coordinate(0, 0), Coordinate(2, 0), frozenset())
+    assert step is Direction.EAST
+
+
+def test_next_step_toward_returns_none_when_target_blocked() -> None:
+    assert next_step_toward(Coordinate(0, 0), Coordinate(1, 0), frozenset({"1,0"})) is None

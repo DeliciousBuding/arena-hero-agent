@@ -32,7 +32,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final
 
-from arena_hero_agent.domain import Coordinate, UnitRole, manhattan
+from arena_hero_agent.domain import Coordinate, Direction, UnitRole, manhattan
 
 from .min_cost_assignment import minimum_cost_assignment
 from .mission import (
@@ -168,6 +168,86 @@ def shortest_path_distances(
                     return result
             queue.append((neighbor, next_depth))
     return result
+
+
+_DIRECTION_FROM_DELTA: Final[dict[tuple[int, int], Direction]] = {
+    (1, 0): Direction.EAST,
+    (0, 1): Direction.SOUTH,
+    (-1, 0): Direction.WEST,
+    (0, -1): Direction.NORTH,
+}
+
+
+def next_step_toward(
+    start: Coordinate,
+    target: Coordinate,
+    obstacles: frozenset[str],
+    *,
+    search_radius: int = ASSIGNMENT_ROUTE_RADIUS,
+    node_budget: int = ASSIGNMENT_ROUTE_NODE_BUDGET,
+) -> Direction | None:
+    """Return the first cardinal step of a BFS route from ``start`` to ``target``.
+
+    Unknown cells are traversable and obstacle cells are blocked, matching
+    :func:`shortest_path_distances`. The search is Chebyshev-bounded and
+    node-budget-bounded; ``None`` means no route was found within the budget.
+    This gives the explore/collect conversions an obstacle-aware first step so a
+    scout does not repeatedly push into a wall on a fixed greedy axis.
+    """
+
+    if not isinstance(start, Coordinate) or not isinstance(target, Coordinate):
+        raise TypeError("start and target must be Coordinate values")
+    if not isinstance(obstacles, frozenset):
+        raise TypeError("obstacles must be a frozenset of cell keys")
+    search_radius = _safe_int("search_radius", search_radius, minimum=1)
+    node_budget = _safe_int("node_budget", node_budget, minimum=1)
+
+    if start.cell_key == target.cell_key:
+        return None
+    if target.cell_key in obstacles:
+        return None
+
+    prev: dict[str, str] = {start.cell_key: ""}
+    queue: deque[str] = deque([start.cell_key])
+    head = 0
+    found: str | None = None
+    while head < len(queue) and head < node_budget:
+        key = queue[head]
+        head += 1
+        x, y = _parse_key_coords(key)
+        for dx, dy in _PATH_DELTAS:
+            neighbor = Coordinate(x + dx, y + dy)
+            if max(abs(neighbor.x - start.x), abs(neighbor.y - start.y)) > search_radius:
+                continue
+            nkey = neighbor.cell_key
+            if nkey in prev or nkey in obstacles:
+                continue
+            prev[nkey] = key
+            if nkey == target.cell_key:
+                found = nkey
+                queue.clear()
+                break
+            queue.append(nkey)
+        if found is not None:
+            break
+
+    if found is None:
+        return None
+    # walk the parent chain back to the first step after start
+    step_key = found
+    while prev[step_key] != start.cell_key:
+        step_key = prev[step_key]
+    sx, sy = _parse_key_coords(step_key)
+    return _DIRECTION_FROM_DELTA[(sx - start.x, sy - start.y)]
+
+
+def _parse_key_coords(key: str) -> tuple[int, int]:
+    """Parse a canonical ``x,y`` cell key without importing the parser module."""
+
+    if not isinstance(key, str):
+        raise TypeError("cell key must be a string")
+    x_str, y_str = key.split(",", 1)
+    return int(x_str), int(y_str)
 
 
 @dataclass(frozen=True, slots=True)

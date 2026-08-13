@@ -30,12 +30,12 @@ tick's assignments.  The target builder is otherwise pure.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Final
 
 from arena_hero_agent.domain import Coordinate, UnitRole, manhattan
 
-from .planning_snapshot import PlanningSnapshot
+from .planning_snapshot import PlanningSnapshot, ResourceCellInfo
 from .task import TaskType
 from .worker_assignment import Assignment
 
@@ -46,7 +46,10 @@ HUNGER_RING_STEP: Final = 8
 HUNGER_RING_COUNT: Final = 5
 HUNGER_TICKS: Final = 200
 REFILL_RECHECK_TICKS: Final = 4
-EXPLORATION_SURVEY_CAP: Final = 1
+EXPLORATION_SURVEY_CAP: Final = 2
+SWEEP_RING_STEP: Final = 8
+SWEEP_RING_COUNT: Final = 6
+HUNGER_SWEEP_RING_COUNT: Final = 8
 
 _DELTAS: Final[tuple[tuple[int, int], ...]] = (
     (1, 0),
@@ -77,6 +80,13 @@ class ExplorationState:
     chunk_anchor: dict[tuple[int, int], Coordinate] = field(default_factory=dict)
     point_visited: dict[str, int] = field(default_factory=dict)
     hungry_since: int | None = None
+    # Resource-cell memory: known (unconsumed) natural resource positions plus
+    # per-worker cargo from the previous tick so harvests are inferred by the
+    # cargo 0 -> >0 transition instead of by assignment type.
+    cell_positions: dict[str, Coordinate] = field(default_factory=dict)
+    cell_last_seen: dict[str, int] = field(default_factory=dict)
+    prev_cargo: dict[str, int] = field(default_factory=dict)
+    known_obstacles: set[str] = field(default_factory=set)
 
 
 def explorer_slot(unit_id: str) -> int:
@@ -173,12 +183,17 @@ def observe_exploration(
     if not isinstance(state, ExplorationState):
         raise TypeError("state must be an ExplorationState")
 
-    # Visible resources mark their chunk as seen and anchor it.
+    # Visible resources mark their chunk as seen and anchor it, and enter the
+    # resource-cell memory so other workers can still collect them once they
+    # leave the fog-of-war vision range.
     for cell in snapshot.resource_cells.values():
         if cell.visible:
             chunk = chunk_of(cell.position)
             state.chunk_seen_tick[chunk] = snapshot.tick
             state.chunk_anchor[chunk] = cell.position
+            state.cell_positions[cell.position.cell_key] = cell.position
+            state.cell_last_seen[cell.position.cell_key] = snapshot.tick
+    state.known_obstacles |= snapshot.obstacle_cells
 
     # A worker that was told to harvest and now carries cargo confirms a
     # successful harvest: record it and reschedule the chunk's refill recheck.
@@ -196,6 +211,55 @@ def observe_exploration(
         state.chunk_harvest_count[chunk] = state.chunk_harvest_count.get(chunk, 0) + 1
         state.chunk_anchor[chunk] = cell
         state.hungry_since = snapshot.tick
+
+    # Cargo 0 -> >0 means this worker just harvested the natural resource it is
+    # standing on (GO_RESOURCE that converted to HARVEST is not visible as a
+    # HARVEST_CURRENT assignment, so infer it from cargo instead). Remove the
+    # cell from memory and schedule the chunk refill recheck.
+    for unit in snapshot.units:
+        if unit.unit_role is not UnitRole.WORKER:
+            continue
+        key = unit.id.value
+        prev_cargo = state.prev_cargo.get(key, 0)
+        if prev_cargo == 0 and unit.cargo > 0 and unit.position.cell_key in state.cell_positions:
+            state.cell_positions.pop(unit.position.cell_key, None)
+            state.cell_last_seen.pop(unit.position.cell_key, None)
+            chunk = chunk_of(unit.position)
+            state.chunk_last_harvest_tick[chunk] = snapshot.tick
+            state.chunk_next_refill_tick[chunk] = refill_tick_at_or_after(snapshot.tick)
+            state.chunk_harvest_count[chunk] = state.chunk_harvest_count.get(chunk, 0) + 1
+            state.chunk_anchor[chunk] = unit.position
+            state.hungry_since = snapshot.tick
+        state.prev_cargo[key] = unit.cargo
+
+
+def with_memory_resource_cells(
+    snapshot: PlanningSnapshot,
+    state: ExplorationState,
+) -> PlanningSnapshot:
+    """Return ``snapshot`` with remembered resource cells merged as ``visible=False``.
+
+    Known-but-not-currently-visible resource cells enter the worker assignment
+    matrix as historical candidates so every worker can route to a mine that a
+    single scout discovered, instead of only the workers whose vision currently
+    covers that cell. Cells already visible keep their ``visible=True`` form.
+    """
+
+    if not isinstance(snapshot, PlanningSnapshot):
+        raise TypeError("snapshot must be a PlanningSnapshot")
+    if not isinstance(state, ExplorationState):
+        raise TypeError("state must be an ExplorationState")
+
+    merged = dict(snapshot.resource_cells)
+    for key, position in state.cell_positions.items():
+        if key in merged:
+            continue
+        merged[key] = ResourceCellInfo(
+            position=position,
+            visible=False,
+            last_seen_tick=state.cell_last_seen.get(key),
+        )
+    return replace(snapshot, resource_cells=merged)
 
 
 def is_hungry(state: ExplorationState, tick: int) -> bool:
@@ -215,6 +279,24 @@ def _refill_due(chunk: tuple[int, int], state: ExplorationState, tick: int) -> b
     if last_probe is None:
         return True
     return tick - last_probe >= REFILL_RECHECK_TICKS
+
+
+def sweep_radii(hungry: bool) -> tuple[int, ...]:
+    """Return the all-direction sweep ring radii (8-step outward)."""
+
+    if not isinstance(hungry, bool):
+        raise TypeError("hungry must be a boolean")
+    count = HUNGER_SWEEP_RING_COUNT if hungry else SWEEP_RING_COUNT
+    return tuple(SWEEP_RING_STEP * ring for ring in range(1, count + 1))
+
+
+def _ring_band_candidates(core: Coordinate, radii: tuple[int, ...]):
+    """Yield one diamond-ring point per direction for each radius (8-way sweep)."""
+
+    for radius in radii:
+        for vx, vy in _DELTAS:
+            scale = radius // (abs(vx) + abs(vy))
+            yield Coordinate(core.x + vx * scale, core.y + vy * scale)
 
 
 def build_exploration_targets(
@@ -253,41 +335,26 @@ def build_exploration_targets(
         chunk for chunk in state.chunk_next_refill_tick if _refill_due(chunk, state, tick)
     )
 
-    for unit in workers:
-        slot = explorer_slot(unit.id.value)
-        vx, vy = _DELTAS[slot % 8]
-        candidates: list[Coordinate] = []
-        for chunk in due_chunks:
-            anchor = state.chunk_anchor.get(chunk) or chunk_center(chunk)
-            candidates.append(anchor)
-        for radius in ring_radii(slot, hungry):
-            scale = radius // (abs(vx) + abs(vy))
-            candidates.append(Coordinate(core.x + vx * scale, core.y + vy * scale))
+    # Refill-revisit anchors are the highest-priority scout targets, then a
+    # deterministic all-direction ring band (8 directions x every radius) so a
+    # scout sweeps the whole compass instead of a single fixed direction.
+    due_anchors = [state.chunk_anchor.get(chunk) or chunk_center(chunk) for chunk in due_chunks]
+    radii = sweep_radii(hungry)
 
+    for unit in workers:
         best: Coordinate | None = None
-        best_key: tuple[int, ...] | None = None
-        for candidate in candidates:
+        for candidate in (*due_anchors, *_ring_band_candidates(core, radii)):
             cell = candidate.cell_key
-            if cell in obstacles or cell in enemies or cell in taken:
+            if (
+                cell in obstacles
+                or cell in state.known_obstacles
+                or cell in enemies
+                or cell in taken
+                or cell in state.point_visited
+            ):
                 continue
-            chunk = chunk_of(candidate)
-            harvest = state.chunk_last_harvest_tick.get(chunk)
-            recency = (tick - harvest) if harvest is not None else _NEVER
-            seen = state.chunk_seen_tick.get(chunk, 0)
-            visited = state.point_visited.get(cell, 0)
-            key = (
-                0 if _refill_due(chunk, state, tick) else 1,
-                recency,
-                seen,
-                visited,
-                -chunk_quota(chunk),
-                manhattan(candidate, core),
-                candidate.x,
-                candidate.y,
-            )
-            if best_key is None or key < best_key:
-                best_key = key
-                best = candidate
+            best = candidate
+            break
         if best is not None:
             targets[unit.id.value] = best
             taken.add(best.cell_key)
@@ -332,4 +399,6 @@ __all__ = [
     "observe_exploration",
     "refill_tick_at_or_after",
     "ring_radii",
+    "sweep_radii",
+    "with_memory_resource_cells",
 ]

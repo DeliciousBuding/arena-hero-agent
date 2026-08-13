@@ -72,7 +72,9 @@ from arena_hero_agent.planning import (
     extract_planning_snapshot,
     is_hungry,
     mark_reached,
+    next_step_toward,
     observe_exploration,
+    with_memory_resource_cells,
 )
 from arena_hero_agent.planning import (
     CoreAction as PlanningCoreAction,
@@ -386,10 +388,11 @@ def _task_action(assignment: Assignment, snapshot: PlanningSnapshot) -> Planning
         if task.target is not None:
             if unit.position == task.target:
                 return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.WAIT)
+            direction = next_step_toward(unit.position, task.target, snapshot.obstacle_cells)
+            if direction is None:
+                direction = step_toward(unit.position, task.target)
             return PlanningUnitAction(
-                unit_id=unit.id,
-                type=UnitActionType.MOVE,
-                direction=step_toward(unit.position, task.target),
+                unit_id=unit.id, type=UnitActionType.MOVE, direction=direction
             )
         dense = worker_dense_direction(_worker_ordinal(snapshot, unit))
         return PlanningUnitAction(
@@ -1065,6 +1068,7 @@ class ComposedDecider:
                 ),
             )
             observe_exploration(snapshot, self._previous_assignments, self._exploration_state)
+            snapshot = with_memory_resource_cells(snapshot, self._exploration_state)
             exploration_targets = build_exploration_targets(
                 snapshot,
                 self._exploration_state,

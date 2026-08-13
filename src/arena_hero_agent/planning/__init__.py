@@ -13,6 +13,8 @@ from .exploration import (
     observe_exploration,
     refill_tick_at_or_after,
     ring_radii,
+    sweep_radii,
+    with_memory_resource_cells,
 )
 from .min_cost_assignment import minimum_cost_assignment
 from .mission import (
@@ -68,6 +70,7 @@ from .worker_assignment import (
     WorkerTaskPlannerConfig,
     apply_sticky_bonus,
     assign_worker_tasks,
+    next_step_toward,
     progress_decay,
     shortest_path_distances,
 )
@@ -127,7 +130,10 @@ __all__ = [
     "observe_exploration",
     "refill_tick_at_or_after",
     "ring_radii",
+    "sweep_radii",
+    "with_memory_resource_cells",
     "minimum_cost_assignment",
     "progress_decay",
+    "next_step_toward",
     "shortest_path_distances",
 ]
