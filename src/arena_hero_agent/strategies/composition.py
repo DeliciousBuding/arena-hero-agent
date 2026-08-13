@@ -339,7 +339,28 @@ def _worker_ordinal(snapshot: PlanningSnapshot, unit: PlanningUnit) -> int:
     return index
 
 
-def _task_action(assignment: Assignment, snapshot: PlanningSnapshot) -> PlanningUnitAction:
+def _route_direction(
+    unit: PlanningUnit,
+    target: Coordinate,
+    obstacles: frozenset[str],
+) -> Direction:
+    """Obstacle-aware first step toward ``target``, falling back to greedy.
+
+    The assignment matrix prices routes with BFS distances, so the actual move
+    must also be BFS-routed or workers repeatedly push into walls (MOVE_BLOCKED
+    death-loop) whenever a mine or the Core is behind an obstacle.
+    """
+
+    direction = next_step_toward(unit.position, target, obstacles)
+    return step_toward(unit.position, target) if direction is None else direction
+
+
+def _task_action(
+    assignment: Assignment,
+    snapshot: PlanningSnapshot,
+    *,
+    route_aware: bool = False,
+) -> PlanningUnitAction:
     """Convert one deterministic worker task into a planning unit action.
 
     Forced-task conversion matches the P4-11 task-to-action contract; the
@@ -359,38 +380,43 @@ def _task_action(assignment: Assignment, snapshot: PlanningSnapshot) -> Planning
         assert task.target is not None
         if unit.position == snapshot.core_position:
             return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.DEPOSIT)
-        return PlanningUnitAction(
-            unit_id=unit.id,
-            type=UnitActionType.MOVE,
-            direction=step_toward(unit.position, task.target),
+        direction = (
+            _route_direction(unit, task.target, snapshot.obstacle_cells)
+            if route_aware
+            else step_toward(unit.position, task.target)
         )
+        return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.MOVE, direction=direction)
     if task.type is TaskType.HARVEST_CURRENT:
         return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.HARVEST)
     if task.type is TaskType.PICKUP_BEACON:
         return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.PICKUP_BEACON)
     if task.type is TaskType.RETURN_FOR_HEAL:
         assert task.target is not None
-        return PlanningUnitAction(
-            unit_id=unit.id,
-            type=UnitActionType.MOVE,
-            direction=step_toward(unit.position, task.target),
+        direction = (
+            _route_direction(unit, task.target, snapshot.obstacle_cells)
+            if route_aware
+            else step_toward(unit.position, task.target)
         )
+        return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.MOVE, direction=direction)
     if task.type is TaskType.GO_RESOURCE:
         assert task.target is not None
         if unit.position == task.target:
             return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.HARVEST)
-        return PlanningUnitAction(
-            unit_id=unit.id,
-            type=UnitActionType.MOVE,
-            direction=step_toward(unit.position, task.target),
+        direction = (
+            _route_direction(unit, task.target, snapshot.obstacle_cells)
+            if route_aware
+            else step_toward(unit.position, task.target)
         )
+        return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.MOVE, direction=direction)
     if task.type is TaskType.EXPLORE:
         if task.target is not None:
             if unit.position == task.target:
                 return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.WAIT)
-            direction = next_step_toward(unit.position, task.target, snapshot.obstacle_cells)
-            if direction is None:
-                direction = step_toward(unit.position, task.target)
+            direction = (
+                _route_direction(unit, task.target, snapshot.obstacle_cells)
+                if route_aware
+                else step_toward(unit.position, task.target)
+            )
             return PlanningUnitAction(
                 unit_id=unit.id, type=UnitActionType.MOVE, direction=direction
             )
@@ -407,6 +433,8 @@ def merge_worker_tasks(
     plan: Plan,
     assignments: tuple[Assignment, ...],
     snapshot: PlanningSnapshot,
+    *,
+    route_aware: bool = False,
 ) -> Plan:
     """Override the baseline plan's worker actions with the assignment layer.
 
@@ -416,7 +444,7 @@ def merge_worker_tasks(
 
     actions = {action.unit_id.value: action for action in plan.unit_actions}
     for assignment in assignments:
-        actions[assignment.unit_id] = _task_action(assignment, snapshot)
+        actions[assignment.unit_id] = _task_action(assignment, snapshot, route_aware=route_aware)
     return Plan(
         tick=plan.tick,
         unit_actions=tuple(actions.values()),
@@ -1090,7 +1118,12 @@ class ComposedDecider:
         if self._config.exploration_v2_enabled:
             mark_reached(snapshot, result.plan.assignments, self._exploration_state)
 
-        plan = merge_worker_tasks(baseline, result.plan.assignments, snapshot)
+        plan = merge_worker_tasks(
+            baseline,
+            result.plan.assignments,
+            snapshot,
+            route_aware=self._config.exploration_v2_enabled,
+        )
 
         if self._config.movement_guard_enabled:
             plan = _apply_movement_overrides(plan, escape_steps, pause_ids)
