@@ -29,6 +29,7 @@ from arena_hero_agent.domain import (
     WorldProjection,
 )
 from arena_hero_agent.planning import (
+    Assignment,
     BeaconInfo,
     EnemyUnit,
     MissionConfig,
@@ -36,6 +37,8 @@ from arena_hero_agent.planning import (
     PlanningSnapshot,
     PlanningUnit,
     ResourceCellInfo,
+    Task,
+    TaskType,
     UnitActionType,
     WorkerTaskPlannerConfig,
 )
@@ -43,6 +46,7 @@ from arena_hero_agent.strategies import (
     ComposedDecider,
     ComposedDeciderConfig,
     compose_decider,
+    merge_worker_tasks,
     plan_to_decision,
     snapshot_from_turn,
 )
@@ -363,3 +367,56 @@ def _empty_projection(tick: int) -> WorldProjection:
         terrain=(),
         beacon=BeaconObservation(position=Coordinate(0, 0), status=BeaconStatus.UNKNOWN),
     )
+
+
+def test_route_aware_deposit_waits_when_core_cell_occupied() -> None:
+    """A full worker adjacent to an occupied Core cell WAITs instead of pushing.
+
+    The FFA engine only allows two entities per cell and the Core permanently
+    occupies its own cell, so a worker that steps onto an occupied Core cell
+    deterministically fails with CELL_UNIT_LIMIT. The route-aware deposit path
+    must wait one tick for the resident to deposit and vacate.
+    """
+
+    core = Coordinate(0, 0)
+    resident = _worker("resident", 0, 0, cargo=1)
+    full = _worker("full", 0, 1, cargo=1)
+    snapshot = _worker_snapshot(
+        units=(resident, full),
+        core_position=core,
+        resource_capacity=100,
+    )
+    assignment = Assignment(
+        unit_id="full",
+        task=Task(type=TaskType.DEPOSIT, target=core),
+    )
+    plan = merge_worker_tasks(
+        Plan(tick=1, unit_actions=(), core_action=None),
+        (assignment,),
+        snapshot,
+        route_aware=True,
+    )
+    assert _action(plan, "full") is UnitActionType.WAIT
+
+
+def test_route_aware_deposit_moves_when_core_cell_free() -> None:
+    """With the Core cell free the same full worker still steps toward it."""
+
+    core = Coordinate(0, 0)
+    full = _worker("full", 0, 1, cargo=1)
+    snapshot = _worker_snapshot(
+        units=(full,),
+        core_position=core,
+        resource_capacity=100,
+    )
+    assignment = Assignment(
+        unit_id="full",
+        task=Task(type=TaskType.DEPOSIT, target=core),
+    )
+    plan = merge_worker_tasks(
+        Plan(tick=1, unit_actions=(), core_action=None),
+        (assignment,),
+        snapshot,
+        route_aware=True,
+    )
+    assert _action(plan, "full") is UnitActionType.MOVE

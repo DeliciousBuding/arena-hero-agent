@@ -355,6 +355,30 @@ def _route_direction(
     return step_toward(unit.position, target) if direction is None else direction
 
 
+def _core_return_wait(
+    snapshot: PlanningSnapshot,
+    unit: PlanningUnit,
+) -> PlanningUnitAction | None:
+    """Return a WAIT when the Core cell is already occupied by another unit.
+
+    The FFA cell capacity is two entities and the Core itself always occupies
+    its own cell, leaving exactly one free slot. A worker adjacent to the Core
+    that steps onto the cell while another controlled unit already stands there
+    deterministically fails with ``CELL_UNIT_LIMIT``. Waiting one tick lets the
+    resident deposit/heal and vacate the cell instead of re-issuing a blocked
+    move in a tight loop.
+    """
+
+    core = snapshot.core_position
+    if core is None:
+        return None
+    if manhattan(unit.position, core) != 1:
+        return None
+    if any(candidate.id != unit.id and candidate.position == core for candidate in snapshot.units):
+        return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.WAIT)
+    return None
+
+
 def _task_action(
     assignment: Assignment,
     snapshot: PlanningSnapshot,
@@ -380,6 +404,10 @@ def _task_action(
         assert task.target is not None
         if unit.position == snapshot.core_position:
             return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.DEPOSIT)
+        if route_aware:
+            wait = _core_return_wait(snapshot, unit)
+            if wait is not None:
+                return wait
         direction = (
             _route_direction(unit, task.target, snapshot.obstacle_cells)
             if route_aware
@@ -392,6 +420,10 @@ def _task_action(
         return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.PICKUP_BEACON)
     if task.type is TaskType.RETURN_FOR_HEAL:
         assert task.target is not None
+        if route_aware:
+            wait = _core_return_wait(snapshot, unit)
+            if wait is not None:
+                return wait
         direction = (
             _route_direction(unit, task.target, snapshot.obstacle_cells)
             if route_aware
