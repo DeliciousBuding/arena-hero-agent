@@ -1,5 +1,19 @@
 """Deterministic planning: snapshots, worker tasks, missions, assignment, and validation."""
 
+from .exploration import (
+    EXPLORATION_SURVEY_CAP,
+    ExplorationState,
+    build_exploration_targets,
+    chunk_of,
+    chunk_quota,
+    chunk_ring,
+    explorer_slot,
+    is_hungry,
+    mark_reached,
+    observe_exploration,
+    refill_tick_at_or_after,
+    ring_radii,
+)
 from .min_cost_assignment import minimum_cost_assignment
 from .mission import (
     DEFAULT_MISSION_CONFIG,
@@ -101,6 +115,18 @@ __all__ = [
     "WorkerTaskPlannerConfig",
     "apply_sticky_bonus",
     "assign_worker_tasks",
+    "EXPLORATION_SURVEY_CAP",
+    "ExplorationState",
+    "build_exploration_targets",
+    "chunk_of",
+    "chunk_quota",
+    "chunk_ring",
+    "explorer_slot",
+    "is_hungry",
+    "mark_reached",
+    "observe_exploration",
+    "refill_tick_at_or_after",
+    "ring_radii",
     "minimum_cost_assignment",
     "progress_decay",
     "shortest_path_distances",

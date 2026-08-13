@@ -1,0 +1,252 @@
+"""Unit tests for the event-driven ring-quota exploration module (research, off)."""
+
+from __future__ import annotations
+
+from arena_hero_agent.domain import CURRENT_RULES_VERSION, Coordinate, EntityId, UnitRole, manhattan
+from arena_hero_agent.planning import (
+    Assignment,
+    BeaconInfo,
+    ExplorationState,
+    PlanningSnapshot,
+    PlanningUnit,
+    ResourceCellInfo,
+    Task,
+    TaskType,
+    build_exploration_targets,
+    chunk_of,
+    chunk_quota,
+    chunk_ring,
+    explorer_slot,
+    is_hungry,
+    mark_reached,
+    observe_exploration,
+    refill_tick_at_or_after,
+    ring_radii,
+)
+from arena_hero_agent.planning.exploration import HUNGER_TICKS
+
+RULES = CURRENT_RULES_VERSION
+_ORIGIN = Coordinate(0, 0)
+
+_DIRS = ((1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1))
+
+
+def _worker(identifier: str, x: int, y: int, *, cargo: int = 0) -> PlanningUnit:
+    return PlanningUnit(
+        id=EntityId(identifier),
+        unit_role=UnitRole.WORKER,
+        position=Coordinate(x, y),
+        health=2,
+        cargo=cargo,
+    )
+
+
+def _snapshot(
+    *,
+    tick: int = 100,
+    units: tuple[PlanningUnit, ...] = (),
+    core: Coordinate | None = _ORIGIN,
+    resource_cells: dict[str, ResourceCellInfo] | None = None,
+    obstacles: frozenset[str] = frozenset(),
+    enemies: frozenset[str] = frozenset(),
+) -> PlanningSnapshot:
+    return PlanningSnapshot(
+        tick=tick,
+        rules_version=RULES,
+        resources=0,
+        resource_capacity=100,
+        resource_space=100,
+        population=len(units),
+        units=units,
+        resource_cells={} if resource_cells is None else resource_cells,
+        obstacle_cells=obstacles,
+        enemy_cells=enemies,
+        enemy_units=(),
+        core_id=None if core is None else "core",
+        core_position=core,
+        core_health=None if core is None else 5,
+        core_shield=None if core is None else 5,
+        core_state=None if core is None else "normal",
+        beacon=BeaconInfo(position=Coordinate(0, 0), status=None),
+        threat_map={},
+    )
+
+
+def _candidates(unit_id: str, core: Coordinate, *, hungry: bool = False) -> list[Coordinate]:
+    slot = explorer_slot(unit_id)
+    vx, vy = _DIRS[slot % 8]
+    result: list[Coordinate] = []
+    for radius in ring_radii(slot, hungry):
+        scale = radius // (abs(vx) + abs(vy))
+        result.append(Coordinate(core.x + vx * scale, core.y + vy * scale))
+    return result
+
+
+def _harvest_assignment(unit_id: str, target: Coordinate) -> Assignment:
+    return Assignment(
+        unit_id=unit_id,
+        task=Task(
+            type=TaskType.HARVEST_CURRENT,
+            target=target,
+            target_cell_key=target.cell_key,
+        ),
+    )
+
+
+def test_explorer_slot_is_stable_and_bounded() -> None:
+    for identifier in ("w1", "w2", "w3", "worker-alpha", "unit:42"):
+        assert 0 <= explorer_slot(identifier) < 16
+        assert explorer_slot(identifier) == explorer_slot(identifier)
+
+
+def test_chunk_quota_matches_reference_formula() -> None:
+    assert chunk_quota((0, 0)) == 16
+    assert chunk_quota((1, 0)) == 14
+    assert chunk_quota((2, 0)) == 12
+    assert chunk_quota((-1, -1)) == 16
+
+
+def test_chunk_ring_maps_negative_axes() -> None:
+    assert chunk_ring((0, 0)) == 0
+    assert chunk_ring((-1, 0)) == 0
+    assert chunk_ring((-2, 0)) == 1
+    assert chunk_ring((1, 2)) == 3
+    assert chunk_of(Coordinate(-1, -1)) == (-1, -1)
+
+
+def test_refill_tick_at_or_after_aligns_to_four_tick_boundary() -> None:
+    assert refill_tick_at_or_after(0) == 0
+    assert refill_tick_at_or_after(1) == 4
+    assert refill_tick_at_or_after(3) == 4
+    assert refill_tick_at_or_after(4) == 4
+    assert refill_tick_at_or_after(5) == 8
+
+
+def test_ring_radii_first_group_and_second_group() -> None:
+    assert ring_radii(0, hungry=False) == (10, 20, 30)
+    assert ring_radii(7, hungry=False) == (10, 20, 30)
+    assert ring_radii(8, hungry=False) == (20, 30, 40)
+    assert ring_radii(15, hungry=False) == (20, 30, 40)
+    assert ring_radii(0, hungry=True) == (8, 16, 24, 32, 40)
+    assert ring_radii(8, hungry=True) == (16, 24, 32, 40, 48)
+
+
+def test_build_targets_empty_without_core() -> None:
+    snapshot = _snapshot(units=(_worker("w1", 0, 0),), core=None)
+    assert build_exploration_targets(snapshot, ExplorationState()) == {}
+
+
+def test_build_targets_ignores_non_workers() -> None:
+    vanguard = PlanningUnit(
+        id=EntityId("v1"),
+        unit_role=UnitRole.VANGUARD,
+        position=Coordinate(0, 0),
+        health=4,
+        cargo=0,
+    )
+    snapshot = _snapshot(units=(vanguard,))
+    assert build_exploration_targets(snapshot, ExplorationState()) == {}
+
+
+def test_build_targets_lie_on_normal_ring_band() -> None:
+    snapshot = _snapshot(
+        units=(_worker("w1", 0, 0), _worker("w2", 1, 0), _worker("w3", 0, 1)),
+    )
+    targets = build_exploration_targets(snapshot, ExplorationState())
+    assert set(targets) == {"w1", "w2", "w3"}
+    for target in targets.values():
+        assert manhattan(target, Coordinate(0, 0)) in (10, 20, 30, 40)
+
+
+def test_build_targets_skip_obstacle_and_pick_farther_ring() -> None:
+    core = Coordinate(0, 0)
+    unit_id = "w1"
+    candidates = _candidates(unit_id, core)
+    obstacles = frozenset(candidate.cell_key for candidate in candidates[:-1])
+    snapshot = _snapshot(units=(_worker(unit_id, 0, 0),), obstacles=obstacles)
+    targets = build_exploration_targets(snapshot, ExplorationState())
+    assert targets[unit_id] == candidates[-1]
+
+
+def test_build_targets_advance_outward_when_visited() -> None:
+    core = Coordinate(0, 0)
+    unit_id = "w1"
+    state = ExplorationState()
+    snapshot = _snapshot(units=(_worker(unit_id, 0, 0),))
+    first = build_exploration_targets(snapshot, state)[unit_id]
+    state.point_visited[first.cell_key] = snapshot.tick
+    second = build_exploration_targets(snapshot, state)[unit_id]
+    assert manhattan(second, core) > manhattan(first, core)
+
+
+def test_build_targets_hungry_extends_beyond_thirty() -> None:
+    core = Coordinate(0, 0)
+    unit_id = "w1"
+    candidates = _candidates(unit_id, core, hungry=True)
+    assert max(manhattan(candidate, core) for candidate in candidates) == 40
+    obstacles = frozenset(candidate.cell_key for candidate in candidates[:-1])
+    snapshot = _snapshot(units=(_worker(unit_id, 0, 0),), obstacles=obstacles)
+    targets = build_exploration_targets(snapshot, ExplorationState(), hungry=True)
+    assert manhattan(targets[unit_id], core) == 40
+
+
+def test_observe_exploration_marks_visible_chunk_seen() -> None:
+    state = ExplorationState()
+    cell = ResourceCellInfo(position=Coordinate(8, 8), visible=True, last_seen_tick=10)
+    snapshot = _snapshot(tick=10, resource_cells={cell.position.cell_key: cell})
+    observe_exploration(snapshot, (), state)
+    assert state.chunk_seen_tick[(0, 0)] == 10
+    assert state.chunk_anchor[(0, 0)] == Coordinate(8, 8)
+
+
+def test_observe_exploration_records_harvest_refill_and_hunger() -> None:
+    state = ExplorationState()
+    unit = _worker("w1", 10, 0, cargo=3)
+    snapshot = _snapshot(tick=7, units=(unit,))
+    target = Coordinate(10, 0)
+    observe_exploration(snapshot, (_harvest_assignment("w1", target),), state)
+    chunk = chunk_of(target)
+    assert state.chunk_harvest_count[chunk] == 1
+    assert state.chunk_last_harvest_tick[chunk] == 7
+    assert state.chunk_next_refill_tick[chunk] == 8
+    assert state.hungry_since == 7
+
+
+def test_is_hungry_strictly_after_hunger_ticks() -> None:
+    state = ExplorationState(hungry_since=10)
+    assert is_hungry(state, 10 + HUNGER_TICKS) is False
+    assert is_hungry(state, 10 + HUNGER_TICKS + 1) is True
+
+
+def test_build_targets_prefer_refill_due_chunk_anchor() -> None:
+    unit_id = "w1"
+    state = ExplorationState()
+    anchor = Coordinate(100, 0)
+    chunk = chunk_of(anchor)
+    state.chunk_next_refill_tick[chunk] = 100
+    state.chunk_anchor[chunk] = anchor
+    snapshot = _snapshot(tick=100, units=(_worker(unit_id, 0, 0),))
+    targets = build_exploration_targets(snapshot, state)
+    assert targets[unit_id] == anchor
+
+
+def test_mark_reached_records_visited_and_probe() -> None:
+    state = ExplorationState()
+    unit = _worker("w1", 9, 0)
+    snapshot = _snapshot(tick=20, units=(unit,))
+    target = Coordinate(10, 0)
+    assignment = Assignment(unit_id="w1", task=Task(type=TaskType.EXPLORE, target=target))
+    mark_reached(snapshot, (assignment,), state)
+    assert state.point_visited[target.cell_key] == 20
+    assert state.chunk_last_probe_tick[chunk_of(target)] == 20
+
+
+def test_mark_reached_ignores_non_explore_and_far_targets() -> None:
+    state = ExplorationState()
+    unit = _worker("w1", 0, 0)
+    snapshot = _snapshot(tick=20, units=(unit,))
+    far = Assignment(unit_id="w1", task=Task(type=TaskType.EXPLORE, target=Coordinate(10, 0)))
+    harvest = _harvest_assignment("w1", Coordinate(0, 0))
+    mark_reached(snapshot, (far, harvest), state)
+    assert state.point_visited == {}
+    assert state.chunk_last_probe_tick == {}

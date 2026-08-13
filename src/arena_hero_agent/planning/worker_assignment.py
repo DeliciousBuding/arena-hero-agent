@@ -275,6 +275,18 @@ class WorkerAssignmentResult:
 DEFAULT_WORKER_TASK_PLANNER_CONFIG: Final = WorkerTaskPlannerConfig()
 
 
+def _explore_task(
+    unit_id: str,
+    exploration_targets: Mapping[str, Coordinate] | None,
+) -> Task:
+    """Build an EXPLORE task, carrying the supplied target when available."""
+
+    target = None if exploration_targets is None else exploration_targets.get(unit_id)
+    if target is not None:
+        return Task(type=TaskType.EXPLORE, target=target)
+    return Task(type=TaskType.EXPLORE)
+
+
 def assign_worker_tasks(
     snapshot: PlanningSnapshot,
     previous_assignments: Sequence[Assignment] = (),
@@ -284,6 +296,7 @@ def assign_worker_tasks(
     claims: frozenset[WorkerClaim] = frozenset(),
     blocked_cells: frozenset[str] = frozenset(),
     refill_predictions: Mapping[str, int] | None = None,
+    exploration_targets: Mapping[str, Coordinate] | None = None,
 ) -> WorkerAssignmentResult:
     """Deterministically assign tasks to every worker for one observed tick.
 
@@ -294,6 +307,9 @@ def assign_worker_tasks(
     role arbitration) or WAIT.  Cross-tick claim leases are pruned against the
     current facts and returned as the next state.  ``blocked_cells`` are
     excluded from the matrix (research stuck-guard reassignment hook).
+    ``exploration_targets`` optionally supplies ring-quota explore destinations
+    for the surveyor workers (research exploration-v2 switch); when ``None`` the
+    legacy fixed-direction EXPLORE task is emitted unchanged.
     """
 
     if not isinstance(snapshot, PlanningSnapshot):
@@ -310,6 +326,8 @@ def assign_worker_tasks(
         raise TypeError("blocked_cells must be a frozenset of cell key strings")
     if refill_predictions is not None and not isinstance(refill_predictions, Mapping):
         raise TypeError("refill_predictions must be a Mapping or None")
+    if exploration_targets is not None and not isinstance(exploration_targets, Mapping):
+        raise TypeError("exploration_targets must be a Mapping or None")
 
     workers = [unit for unit in snapshot.units if unit.unit_role is UnitRole.WORKER]
     assignments: list[Assignment] = []
@@ -478,7 +496,7 @@ def assign_worker_tasks(
                 )
             else:
                 task = (
-                    Task(type=TaskType.EXPLORE)
+                    _explore_task(worker.id.value, exploration_targets)
                     if worker.id.value in leftover_surveyors
                     else Task(type=TaskType.WAIT)
                 )
@@ -493,7 +511,7 @@ def assign_worker_tasks(
         )
         for worker in pool:
             task = (
-                Task(type=TaskType.EXPLORE)
+                _explore_task(worker.id.value, exploration_targets)
                 if worker.id.value in leftover_surveyors
                 else Task(type=TaskType.WAIT)
             )

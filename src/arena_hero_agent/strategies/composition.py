@@ -28,6 +28,7 @@ at 8cf5cbb.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import Final
 
@@ -55,8 +56,10 @@ from arena_hero_agent.domain import (
     unit_price,
 )
 from arena_hero_agent.planning import (
+    EXPLORATION_SURVEY_CAP,
     Assignment,
     CoreActionType,
+    ExplorationState,
     Plan,
     PlanningSnapshot,
     PlanningUnit,
@@ -65,7 +68,11 @@ from arena_hero_agent.planning import (
     WorkerClaim,
     WorkerTaskPlannerConfig,
     assign_worker_tasks,
+    build_exploration_targets,
     extract_planning_snapshot,
+    is_hungry,
+    mark_reached,
+    observe_exploration,
 )
 from arena_hero_agent.planning import (
     CoreAction as PlanningCoreAction,
@@ -210,6 +217,7 @@ class ComposedDeciderConfig:
     economy_budget_enabled: bool = False
     economy_expansion_enabled: bool = False
     raid_quota_enabled: bool = False
+    exploration_v2_enabled: bool = False
     raid_min_observations: int = RAID_MIN_OBSERVATIONS
     raid_max_distance: int = RAID_MAX_DISTANCE
     raid_min_fighters: int = RAID_MIN_FIGHTERS
@@ -242,6 +250,7 @@ class ComposedDeciderConfig:
             "economy_budget_enabled",
             "economy_expansion_enabled",
             "raid_quota_enabled",
+            "exploration_v2_enabled",
         ):
             if not isinstance(getattr(self, name), bool):
                 raise TypeError(f"{name} must be a boolean")
@@ -374,6 +383,14 @@ def _task_action(assignment: Assignment, snapshot: PlanningSnapshot) -> Planning
             direction=step_toward(unit.position, task.target),
         )
     if task.type is TaskType.EXPLORE:
+        if task.target is not None:
+            if unit.position == task.target:
+                return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.WAIT)
+            return PlanningUnitAction(
+                unit_id=unit.id,
+                type=UnitActionType.MOVE,
+                direction=step_toward(unit.position, task.target),
+            )
         dense = worker_dense_direction(_worker_ordinal(snapshot, unit))
         return PlanningUnitAction(
             unit_id=unit.id,
@@ -552,6 +569,7 @@ class ComposedDecider:
         self._raid_state = RaidState()
         self._replacement_queue = ReplacementQueue()
         self._previous_unit_roles: dict[str, str] = {}
+        self._exploration_state = ExplorationState()
 
     @property
     def config(self) -> ComposedDeciderConfig:
@@ -748,9 +766,9 @@ class ComposedDecider:
 
         spin_ticks = self._config.movement_cargo_spin_ticks
         self._cargo_spin_history = {
-            unit.id.value: (
-                self._cargo_spin_history.get(unit.id.value, ()) + (unit.position,)
-            )[-spin_ticks:]
+            unit.id.value: (self._cargo_spin_history.get(unit.id.value, ()) + (unit.position,))[
+                -spin_ticks:
+            ]
             for unit in snapshot.units
             if unit.unit_role is UnitRole.WORKER
         }
@@ -833,11 +851,7 @@ class ComposedDecider:
         core = snapshot.core_position
         if core is not None:
             for unit in snapshot.units:
-                if (
-                    unit.unit_role is UnitRole.WORKER
-                    and unit.position == core
-                    and unit.cargo > 0
-                ):
+                if unit.unit_role is UnitRole.WORKER and unit.position == core and unit.cargo > 0:
                     deposit_cargo += unit.cargo
         projected = projected_core_resources(
             resources=snapshot.resources,
@@ -908,8 +922,7 @@ class ComposedDecider:
 
         candidate = stationary.get(position.cell_key)
         return (
-            candidate is not None
-            and candidate.observations >= self._config.raid_min_observations
+            candidate is not None and candidate.observations >= self._config.raid_min_observations
         )
 
     def _raid_quota_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
@@ -941,9 +954,7 @@ class ComposedDecider:
             )
 
         fighter_count = sum(
-            1
-            for unit in snapshot.units
-            if unit.unit_role in (UnitRole.VANGUARD, UnitRole.RANGER)
+            1 for unit in snapshot.units if unit.unit_role in (UnitRole.VANGUARD, UnitRole.RANGER)
         )
         if not raid_fighters_ready(fighter_count, min_fighters=self._config.raid_min_fighters):
             if raid_active(self._raid_state):
@@ -1018,9 +1029,7 @@ class ComposedDecider:
 
         baseline = self._safety.decide(snapshot).plan
         blocked_cells = (
-            self._stuck_blocked_cells(snapshot)
-            if self._config.stuck_guard_enabled
-            else frozenset()
+            self._stuck_blocked_cells(snapshot) if self._config.stuck_guard_enabled else frozenset()
         )
 
         escape_steps: dict[str, Direction] = {}
@@ -1041,6 +1050,24 @@ class ComposedDecider:
                 ),
             )
 
+        exploration_targets: Mapping[str, Coordinate] | None = None
+        if self._config.exploration_v2_enabled:
+            worker_config = replace(
+                worker_config,
+                mission=replace(
+                    worker_config.mission,
+                    survey_worker_cap=max(
+                        worker_config.mission.survey_worker_cap, EXPLORATION_SURVEY_CAP
+                    ),
+                ),
+            )
+            observe_exploration(snapshot, self._previous_assignments, self._exploration_state)
+            exploration_targets = build_exploration_targets(
+                snapshot,
+                self._exploration_state,
+                hungry=is_hungry(self._exploration_state, snapshot.tick),
+            )
+
         result = assign_worker_tasks(
             snapshot,
             self._previous_assignments,
@@ -1048,9 +1075,13 @@ class ComposedDecider:
             survey_burst_active=self._config.survey_burst_active,
             claims=self._claims,
             blocked_cells=blocked_cells,
+            exploration_targets=exploration_targets,
         )
         self._previous_assignments = result.plan.assignments
         self._claims = result.claims
+
+        if self._config.exploration_v2_enabled:
+            mark_reached(snapshot, result.plan.assignments, self._exploration_state)
 
         plan = merge_worker_tasks(baseline, result.plan.assignments, snapshot)
 
