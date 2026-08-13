@@ -197,6 +197,26 @@ def test_build_targets_hungry_extends_beyond_thirty() -> None:
     assert manhattan(targets[unit_id], core) == 64
 
 
+def test_build_targets_bfs_frontier_fallback_in_maze() -> None:
+    unit_id = "w1"
+    core = Coordinate(0, 0)
+    # Block every normal sweep-ring candidate so the directional ring has
+    # no valid target; the scout must fall back to the BFS nearest-unvisited
+    # frontier from its own position instead of stalling.
+    blocked = set()
+    for radius in (8, 16, 24, 32, 40, 48):
+        for vx, vy in _DIRS:
+            scale = radius // (abs(vx) + abs(vy))
+            blocked.add(Coordinate(core.x + vx * scale, core.y + vy * scale).cell_key)
+    snapshot = _snapshot(
+        units=(_worker(unit_id, 0, 0),),
+        obstacles=frozenset(blocked),
+    )
+    targets = build_exploration_targets(snapshot, ExplorationState())
+    # Nearest reachable, unvisited, unclaimed cell is the first cardinal step.
+    assert targets[unit_id] == Coordinate(1, 0)
+
+
 def test_observe_exploration_marks_visible_chunk_seen() -> None:
     state = ExplorationState()
     cell = ResourceCellInfo(position=Coordinate(8, 8), visible=True, last_seen_tick=10)

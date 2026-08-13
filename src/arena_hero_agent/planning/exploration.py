@@ -21,6 +21,10 @@ enabled path:
 - ranks candidates by: due refill recheck -> most recently harvested chunk ->
   never-seen chunk -> least recently visited point -> richer chunk quota ->
   distance to Core -> coordinates.
+- falls back to a BFS nearest-unvisited frontier when the directional ring
+  and refill anchors all land inside walls (maze): the scout still gets a
+  reachable frontier target instead of stalling (port of evolve
+  ``_nearest_unvisited``).
 
 All cross-tick knowledge lives in :class:`ExplorationState`, which is advanced
 by :func:`observe_exploration` from the current snapshot plus the previous
@@ -29,7 +33,8 @@ tick's assignments.  The target builder is otherwise pure.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections import deque
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Final
 
@@ -61,6 +66,15 @@ _DELTAS: Final[tuple[tuple[int, int], ...]] = (
     (0, -1),
     (1, -1),
 )
+
+_CARDINAL_DELTAS: Final[tuple[tuple[int, int], ...]] = (
+    (1, 0),
+    (0, 1),
+    (-1, 0),
+    (0, -1),
+)
+_FRONTIER_RADIUS: Final = 64
+_FRONTIER_NODE_BUDGET: Final = 16384
 
 _FNV_OFFSET_BASIS: Final = 0x811C9DC5
 _FNV_PRIME: Final = 0x01000193
@@ -299,6 +313,61 @@ def _ring_band_candidates(core: Coordinate, radii: tuple[int, ...]):
             yield Coordinate(core.x + vx * scale, core.y + vy * scale)
 
 
+def _bfs_nearest_frontier(
+    start: Coordinate,
+    blocked: frozenset[str],
+    visited: Mapping[str, int],
+    taken: set[str],
+    *,
+    search_radius: int = _FRONTIER_RADIUS,
+    node_budget: int = _FRONTIER_NODE_BUDGET,
+) -> Coordinate | None:
+    """Return the nearest reachable, unvisited, unclaimed cell via BFS.
+
+    Four-way BFS from ``start`` in the oracle's fixed (E, S, W, N) order.
+    ``blocked`` cells are impassable; ``visited`` (recorded scout arrivals)
+    and ``taken`` (already claimed this tick) cells are traversable but not
+    valid targets.  The search is Chebyshev-bounded and node-budget-bounded.
+    This is the frontier-expansion counterpart to the fixed-radius
+    directional ring: when the ring points all land inside walls (a maze),
+    the scout still gets a reachable nearest-unvisited target instead of
+    stalling.
+    """
+
+    if not isinstance(start, Coordinate):
+        raise TypeError("start must be a Coordinate")
+    if not isinstance(blocked, frozenset):
+        raise TypeError("blocked must be a frozenset of cell keys")
+    if not isinstance(visited, Mapping):
+        raise TypeError("visited must be a Mapping of cell key -> tick")
+    if not isinstance(taken, set):
+        raise TypeError("taken must be a set of cell keys")
+    if isinstance(search_radius, bool) or not isinstance(search_radius, int) or search_radius < 1:
+        raise ValueError("search_radius must be a positive integer")
+    if isinstance(node_budget, bool) or not isinstance(node_budget, int) or node_budget < 1:
+        raise ValueError("node_budget must be a positive integer")
+
+    start_key = start.cell_key
+    queue: deque[Coordinate] = deque([start])
+    seen = {start_key}
+    head = 0
+    while head < len(queue) and head < node_budget:
+        current = queue[head]
+        head += 1
+        for dx, dy in _CARDINAL_DELTAS:
+            neighbor = Coordinate(current.x + dx, current.y + dy)
+            if max(abs(neighbor.x - start.x), abs(neighbor.y - start.y)) > search_radius:
+                continue
+            key = neighbor.cell_key
+            if key in seen or key in blocked:
+                continue
+            seen.add(key)
+            if key not in visited and key not in taken:
+                return neighbor
+            queue.append(neighbor)
+    return None
+
+
 def build_exploration_targets(
     snapshot: PlanningSnapshot,
     state: ExplorationState,
@@ -327,6 +396,7 @@ def build_exploration_targets(
     tick = snapshot.tick
     obstacles = snapshot.obstacle_cells
     enemies = snapshot.enemy_cells
+    blocked = frozenset(obstacles | state.known_obstacles | enemies)
     taken: set[str] = set()
     targets: dict[str, Coordinate] = {}
 
@@ -355,6 +425,17 @@ def build_exploration_targets(
                 continue
             best = candidate
             break
+        if best is None:
+            # Maze/stall fallback: every refill anchor and directional ring
+            # candidate is blocked, visited, or already claimed.  BFS-expand
+            # from the worker to the nearest reachable, unvisited, unclaimed
+            # cell so a scout always has a frontier target instead of stalling.
+            best = _bfs_nearest_frontier(
+                unit.position,
+                blocked,
+                state.point_visited,
+                taken,
+            )
         if best is not None:
             targets[unit.id.value] = best
             taken.add(best.cell_key)
