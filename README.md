@@ -5,7 +5,7 @@ multiple tenants, and exposing an operator-facing control plane. The repository 
 engine independent from transport, storage, and deployment details so it can be tested offline and
 integrated through replaceable adapters.
 
-> **Status:** v0.1.4, offline turn-to-decision adapter chain stable (1788 tests). Production
+> **Status:** v0.1.5, offline turn-to-decision adapter chain stable (1788 tests). Production
 > game behavior and deployment integration are implemented but not yet promoted beyond the
 > t4 canary; see `PROGRESS.md`.
 
