@@ -71,6 +71,35 @@ _BEACON_GROUND = "ground"
 _PATH_DELTAS: Final = ((1, 0), (0, 1), (-1, 0), (0, -1))
 
 
+def _canonical_obstacle_positions(obstacles: frozenset[str]) -> frozenset[tuple[int, int]]:
+    """Decode canonical obstacle keys once before entering a routing BFS.
+
+    The planner receives obstacle keys because that is the public snapshot
+    contract. Routing should operate on integer coordinates, however: creating
+    a ``Coordinate`` and formatting its string key for every explored neighbor
+    is disproportionately expensive when many workers share a crowded map.
+    Invalid or non-canonical keys remain non-blocking, matching the previous
+    string-membership behavior instead of making this optimization a new
+    validation boundary.
+    """
+
+    decoded: set[tuple[int, int]] = set()
+    for key in obstacles:
+        if not isinstance(key, str):
+            continue
+        x_text, separator, y_text = key.partition(",")
+        if not separator:
+            continue
+        try:
+            x_coordinate = int(x_text)
+            y_coordinate = int(y_text)
+        except ValueError:
+            continue
+        if key == f"{x_coordinate},{y_coordinate}":
+            decoded.add((x_coordinate, y_coordinate))
+    return frozenset(decoded)
+
+
 def progress_decay(distance: float, norm_distance: float = 20.0) -> float:
     """Distance-proportional sticky decay: 1.0 at 0, 0.5 at norm, toward 0."""
 
@@ -136,37 +165,59 @@ def shortest_path_distances(
         raise TypeError("obstacles must be a frozenset of cell keys")
     search_radius = _safe_int("search_radius", search_radius, minimum=1)
     node_budget = _safe_int("node_budget", node_budget, minimum=1)
+    blocked_positions = _canonical_obstacle_positions(obstacles)
+    return _shortest_path_distances_with_blocked_positions(
+        start,
+        targets,
+        blocked_positions,
+        search_radius=search_radius,
+        node_budget=node_budget,
+    )
 
-    target_keys = {target.cell_key for target in targets}
+
+def _shortest_path_distances_with_blocked_positions(
+    start: Coordinate,
+    targets: Sequence[Coordinate],
+    blocked_positions: frozenset[tuple[int, int]],
+    *,
+    search_radius: int,
+    node_budget: int,
+) -> dict[str, int]:
+    """Run the integer-coordinate routing BFS with decoded obstacles."""
+
+    target_positions = {(target.x, target.y): target.cell_key for target in targets}
     result: dict[str, int] = {}
-    if not target_keys:
+    if not target_positions:
         return result
-    start_key = start.cell_key
-    if start_key in target_keys:
+    start_position = (start.x, start.y)
+    start_key = target_positions.get(start_position)
+    if start_key is not None:
         result[start_key] = 0
-        if len(result) == len(target_keys):
+        if len(result) == len(target_positions):
             return result
 
-    queue: deque[tuple[Coordinate, int]] = deque([(start, 0)])
-    visited = {start_key}
-    head = 0
-    while head < len(queue) and head < node_budget:
-        current, depth = queue[head]
-        head += 1
-        for dx, dy in _PATH_DELTAS:
-            neighbor = Coordinate(current.x + dx, current.y + dy)
-            if max(abs(neighbor.x - start.x), abs(neighbor.y - start.y)) > search_radius:
+    queue: deque[tuple[int, int, int]] = deque([(start.x, start.y, 0)])
+    visited = {start_position}
+    explored_nodes = 0
+    while queue and explored_nodes < node_budget:
+        current_x, current_y, depth = queue.popleft()
+        explored_nodes += 1
+        for delta_x, delta_y in _PATH_DELTAS:
+            neighbor_x = current_x + delta_x
+            neighbor_y = current_y + delta_y
+            if max(abs(neighbor_x - start.x), abs(neighbor_y - start.y)) > search_radius:
                 continue
-            key = neighbor.cell_key
-            if key in visited or key in obstacles:
+            neighbor = (neighbor_x, neighbor_y)
+            if neighbor in visited or neighbor in blocked_positions:
                 continue
-            visited.add(key)
+            visited.add(neighbor)
             next_depth = depth + 1
-            if key in target_keys:
-                result[key] = next_depth
-                if len(result) == len(target_keys):
+            target_key = target_positions.get(neighbor)
+            if target_key is not None:
+                result[target_key] = next_depth
+                if len(result) == len(target_positions):
                     return result
-            queue.append((neighbor, next_depth))
+            queue.append((neighbor_x, neighbor_y, next_depth))
     return result
 
 
@@ -204,50 +255,42 @@ def next_step_toward(
 
     if start.cell_key == target.cell_key:
         return None
-    if target.cell_key in obstacles:
+    blocked_positions = _canonical_obstacle_positions(obstacles)
+    target_position = (target.x, target.y)
+    if target_position in blocked_positions:
         return None
 
-    prev: dict[str, str] = {start.cell_key: ""}
-    queue: deque[str] = deque([start.cell_key])
-    head = 0
-    found: str | None = None
-    while head < len(queue) and head < node_budget:
-        key = queue[head]
-        head += 1
-        x, y = _parse_key_coords(key)
-        for dx, dy in _PATH_DELTAS:
-            neighbor = Coordinate(x + dx, y + dy)
-            if max(abs(neighbor.x - start.x), abs(neighbor.y - start.y)) > search_radius:
+    start_position = (start.x, start.y)
+    previous: dict[tuple[int, int], tuple[int, int] | None] = {start_position: None}
+    queue: deque[tuple[int, int]] = deque([start_position])
+    explored_nodes = 0
+    found: tuple[int, int] | None = None
+    while queue and explored_nodes < node_budget:
+        current_x, current_y = queue.popleft()
+        explored_nodes += 1
+        for delta_x, delta_y in _PATH_DELTAS:
+            neighbor = (current_x + delta_x, current_y + delta_y)
+            if max(abs(neighbor[0] - start.x), abs(neighbor[1] - start.y)) > search_radius:
                 continue
-            nkey = neighbor.cell_key
-            if nkey in prev or nkey in obstacles:
+            if neighbor in previous or neighbor in blocked_positions:
                 continue
-            prev[nkey] = key
-            if nkey == target.cell_key:
-                found = nkey
-                queue.clear()
+            previous[neighbor] = (current_x, current_y)
+            if neighbor == target_position:
+                found = neighbor
                 break
-            queue.append(nkey)
+            queue.append(neighbor)
         if found is not None:
             break
 
     if found is None:
         return None
     # walk the parent chain back to the first step after start
-    step_key = found
-    while prev[step_key] != start.cell_key:
-        step_key = prev[step_key]
-    sx, sy = _parse_key_coords(step_key)
-    return _DIRECTION_FROM_DELTA[(sx - start.x, sy - start.y)]
-
-
-def _parse_key_coords(key: str) -> tuple[int, int]:
-    """Parse a canonical ``x,y`` cell key without importing the parser module."""
-
-    if not isinstance(key, str):
-        raise TypeError("cell key must be a string")
-    x_str, y_str = key.split(",", 1)
-    return int(x_str), int(y_str)
+    step = found
+    while previous[step] != start_position:
+        parent = previous[step]
+        assert parent is not None
+        step = parent
+    return _DIRECTION_FROM_DELTA[(step[0] - start.x, step[1] - start.y)]
 
 
 @dataclass(frozen=True, slots=True)
@@ -467,22 +510,23 @@ def assign_worker_tasks(
     if pool:
         target_positions = [snapshot.resource_cells[key].position for key in available_cells]
         routing_obstacles = snapshot.obstacle_cells | snapshot.enemy_cells
+        blocked_positions = _canonical_obstacle_positions(routing_obstacles)
         travel_fields: dict[str, dict[str, int]] = {}
         if routing_obstacles:
             for worker in pool:
-                travel_fields[worker.id.value] = shortest_path_distances(
+                travel_fields[worker.id.value] = _shortest_path_distances_with_blocked_positions(
                     worker.position,
                     target_positions,
-                    routing_obstacles,
+                    blocked_positions,
                     search_radius=ASSIGNMENT_ROUTE_RADIUS,
                     node_budget=ASSIGNMENT_ROUTE_NODE_BUDGET,
                 )
         return_field: dict[str, int] = {}
         if snapshot.core_position is not None and routing_obstacles:
-            return_field = shortest_path_distances(
+            return_field = _shortest_path_distances_with_blocked_positions(
                 snapshot.core_position,
                 target_positions,
-                routing_obstacles,
+                blocked_positions,
                 search_radius=ASSIGNMENT_ROUTE_RADIUS,
                 node_budget=ASSIGNMENT_ROUTE_NODE_BUDGET,
             )
