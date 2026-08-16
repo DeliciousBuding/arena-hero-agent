@@ -1,16 +1,20 @@
-"""Wiring tests for the three disabled-by-default research layers.
+"""Wiring tests for the research layers composed into the live decider.
 
-Each layer is a pure, already-tested module that :mod:`ComposedDecider` now
-gates behind its own config flag.  This file pins three invariants:
+Each layer is a pure, already-tested module that :mod:`ComposedDecider` gates
+behind its own config flag.  The flags default to ``True``: the layers are
+basic, tested capabilities, not experimental switches.  This file pins three
+invariants:
 
-- all three flags default to ``False``;
-- an explicit all-``False`` config is byte-identical to ``ComposedDecider()``
+- the flags default to ``True``;
+- an explicit all-``True`` config is byte-identical to ``ComposedDecider()``
   across a multi-tick fixture sequence;
-- enabling each flag changes the merged plan in the expected way.
+- enabling each flag changes the merged plan in the expected way, isolated
+  against an explicit all-off baseline.
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import cast
 
 import pytest
@@ -115,15 +119,32 @@ def _direction(plan: Plan, unit_id: str) -> Direction | None:
     return None if action is None or action.direction is None else action.direction
 
 
-def test_research_flags_default_off() -> None:
+def _all_off() -> ComposedDeciderConfig:
+    """Explicit baseline with every research layer disabled for isolation tests."""
+
+    return ComposedDeciderConfig(
+        survey_burst_active=False,
+        stuck_guard_enabled=False,
+        movement_guard_enabled=False,
+        economy_budget_enabled=False,
+        economy_expansion_enabled=False,
+        raid_quota_enabled=False,
+        exploration_v2_enabled=False,
+        respawn_recovery_enabled=False,
+    )
+
+
+def test_research_flags_default_on() -> None:
     config = ComposedDeciderConfig()
-    assert config.movement_guard_enabled is False
-    assert config.economy_budget_enabled is False
-    assert config.economy_expansion_enabled is False
-    assert config.raid_quota_enabled is False
+    assert config.movement_guard_enabled is True
+    assert config.economy_budget_enabled is True
+    assert config.economy_expansion_enabled is True
+    assert config.raid_quota_enabled is True
+    assert config.exploration_v2_enabled is True
+    assert config.respawn_recovery_enabled is True
 
 
-def test_default_byte_identical_to_explicit_all_false() -> None:
+def test_default_byte_identical_to_explicit_all_true() -> None:
     cells = {"5,0": _cell(5, 0)}
     ticks = [
         _snapshot(
@@ -148,10 +169,12 @@ def test_default_byte_identical_to_explicit_all_false() -> None:
     default = ComposedDecider()
     explicit = ComposedDecider(
         ComposedDeciderConfig(
-            movement_guard_enabled=False,
-            economy_budget_enabled=False,
-            economy_expansion_enabled=False,
-            raid_quota_enabled=False,
+            movement_guard_enabled=True,
+            economy_budget_enabled=True,
+            economy_expansion_enabled=True,
+            raid_quota_enabled=True,
+            exploration_v2_enabled=True,
+            respawn_recovery_enabled=True,
         )
     )
     for snapshot in ticks:
@@ -175,8 +198,8 @@ def test_movement_guard_blocks_looping_resource_target() -> None:
             for index, position in enumerate(positions, start=1)
         ]
 
-    disabled = run(ComposedDecider())
-    enabled = run(ComposedDecider(ComposedDeciderConfig(movement_guard_enabled=True)))
+    disabled = run(ComposedDecider(_all_off()))
+    enabled = run(ComposedDecider(replace(_all_off(), movement_guard_enabled=True)))
 
     assert _action(disabled[0], "w1") is UnitActionType.MOVE
     assert _action(disabled[-1], "w1") is UnitActionType.MOVE
@@ -202,8 +225,8 @@ def test_movement_guard_forces_escape_direction() -> None:
             )
         return plan
 
-    disabled = run(ComposedDecider())
-    enabled = run(ComposedDecider(ComposedDeciderConfig(movement_guard_enabled=True)))
+    disabled = run(ComposedDecider(_all_off()))
+    enabled = run(ComposedDecider(replace(_all_off(), movement_guard_enabled=True)))
 
     assert _direction(disabled, "w1") is Direction.EAST
     assert _direction(enabled, "w1") is Direction.SOUTH
@@ -219,11 +242,11 @@ def test_economy_budget_skips_spawn_when_heal_reserve_short() -> None:
         core_position=Coordinate(0, 0),
     )
 
-    baseline = ComposedDecider().decide_snapshot(snapshot)
+    baseline = ComposedDecider(_all_off()).decide_snapshot(snapshot)
     assert baseline.core_action is not None
     assert baseline.core_action.type is CoreActionType.SPAWN
 
-    gated = ComposedDecider(ComposedDeciderConfig(economy_budget_enabled=True)).decide_snapshot(
+    gated = ComposedDecider(replace(_all_off(), economy_budget_enabled=True)).decide_snapshot(
         snapshot
     )
     assert gated.core_action is not None
@@ -296,8 +319,8 @@ def test_cargo_spin_core_self_heal_starts_core_move() -> None:
             )
         return plan
 
-    disabled = run(ComposedDecider())
-    enabled = run(ComposedDecider(ComposedDeciderConfig(movement_guard_enabled=True)))
+    disabled = run(ComposedDecider(_all_off()))
+    enabled = run(ComposedDecider(replace(_all_off(), movement_guard_enabled=True)))
 
     assert (
         disabled.core_action is None or disabled.core_action.type is not CoreActionType.START_MOVE
@@ -457,10 +480,10 @@ def test_economy_expansion_routes_idle_workers_to_explore() -> None:
             core_position=Coordinate(0, 0),
         )
 
-    default = ComposedDecider().decide_snapshot(make())
-    enabled = ComposedDecider(
-        ComposedDeciderConfig(economy_expansion_enabled=True)
-    ).decide_snapshot(make())
+    default = ComposedDecider(_all_off()).decide_snapshot(make())
+    enabled = ComposedDecider(replace(_all_off(), economy_expansion_enabled=True)).decide_snapshot(
+        make()
+    )
 
     for unit_id in ("w1", "w2", "w3"):
         assert _action(default, unit_id) is UnitActionType.WAIT
@@ -475,10 +498,10 @@ def test_economy_expansion_spawns_worker_from_inflight_deposit() -> None:
         population=1,
         core_position=Coordinate(0, 0),
     )
-    default = ComposedDecider().decide_snapshot(snapshot)
-    enabled = ComposedDecider(
-        ComposedDeciderConfig(economy_expansion_enabled=True)
-    ).decide_snapshot(snapshot)
+    default = ComposedDecider(_all_off()).decide_snapshot(snapshot)
+    enabled = ComposedDecider(replace(_all_off(), economy_expansion_enabled=True)).decide_snapshot(
+        snapshot
+    )
 
     assert default.core_action is None
     assert enabled.core_action is not None

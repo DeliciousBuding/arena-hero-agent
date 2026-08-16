@@ -54,6 +54,22 @@ from tests.strategies.fixture_loader import load_oracle_fixture
 
 RULES = CURRENT_RULES_VERSION
 
+
+def _all_off() -> ComposedDeciderConfig:
+    """Explicit baseline with every research layer disabled for oracle parity tests."""
+
+    return ComposedDeciderConfig(
+        survey_burst_active=False,
+        stuck_guard_enabled=False,
+        movement_guard_enabled=False,
+        economy_budget_enabled=False,
+        economy_expansion_enabled=False,
+        raid_quota_enabled=False,
+        exploration_v2_enabled=False,
+        respawn_recovery_enabled=False,
+    )
+
+
 _MISSION_KEYS = {
     "collectionValueFloor": "collection_value_floor",
     "maxCollectionDistance": "max_collection_distance",
@@ -230,7 +246,7 @@ def test_worker_assignment_known_answers_convert_to_actions() -> None:
         if case["name"] not in cases:
             continue
         snapshot = _fixture_snapshot(case["snapshot"])
-        plan = ComposedDecider().decide_snapshot(snapshot)
+        plan = ComposedDecider(_all_off()).decide_snapshot(snapshot)
         for unit_id, (action_type, direction) in expected_actions[case["name"]].items():
             assert _action(plan, unit_id) is action_type, case["name"]
             got_direction = _direction(plan, unit_id)
@@ -273,7 +289,7 @@ def test_two_tick_claim_sequence_is_sticky() -> None:
         for item in fixture["worker_assignments"]
         if item["name"] == "claim_keeps_cell_two_ticks"
     )
-    decider = ComposedDecider()
+    decider = ComposedDecider(_all_off())
     for tick_record in case["ticks"]:
         plan = decider.decide_snapshot(_fixture_snapshot(tick_record))
         assert _action(plan, "w1") is UnitActionType.MOVE

@@ -1,12 +1,13 @@
 """Stuck-guard layer tests: pure detection plus composition gating.
 
-The stuck guard is a research variant: off by default (byte-identical default
-behavior) and, when enabled, blocks a worker's current resource target once its
-recent movement looks frozen or confined, forcing reassignment.
+The stuck guard blocks a worker's current resource target once its recent
+movement looks frozen or confined, forcing reassignment. It is enabled by
+default; isolation tests disable the other research layers explicitly.
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import cast
 
 import pytest
@@ -91,6 +92,21 @@ def _action(plan: Plan, unit_id: str) -> UnitActionType | None:
 def _direction(plan: Plan, unit_id: str) -> Direction | None:
     action = plan.action_for(unit_id)
     return None if action is None else action.direction
+
+
+def _all_off() -> ComposedDeciderConfig:
+    """Explicit baseline with every research layer disabled for isolation tests."""
+
+    return ComposedDeciderConfig(
+        survey_burst_active=False,
+        stuck_guard_enabled=False,
+        movement_guard_enabled=False,
+        economy_budget_enabled=False,
+        economy_expansion_enabled=False,
+        raid_quota_enabled=False,
+        exploration_v2_enabled=False,
+        respawn_recovery_enabled=False,
+    )
 
 
 def test_detect_stuck_unchanged_positions() -> None:
@@ -178,7 +194,8 @@ def test_stuck_guard_enabled_reassigns_spinning_unit() -> None:
     resource_cells = {"2,0": _cell(2, 0)}
     positions = [Coordinate(0, 0), Coordinate(0, 1), Coordinate(0, 0)]
     decider = ComposedDecider(
-        ComposedDeciderConfig(
+        replace(
+            _all_off(),
             stuck_guard_enabled=True,
             stuck_guard_ticks=3,
             stuck_guard_radius=1,
