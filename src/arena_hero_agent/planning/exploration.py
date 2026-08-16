@@ -313,6 +313,13 @@ def _ring_band_candidates(core: Coordinate, radii: tuple[int, ...]):
             yield Coordinate(core.x + vx * scale, core.y + vy * scale)
 
 
+def _parse_cell_key_xy(key: str) -> tuple[int, int]:
+    """Parse a canonical ``x,y`` cell key back into an integer coordinate tuple."""
+
+    x_text, y_text = key.split(",")
+    return int(x_text), int(y_text)
+
+
 def _bfs_frontier_flood(
     start: Coordinate,
     blocked: frozenset[str],
@@ -349,26 +356,35 @@ def _bfs_frontier_flood(
     if isinstance(node_budget, bool) or not isinstance(node_budget, int) or node_budget < 1:
         raise ValueError("node_budget must be a positive integer")
 
-    start_key = start.cell_key
-    queue: deque[Coordinate] = deque([start])
-    seen: set[str] = {start_key}
+    # Work in integer tuples instead of Coordinate objects + string cell keys:
+    # the per-neighbor dataclass allocation and ``f"{x},{y}"`` formatting in the
+    # original flood made this the dominant cost of the composed decider for
+    # high unit/enemy counts, so the frontier is now cheap tuple arithmetic.
+    start_x, start_y = start.x, start.y
+    blocked_xy = frozenset(_parse_cell_key_xy(key) for key in blocked)
+    visited_xy = frozenset(_parse_cell_key_xy(key) for key in visited)
+    taken_xy = {_parse_cell_key_xy(key) for key in taken}
+
+    queue: deque[tuple[int, int]] = deque([(start_x, start_y)])
+    seen: set[tuple[int, int]] = {(start_x, start_y)}
     nearest: Coordinate | None = None
     head = 0
     while head < len(queue) and head < node_budget:
-        current = queue[head]
+        current_x, current_y = queue[head]
         head += 1
         for dx, dy in _CARDINAL_DELTAS:
-            neighbor = Coordinate(current.x + dx, current.y + dy)
-            if max(abs(neighbor.x - start.x), abs(neighbor.y - start.y)) > search_radius:
+            next_x = current_x + dx
+            next_y = current_y + dy
+            if max(abs(next_x - start_x), abs(next_y - start_y)) > search_radius:
                 continue
-            key = neighbor.cell_key
-            if key in seen or key in blocked:
+            key = (next_x, next_y)
+            if key in seen or key in blocked_xy:
                 continue
             seen.add(key)
-            if nearest is None and key not in visited and key not in taken:
-                nearest = neighbor
-            queue.append(neighbor)
-    return nearest, frozenset(seen)
+            if nearest is None and key not in visited_xy and key not in taken_xy:
+                nearest = Coordinate(next_x, next_y)
+            queue.append(key)
+    return nearest, frozenset(f"{x},{y}" for x, y in seen)
 
 
 def build_exploration_targets(
