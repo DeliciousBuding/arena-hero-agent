@@ -64,6 +64,10 @@ from arena_hero_agent.adapters.replay import (
     ReplayTickSource,
     load_observations,
 )
+from arena_hero_agent.adapters.runtime.live_status import (
+    LiveStatusWriter,
+    LiveStatusWriterConfig,
+)
 from arena_hero_agent.adapters.runtime.process_leases import (
     FileWriterLeaseCoordinator,
 )
@@ -965,6 +969,24 @@ async def _run_live_loop(
                 await renew_task
 
 
+def _decider_with_live_status(
+    decider: Decider,
+    writer: LiveStatusWriter,
+) -> Decider:
+    """Wrap a decider so each observation also refreshes the live status snapshot.
+
+    The write is best-effort and never changes the returned decision, so the
+    inner decider stays deterministic while resource observability stays live.
+    """
+
+    def decide(observation: TurnObservation, budget: DeadlineBudget) -> Decision:
+        decision = decider(observation, budget)
+        writer.write(observation)
+        return decision
+
+    return decide
+
+
 async def _execute_live(
     args: argparse.Namespace,
     *,
@@ -1060,6 +1082,10 @@ async def _execute_live(
             process_run_id=uuid.uuid4().hex[:16],
         )
         decider = decider_factory() if decider_factory is not None else compose_decider()
+        decider = _decider_with_live_status(
+            decider,
+            LiveStatusWriter(LiveStatusWriterConfig(data_root=args.data_root, tenant_id=tenant)),
+        )
         submitter = LiveSubmitter(client, tenant_id=tenant)
         if state is not None:
             state.client = client
