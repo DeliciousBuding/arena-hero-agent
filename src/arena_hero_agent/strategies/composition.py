@@ -135,8 +135,10 @@ from .respawn_recovery import (
     DEFAULT_BARREN_MIGRATION_TICKS,
     DEFAULT_DETECTION_DISTANCE,
     DEFAULT_RECOVERY_WORKERS,
+    DEFAULT_STUCK_RESOURCES_TICKS,
     BarrenMigrationState,
     RespawnRecoveryState,
+    StuckWithResourcesState,
     detect_respawn,
     migration_direction_toward_origin,
 )
@@ -237,6 +239,8 @@ class ComposedDeciderConfig:
     raid_min_fighters: int = RAID_MIN_FIGHTERS
     barren_migration_enabled: bool = True
     barren_migration_ticks: int = DEFAULT_BARREN_MIGRATION_TICKS
+    stuck_resources_enabled: bool = True
+    stuck_resources_ticks: int = DEFAULT_STUCK_RESOURCES_TICKS
 
     def __post_init__(self) -> None:
         if not isinstance(self.safety_config, SafetyPlannerConfig):
@@ -269,6 +273,7 @@ class ComposedDeciderConfig:
             "exploration_v2_enabled",
             "respawn_recovery_enabled",
             "barren_migration_enabled",
+            "stuck_resources_enabled",
         ):
             if not isinstance(getattr(self, name), bool):
                 raise TypeError(f"{name} must be a boolean")
@@ -285,6 +290,7 @@ class ComposedDeciderConfig:
             "respawn_worker_target",
             "respawn_detection_distance",
             "barren_migration_ticks",
+            "stuck_resources_ticks",
         ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int):
@@ -654,6 +660,7 @@ class ComposedDecider:
         self._exploration_state = ExplorationState()
         self._respawn_state = RespawnRecoveryState()
         self._barren_migration = BarrenMigrationState()
+        self._stuck_resources = StuckWithResourcesState()
         self._previous_core_position: Coordinate | None = None
 
     @property
@@ -933,6 +940,7 @@ class ComposedDecider:
                 # new position. Obstacles (permanent terrain) are kept.
                 self._exploration_state.reset_location_state()
                 self._barren_migration.reset()
+                self._stuck_resources.reset()
             self._previous_core_position = current_core
 
         if not self._config.respawn_recovery_enabled:
@@ -1018,6 +1026,37 @@ class ComposedDecider:
             core_action=PlanningCoreAction(
                 type=CoreActionType.START_MOVE,
                 direction=direction,
+            ),
+        )
+
+    def _terrain_trap_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
+        """Break terrain-trap deadlock by issuing SELF_DESTRUCT.
+
+        When the Core has resources (> 0) but the population hasn't grown for
+        ``stuck_resources_ticks`` consecutive ticks, the most likely cause is
+        a terrain trap: the worker is stuck on the Core's cell
+        (MOVE_BLOCKED_TERRAIN) and the Core can't spawn (CELL_UNIT_LIMIT).
+        SELF_DESTRUCT respawns the Core at a new terrain-passable location
+        with fresh resources, breaking the deadlock.
+        """
+
+        if not self._config.stuck_resources_enabled:
+            return plan
+        if snapshot.core_state != "normal":
+            return plan
+        should_self_destruct = self._stuck_resources.observe(
+            resources=snapshot.resources,
+            population=snapshot.population,
+            tick=snapshot.tick,
+            threshold=self._config.stuck_resources_ticks,
+        )
+        if not should_self_destruct:
+            return plan
+        return Plan(
+            tick=plan.tick,
+            unit_actions=plan.unit_actions,
+            core_action=PlanningCoreAction(
+                type=CoreActionType.SELF_DESTRUCT,
             ),
         )
 
@@ -1346,6 +1385,9 @@ class ComposedDecider:
 
         if self._config.barren_migration_enabled:
             plan = self._barren_migration_hook(snapshot, plan)
+
+        if self._config.stuck_resources_enabled:
+            plan = self._terrain_trap_hook(snapshot, plan)
 
         if self._config.raid_quota_enabled:
             plan = self._raid_quota_hook(snapshot, plan)

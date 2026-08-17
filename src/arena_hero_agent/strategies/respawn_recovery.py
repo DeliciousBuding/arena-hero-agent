@@ -32,6 +32,7 @@ DEFAULT_DETECTION_DISTANCE: Final = 32
 DEFAULT_RECOVERY_WORKERS: Final = 16
 DEFAULT_BARREN_MIGRATION_TICKS: Final = 30
 DEFAULT_BARREN_MIGRATION_COOLDOWN: Final = 30
+DEFAULT_STUCK_RESOURCES_TICKS: Final = 20
 
 
 def detect_respawn(
@@ -133,6 +134,56 @@ class BarrenMigrationState:
         self.migration_started_tick = None
 
 
+@dataclass(slots=True)
+class StuckWithResourcesState:
+    """Track terrain-trap deadlock: Core has resources but population won't grow.
+
+    When the Core has resources (> 0) but the population hasn't increased for
+    ``threshold`` consecutive ticks, the most likely cause is a terrain trap:
+    the worker is stuck on the Core's cell (MOVE_BLOCKED_TERRAIN) and the Core
+    can't spawn (CELL_UNIT_LIMIT).  Issuing SELF_DESTRUCT breaks this deadlock
+    by respawning the Core at a new terrain-passable location.
+    """
+
+    last_population: int | None = None
+    stuck_since_tick: int | None = None
+
+    def observe(
+        self,
+        *,
+        resources: int,
+        population: int,
+        tick: int,
+        threshold: int = DEFAULT_STUCK_RESOURCES_TICKS,
+    ) -> bool:
+        """Return True when SELF_DESTRUCT should fire to escape the trap."""
+
+        if resources <= 0:
+            self.last_population = population
+            self.stuck_since_tick = None
+            return False
+
+        if self.last_population is None or population > self.last_population:
+            self.last_population = population
+            self.stuck_since_tick = tick
+            return False
+
+        if population < self.last_population:
+            self.last_population = population
+            self.stuck_since_tick = tick
+            return False
+
+        if self.stuck_since_tick is None:
+            self.stuck_since_tick = tick
+            return False
+
+        return tick - self.stuck_since_tick >= threshold
+
+    def reset(self) -> None:
+        self.last_population = None
+        self.stuck_since_tick = None
+
+
 def migration_direction_toward_origin(
     core: Coordinate,
     obstacles: frozenset[str],
@@ -157,8 +208,10 @@ __all__ = [
     "DEFAULT_BARREN_MIGRATION_TICKS",
     "DEFAULT_DETECTION_DISTANCE",
     "DEFAULT_RECOVERY_WORKERS",
+    "DEFAULT_STUCK_RESOURCES_TICKS",
     "BarrenMigrationState",
     "RespawnRecoveryState",
+    "StuckWithResourcesState",
     "detect_respawn",
     "migration_direction_toward_origin",
 ]
