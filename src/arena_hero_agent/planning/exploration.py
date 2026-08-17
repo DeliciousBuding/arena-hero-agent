@@ -48,13 +48,19 @@ CHUNK_SIZE: Final = 32
 NORMAL_RING_STEP: Final = 10
 NORMAL_RING_COUNT: Final = 3
 HUNGER_RING_STEP: Final = 8
-HUNGER_RING_COUNT: Final = 5
+# Hunger rings reach 8/16/.../160 — matching the waaiging reference strategy's
+# DEVELOP_WIDE_SEARCH_MAX_RADIUS (160). The previous count of 5 only reached
+# 40 cells, which was insufficient for barren-area respawn where the nearest
+# resource chunk can be 40-160 cells from the new Core position.
+HUNGER_RING_COUNT: Final = 20
 HUNGER_TICKS: Final = 200
 REFILL_RECHECK_TICKS: Final = 4
 EXPLORATION_SURVEY_CAP: Final = 2
 SWEEP_RING_STEP: Final = 8
 SWEEP_RING_COUNT: Final = 6
-HUNGER_SWEEP_RING_COUNT: Final = 8
+# Sweep rings in hunger mode also reach 160 (20 * 8), matching the
+# wide-search max radius of the waaiging reference strategy.
+HUNGER_SWEEP_RING_COUNT: Final = 20
 
 _DELTAS: Final[tuple[tuple[int, int], ...]] = (
     (1, 0),
@@ -75,6 +81,13 @@ _CARDINAL_DELTAS: Final[tuple[tuple[int, int], ...]] = (
 )
 _FRONTIER_RADIUS: Final = 64
 _FRONTIER_NODE_BUDGET: Final = 16384
+# During respawn in a barren area, workers must search further for resources.
+# The normal 64-radius frontier exhausts after hours of being stuck (all
+# nearby cells visited); 128 reaches into neighbouring chunks where
+# ring-44+ quotas (min 2 resources per 32x32 chunk) are more likely
+# unvisited. Matches the waaiging reference agent's recovery sweep scale.
+_BARREN_FRONTIER_RADIUS: Final = 128
+_BARREN_FRONTIER_NODE_BUDGET: Final = 65536
 
 _FNV_OFFSET_BASIS: Final = 0x811C9DC5
 _FNV_PRIME: Final = 0x01000193
@@ -101,6 +114,28 @@ class ExplorationState:
     cell_last_seen: dict[str, int] = field(default_factory=dict)
     prev_cargo: dict[str, int] = field(default_factory=dict)
     known_obstacles: set[str] = field(default_factory=set)
+
+    def reset_location_state(self) -> None:
+        """Clear location-specific state after a Core respawn.
+
+        After respawn the Core and Workers get fresh UUIDs at a new position.
+        All chunk ledgers, visited points, resource-cell memory, and cargo
+        tracking from the old location are stale and must be cleared so the
+        exploration and barren-migration layers see the new area as genuinely
+        fresh. ``known_obstacles`` is permanent base terrain and is kept.
+        """
+
+        self.chunk_seen_tick.clear()
+        self.chunk_last_harvest_tick.clear()
+        self.chunk_next_refill_tick.clear()
+        self.chunk_last_probe_tick.clear()
+        self.chunk_harvest_count.clear()
+        self.chunk_anchor.clear()
+        self.point_visited.clear()
+        self.hungry_since = None
+        self.cell_positions.clear()
+        self.cell_last_seen.clear()
+        self.prev_cargo.clear()
 
 
 def explorer_slot(unit_id: str) -> int:
@@ -392,8 +427,17 @@ def build_exploration_targets(
     state: ExplorationState,
     *,
     hungry: bool = False,
+    barren: bool = False,
 ) -> dict[str, Coordinate]:
-    """Return one ring-quota explore target per controlled worker (pure read)."""
+    """Return one ring-quota explore target per controlled worker (pure read).
+
+    When ``barren`` is True, the BFS frontier search expands from 64 to 128
+    cells with a proportional node-budget increase. This is needed during
+    respawn in a barren area where all cells within the normal 64-radius
+    frontier have already been visited (the agent was stuck for hours);
+    128 reaches into neighbouring chunks where unvisited resource-bearing
+    cells are more likely to exist.
+    """
 
     if not isinstance(snapshot, PlanningSnapshot):
         raise TypeError("snapshot must be a PlanningSnapshot")
@@ -401,6 +445,11 @@ def build_exploration_targets(
         raise TypeError("state must be an ExplorationState")
     if not isinstance(hungry, bool):
         raise TypeError("hungry must be a boolean")
+    if not isinstance(barren, bool):
+        raise TypeError("barren must be a boolean")
+
+    frontier_radius = _BARREN_FRONTIER_RADIUS if barren else _FRONTIER_RADIUS
+    frontier_budget = _BARREN_FRONTIER_NODE_BUDGET if barren else _FRONTIER_NODE_BUDGET
 
     core = snapshot.core_position
     if core is None:
@@ -443,6 +492,8 @@ def build_exploration_targets(
                 blocked,
                 state.point_visited,
                 taken,
+                search_radius=frontier_radius,
+                node_budget=frontier_budget,
             )
         best: Coordinate | None = None
         for candidate in (*due_anchors, *_ring_band_candidates(core, radii)):
@@ -461,7 +512,7 @@ def build_exploration_targets(
             # their pathing and a far anchor is trustworthy history.
             within_flood = (
                 max(abs(candidate.x - unit.position.x), abs(candidate.y - unit.position.y))
-                <= _FRONTIER_RADIUS
+                <= frontier_radius
             )
             if within_flood and reachable is not None and cell not in reachable:
                 continue

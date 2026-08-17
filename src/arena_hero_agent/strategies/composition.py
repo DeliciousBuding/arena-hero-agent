@@ -925,6 +925,14 @@ class ComposedDecider:
                 detection_distance=self._config.respawn_detection_distance,
             ):
                 self._respawn_state.note_respawn(snapshot.tick)
+                # Clear stale exploration memory from the pre-respawn location.
+                # Old resource-cell memory (cell_positions) would make the
+                # barren-migration hook think resources still exist, preventing
+                # Core migration toward origin. Old visited-point and chunk
+                # data are also stale — the new Core has fresh Workers at a
+                # new position. Obstacles (permanent terrain) are kept.
+                self._exploration_state.reset_location_state()
+                self._barren_migration.reset()
             self._previous_core_position = current_core
 
         if not self._config.respawn_recovery_enabled:
@@ -1293,6 +1301,7 @@ class ComposedDecider:
                 snapshot,
                 self._exploration_state,
                 hungry=is_hungry(self._exploration_state, snapshot.tick) or respawn_barren,
+                barren=respawn_barren,
             )
 
         result = assign_worker_tasks(

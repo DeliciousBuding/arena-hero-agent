@@ -31,6 +31,7 @@ from arena_hero_agent.domain import Coordinate, manhattan
 DEFAULT_DETECTION_DISTANCE: Final = 32
 DEFAULT_RECOVERY_WORKERS: Final = 16
 DEFAULT_BARREN_MIGRATION_TICKS: Final = 100
+DEFAULT_BARREN_MIGRATION_COOLDOWN: Final = 200
 
 
 def detect_respawn(
@@ -74,10 +75,11 @@ class BarrenMigrationState:
     """Track resource-barren condition to trigger Core migration toward origin.
 
     After respawn the Core may land in a resource-sparse area (high ring). If
-    ``resource_cells`` stays empty for ``barren_ticks`` consecutive ticks, the
-    hook signals the Core to START_MOVE toward [0, 0] — where resource density
-    is highest. The migration is slow (4 ticks per cell) but automatic; workers
-    continue exploring during migration.
+    ``resource_cells`` stays empty for ``barren_threshold`` consecutive ticks,
+    the hook signals the Core to START_MOVE toward [0, 0] — where resource
+    density is highest. The migration is slow (4 ticks per cell) but automatic;
+    workers continue exploring during migration. A cooldown prevents jitter:
+    after each migration attempt, ``cooldown`` ticks must pass before the next.
     """
 
     barren_since_tick: int | None = None
@@ -90,12 +92,13 @@ class BarrenMigrationState:
         tick: int,
         core_migrating: bool,
         barren_threshold: int = DEFAULT_BARREN_MIGRATION_TICKS,
+        cooldown: int = DEFAULT_BARREN_MIGRATION_COOLDOWN,
     ) -> bool:
         """Track barren condition; return True when migration should start.
 
-        Call once per tick before the core_action decision. Returns ``True`` only
-        on the single tick the migration should be triggered (not every tick
-        while barren). Once migration starts, returns ``False`` until reset.
+        Call once per tick before the core_action decision. Returns ``True``
+        only on the tick the migration should be triggered. After firing, the
+        cooldown prevents re-triggering until ``cooldown`` ticks have passed.
         """
 
         if core_migrating:
@@ -104,9 +107,7 @@ class BarrenMigrationState:
 
         if has_resource_cells:
             self.barren_since_tick = None
-            return False
-
-        if self.migration_started_tick is not None:
+            self.migration_started_tick = None
             return False
 
         if self.barren_since_tick is None:
@@ -117,7 +118,12 @@ class BarrenMigrationState:
         if elapsed < barren_threshold:
             return False
 
+        if self.migration_started_tick is not None:
+            if tick - self.migration_started_tick < cooldown:
+                return False
+
         self.migration_started_tick = tick
+        self.barren_since_tick = tick
         return True
 
     def reset(self) -> None:
