@@ -128,8 +128,14 @@ def test_ring_radii_first_group_and_second_group() -> None:
     assert ring_radii(7, hungry=False) == (10, 20, 30)
     assert ring_radii(8, hungry=False) == (20, 30, 40)
     assert ring_radii(15, hungry=False) == (20, 30, 40)
-    assert ring_radii(0, hungry=True) == (8, 16, 24, 32, 40)
-    assert ring_radii(8, hungry=True) == (16, 24, 32, 40, 48)
+    hungry_0 = ring_radii(0, hungry=True)
+    assert hungry_0[:5] == (8, 16, 24, 32, 40)
+    assert len(hungry_0) == 20
+    assert hungry_0[-1] == 160
+    hungry_8 = ring_radii(8, hungry=True)
+    assert hungry_8[:5] == (16, 24, 32, 40, 48)
+    assert len(hungry_8) == 20
+    assert hungry_8[-1] == 168
 
 
 def test_build_targets_empty_without_core() -> None:

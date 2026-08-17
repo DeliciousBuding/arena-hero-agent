@@ -132,10 +132,13 @@ from .raid_quota import (
     select_strike_group,
 )
 from .respawn_recovery import (
+    DEFAULT_BARREN_MIGRATION_TICKS,
     DEFAULT_DETECTION_DISTANCE,
     DEFAULT_RECOVERY_WORKERS,
+    BarrenMigrationState,
     RespawnRecoveryState,
     detect_respawn,
+    migration_direction_toward_origin,
 )
 from .safety_planner import SafetyPlanner, step_toward, worker_dense_direction
 from .safety_planner_config import DEFAULT_SAFETY_CONFIG, SafetyPlannerConfig
@@ -232,6 +235,8 @@ class ComposedDeciderConfig:
     raid_min_observations: int = RAID_MIN_OBSERVATIONS
     raid_max_distance: int = RAID_MAX_DISTANCE
     raid_min_fighters: int = RAID_MIN_FIGHTERS
+    barren_migration_enabled: bool = True
+    barren_migration_ticks: int = DEFAULT_BARREN_MIGRATION_TICKS
 
     def __post_init__(self) -> None:
         if not isinstance(self.safety_config, SafetyPlannerConfig):
@@ -263,6 +268,7 @@ class ComposedDeciderConfig:
             "raid_quota_enabled",
             "exploration_v2_enabled",
             "respawn_recovery_enabled",
+            "barren_migration_enabled",
         ):
             if not isinstance(getattr(self, name), bool):
                 raise TypeError(f"{name} must be a boolean")
@@ -278,6 +284,7 @@ class ComposedDeciderConfig:
             "raid_min_fighters",
             "respawn_worker_target",
             "respawn_detection_distance",
+            "barren_migration_ticks",
         ):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, int):
@@ -646,6 +653,7 @@ class ComposedDecider:
         self._previous_unit_roles: dict[str, str] = {}
         self._exploration_state = ExplorationState()
         self._respawn_state = RespawnRecoveryState()
+        self._barren_migration = BarrenMigrationState()
         self._previous_core_position: Coordinate | None = None
 
     @property
@@ -958,6 +966,51 @@ class ComposedDecider:
             tick=plan.tick,
             unit_actions=plan.unit_actions,
             core_action=PlanningCoreAction(type=CoreActionType.WAIT),
+        )
+
+    def _barren_migration_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
+        """Start Core migration toward origin when stuck in a resource-barren area.
+
+        After ``barren_migration_ticks`` consecutive ticks with zero visible
+        resource cells, the Core should START_MOVE toward [0, 0] where
+        resource density is higher. This only fires when the Core is not already
+        migrating and has no resources to spawn. Once migration starts, the
+        official four-tick migration cycle runs automatically — workers continue
+        exploring during migration.
+        """
+
+        if not self._config.barren_migration_enabled:
+            return plan
+        if snapshot.core_state != "normal":
+            return plan
+        core = snapshot.core_position
+        if core is None:
+            return plan
+        core_migrating = snapshot.core_state == "moving"
+        should_migrate = self._barren_migration.observe(
+            has_resource_cells=bool(snapshot.resource_cells),
+            tick=snapshot.tick,
+            core_migrating=core_migrating,
+            barren_threshold=self._config.barren_migration_ticks,
+        )
+        if not should_migrate:
+            return plan
+        direction_label = migration_direction_toward_origin(core, snapshot.obstacle_cells)
+        if direction_label is None:
+            return plan
+        direction = {
+            "E": Direction.EAST,
+            "W": Direction.WEST,
+            "S": Direction.SOUTH,
+            "N": Direction.NORTH,
+        }[direction_label]
+        return Plan(
+            tick=plan.tick,
+            unit_actions=plan.unit_actions,
+            core_action=PlanningCoreAction(
+                type=CoreActionType.START_MOVE,
+                direction=direction,
+            ),
         )
 
     def _economy_budget_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
@@ -1281,6 +1334,9 @@ class ComposedDecider:
 
         if self._config.respawn_recovery_enabled:
             plan = self._respawn_recovery_hook(snapshot, plan)
+
+        if self._config.barren_migration_enabled:
+            plan = self._barren_migration_hook(snapshot, plan)
 
         if self._config.raid_quota_enabled:
             plan = self._raid_quota_hook(snapshot, plan)
