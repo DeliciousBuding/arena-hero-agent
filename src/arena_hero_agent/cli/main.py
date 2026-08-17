@@ -101,7 +101,7 @@ from arena_hero_agent.domain import (
     canonical_sha256,
 )
 from arena_hero_agent.ports import GameClient, WriterLeaseHandle
-from arena_hero_agent.strategies.composition import compose_decider
+from arena_hero_agent.strategies import compose_decider, load_config
 
 PROG = "arena-hero-agent"
 
@@ -690,6 +690,15 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="N",
         help="stream reopen bound (default: 3)",
     )
+    live_parser.add_argument(
+        "--strategy-config",
+        default=None,
+        metavar="PATH",
+        help=(
+            "optional JSON strategy configuration; otherwise use "
+            "ARENA_HERO_STRATEGY_CONFIG(_JSON) or built-in defaults"
+        ),
+    )
 
     health_parser = subparsers.add_parser(
         "health",
@@ -984,6 +993,15 @@ def _decider_with_live_status(
         writer.write(observation)
         return decision
 
+    fallback = getattr(decider, "safety_fallback", None)
+    if callable(fallback):
+        def safety_fallback(observation: TurnObservation) -> Decision:
+            decision = fallback(observation)
+            writer.write(observation)
+            return decision
+
+        decide.safety_fallback = safety_fallback
+
     return decide
 
 
@@ -1042,13 +1060,27 @@ async def _execute_live(
         client = factory(api_key=api_key, base_url=args.base_url)
         source = LiveTurnSource(client)
         try:
+            decider = (
+                decider_factory()
+                if decider_factory is not None
+                else compose_decider(load_config(getattr(args, "strategy_config", None)))
+            )
+        except (OSError, ValueError, TypeError):
+            _print_error("strategy configuration is invalid")
+            return EXIT_ERROR
+        try:
             recorder = open_tick_recorder(
                 RecorderConfig(data_root=args.data_root, tenant_id=tenant),
                 backend=RecorderBackend.JSONL,
             )
             telemetry_path = _telemetry_path(args.data_root, tenant)
             telemetry_path.parent.mkdir(parents=True, exist_ok=True)
-            sink = RuntimeTraceJsonlSink(tenant_id=tenant, path=telemetry_path)
+            sink = RuntimeTraceJsonlSink(
+                tenant_id=tenant,
+                path=telemetry_path,
+                config_hash=getattr(decider, "config_hash", None),
+                strategy_hash=getattr(decider, "strategy_hash", None),
+            )
         except Exception:
             _print_error("runtime storage could not be initialized")
             if recorder is not None:
@@ -1081,7 +1113,6 @@ async def _execute_live(
             telemetry=sink,
             process_run_id=uuid.uuid4().hex[:16],
         )
-        decider = decider_factory() if decider_factory is not None else compose_decider()
         decider = _decider_with_live_status(
             decider,
             LiveStatusWriter(LiveStatusWriterConfig(data_root=args.data_root, tenant_id=tenant)),

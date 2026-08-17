@@ -211,11 +211,22 @@ class TenantRuntime:
                     self._set_component(_COMPONENT_TELEMETRY, False, f"emit_tick failed: {exc}")
             self._touch()
 
+        async def on_tick_observed(observation, decision, result: TickResult) -> None:
+            if self._recorder is not None:
+                try:
+                    self._recorder.record_tick_state(observation, decision, result)
+                except Exception as exc:
+                    self._set_component(
+                        _COMPONENT_RECORDER, False, f"record_tick_state failed: {exc}"
+                    )
+
         self._set_component(_COMPONENT_SOURCE, True, "started")
         self._status = self._target_status()
 
         try:
-            result = await loop.run(source, decide, submit, on_tick=on_tick)
+            result = await loop.run(
+                source, decide, submit, on_tick=on_tick, on_tick_observed=on_tick_observed
+            )
         except asyncio.CancelledError:
             self._set_component(_COMPONENT_SOURCE, False, "cancelled")
             self._last_error = "cancelled"

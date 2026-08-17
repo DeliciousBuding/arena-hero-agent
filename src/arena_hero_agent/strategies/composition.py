@@ -653,6 +653,28 @@ class ComposedDecider:
         return self._config
 
     @property
+    def config_hash(self) -> str:
+        """Return the stable hash of the effective tunable inputs."""
+
+        from .configuration import config_hash
+
+        return config_hash(self._config)
+
+    @property
+    def strategy_hash(self) -> str:
+        """Return the stable hash of implementation plus tunable inputs."""
+
+        from .configuration import strategy_hash
+
+        return strategy_hash(self._config)
+
+    def safety_fallback(self, observation: TurnObservation) -> Decision:
+        """Produce the inexpensive safety plan used after a strategy overrun."""
+
+        snapshot = snapshot_from_turn(observation)
+        return plan_to_decision(self._safety.decide(snapshot).plan)
+
+    @property
     def raid_state(self) -> RaidState:
         return self._raid_state
 

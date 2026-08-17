@@ -278,7 +278,7 @@ async def test_live_e2e_fake_client(
     assert (tenant_dir / "health.json").exists()
     assert (tenant_dir / "telemetry.jsonl").exists()
     ticks_lines = (tenant_dir / "ticks.jsonl").read_text(encoding="utf-8").strip().splitlines()
-    assert len(ticks_lines) == 3  # two tick records plus one loop record
+    assert len(ticks_lines) == 5  # two tick + two tick_state + one loop record
 
     # The lease is released and the client closed after a clean session.
     assert client.close_calls == 1

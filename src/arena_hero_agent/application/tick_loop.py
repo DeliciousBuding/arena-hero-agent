@@ -166,6 +166,8 @@ class TickResult:
     deadline_outcome: DeadlineOutcome
     submit_result: SubmitResult = SubmitResult.NOT_SUBMITTED
     submit_error: str | None = None
+    agent_latency_ms: float | None = None
+    selection_latency_ms: float = 0.0
 
     def __post_init__(self) -> None:
         if isinstance(self.tick, bool) or not isinstance(self.tick, int):
@@ -180,10 +182,17 @@ class TickResult:
             raise TypeError("submit_result must be a SubmitResult")
         if self.submit_error is not None and not isinstance(self.submit_error, str):
             raise TypeError("submit_error must be a string or None")
+        if self.agent_latency_ms is not None and self.agent_latency_ms < 0:
+            raise ValueError("agent_latency_ms cannot be negative")
+        if self.selection_latency_ms < 0:
+            raise ValueError("selection_latency_ms cannot be negative")
         if self.deadline_outcome is DeadlineOutcome.CANDIDATE:
             if self.submit_result is SubmitResult.NOT_SUBMITTED:
                 raise ValueError("candidate ticks must record a submission result")
-        elif self.submit_result is not SubmitResult.NOT_SUBMITTED:
+        elif (
+            self.deadline_outcome is not DeadlineOutcome.SELECTION_TIMEOUT
+            and self.submit_result is not SubmitResult.NOT_SUBMITTED
+        ):
             raise ValueError("non-candidate ticks cannot record a submission result")
         if self.submit_result is not SubmitResult.REJECTED and self.submit_error is not None:
             raise ValueError("only rejected ticks may carry submit_error")
@@ -291,6 +300,20 @@ async def _notify_on_tick(
         await on_tick(result)
 
 
+async def _notify_on_tick_observed(
+    on_tick_observed: Callable[[TurnObservation, Decision | None, TickResult], Awaitable[None]]
+    | None,
+    observation: TurnObservation,
+    decision: Decision | None,
+    result: TickResult,
+) -> None:
+    """Best-effort rich-observer hook mirroring :func:`_notify_on_tick`."""
+    if on_tick_observed is None:
+        return
+    with contextlib.suppress(Exception):
+        await on_tick_observed(observation, decision, result)
+
+
 class SingleTenantTickLoop:
     """Drive one tenant's offline tick stream within explicit deadlines."""
 
@@ -304,13 +327,18 @@ class SingleTenantTickLoop:
         submit: Submitter,
         *,
         on_tick: Callable[[TickResult], Awaitable[None]] | None = None,
+        on_tick_observed: Callable[[TurnObservation, Decision | None, TickResult], Awaitable[None]]
+        | None = None,
     ) -> TickLoopResult:
         """Consume the source until it ends, a deadline fires, or a stop policy applies.
 
         ``CancelledError`` always propagates; the active stream is closed
         exactly once before the exception leaves this method. When provided,
         ``on_tick`` is awaited after each finalized outcome; observer failures
-        never affect loop results.
+        never affect loop results. ``on_tick_observed`` extends the hook with
+        the full ``TurnObservation`` and the decided ``Decision`` (or ``None``
+        for deadline-exhausted ticks where no decision was made), so a rich
+        recorder can persist state + plan alongside the thin outcome.
         """
         config = self._config
         last_tick = 0
@@ -396,20 +424,57 @@ class SingleTenantTickLoop:
                     )
                     outcomes.append(result)
                     await _notify_on_tick(on_tick, result)
+                    await _notify_on_tick_observed(on_tick_observed, observation, None, result)
                     break
 
                 started = config.clock.monotonic_ns()
                 decision = decide(observation, budget)
-                remaining = budget.consume(config.clock.monotonic_ns() - started)
+                elapsed_nanoseconds = config.clock.monotonic_ns() - started
+                elapsed_milliseconds = elapsed_nanoseconds / 1_000_000
+                remaining = budget.consume(elapsed_nanoseconds)
                 if remaining.exhausted:
-                    result = TickResult(
-                        tick=tick,
-                        decision_id=decision_id,
-                        deadline_outcome=DeadlineOutcome.SELECTION_TIMEOUT,
-                        submit_result=SubmitResult.NOT_SUBMITTED,
-                    )
-                    outcomes.append(result)
-                    await _notify_on_tick(on_tick, result)
+                    fallback_factory = getattr(decide, "safety_fallback", None)
+                    if callable(fallback_factory):
+                        fallback_decision = fallback_factory(observation)
+                        fallback_outcome = await submit(fallback_decision, observation)
+                        fallback_result = TickResult(
+                            tick=tick,
+                            decision_id=decision_id,
+                            deadline_outcome=DeadlineOutcome.SELECTION_TIMEOUT,
+                            submit_result=(
+                                SubmitResult.ACCEPTED
+                                if fallback_outcome.accepted
+                                else SubmitResult.REJECTED
+                            ),
+                            submit_error=fallback_outcome.error,
+                            agent_latency_ms=elapsed_milliseconds,
+                            selection_latency_ms=elapsed_milliseconds,
+                        )
+                        outcomes.append(fallback_result)
+                        await _notify_on_tick(on_tick, fallback_result)
+                        await _notify_on_tick_observed(
+                            on_tick_observed, observation, fallback_decision, fallback_result
+                        )
+                        last_tick = tick
+                        ticks_processed += 1
+                        if (
+                            not fallback_outcome.accepted
+                            and config.submit_error_policy is SubmitErrorPolicy.STOP
+                        ):
+                            stopped_reason = StoppedReason.SUBMIT_FAILURE
+                            break
+                    else:
+                        result = TickResult(
+                            tick=tick,
+                            decision_id=decision_id,
+                            deadline_outcome=DeadlineOutcome.SELECTION_TIMEOUT,
+                            submit_result=SubmitResult.NOT_SUBMITTED,
+                            agent_latency_ms=elapsed_milliseconds,
+                            selection_latency_ms=elapsed_milliseconds,
+                        )
+                        outcomes.append(result)
+                        await _notify_on_tick(on_tick, result)
+                        await _notify_on_tick_observed(on_tick_observed, observation, None, result)
                     if not config.continue_on_selection_timeout:
                         stopped_reason = StoppedReason.SELECTION_TIMEOUT
                         break
@@ -445,9 +510,12 @@ class SingleTenantTickLoop:
                     deadline_outcome=DeadlineOutcome.CANDIDATE,
                     submit_result=submit_result,
                     submit_error=submit_error,
+                    agent_latency_ms=elapsed_milliseconds,
+                    selection_latency_ms=elapsed_milliseconds,
                 )
                 outcomes.append(result)
                 await _notify_on_tick(on_tick, result)
+                await _notify_on_tick_observed(on_tick_observed, observation, decision, result)
                 last_tick = tick
                 ticks_processed += 1
                 if (

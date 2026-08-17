@@ -12,10 +12,13 @@ from .records import (
     RECORD_SCHEMA_VERSION,
     RECORD_TYPE_LOOP,
     RECORD_TYPE_TICK,
+    RECORD_TYPE_TICK_STATE,
     parse_loop,
     parse_tick,
+    parse_tick_state,
     serialize_loop,
     serialize_tick,
+    serialize_tick_state,
 )
 from .sqlite import SqliteTickRecorder
 
@@ -44,6 +47,7 @@ __all__ = [
     "RECORD_SCHEMA_VERSION",
     "RECORD_TYPE_LOOP",
     "RECORD_TYPE_TICK",
+    "RECORD_TYPE_TICK_STATE",
     "JsonlTickRecorder",
     "RecorderBackend",
     "RecorderConfig",
@@ -52,6 +56,8 @@ __all__ = [
     "open_tick_recorder",
     "parse_loop",
     "parse_tick",
+    "parse_tick_state",
     "serialize_loop",
     "serialize_tick",
+    "serialize_tick_state",
 ]

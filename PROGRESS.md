@@ -1,5 +1,11 @@
 # PROGRESS — 当前状态（收口摘要）
 
+## Lane 1 receipt (2026-08-17)
+
+- Scope: live configuration injection, stable hashes, measured latency, and budget safety fallback.
+- Compatibility target: preserve release-008 defaults and submit/lease semantics.
+- Validation and implementation are pending; no cross-repository changes or deployment are planned.
+
 > 本仓当前版本 0.1.7（release-008）。研究层
 > （economy/raid/exploration/respawn/movement/stuck）默认开启。
 > 历史 wave（W18–W44）明细以 `git log main` 为唯一权威；本文件只保留当前状态

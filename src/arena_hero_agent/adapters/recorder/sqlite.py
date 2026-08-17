@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import time
 from pathlib import Path
@@ -14,6 +15,7 @@ from arena_hero_agent.application import (
     TickLoopResult,
     TickResult,
 )
+from arena_hero_agent.application.turns import Decision, TurnObservation
 from arena_hero_agent.domain import DecisionId
 
 from ._common import (
@@ -25,7 +27,7 @@ from ._common import (
     sqlite_target_path,
     unregister_target,
 )
-from .records import RECORD_SCHEMA_VERSION
+from .records import RECORD_SCHEMA_VERSION, serialize_tick_state
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS tick_records (
@@ -57,6 +59,15 @@ CREATE TABLE IF NOT EXISTS loop_records (
 );
 CREATE INDEX IF NOT EXISTS loop_records_tenant_id_idx
     ON loop_records (tenant_id);
+CREATE TABLE IF NOT EXISTS tick_state_records (
+    tenant_id TEXT NOT NULL,
+    tick INTEGER NOT NULL,
+    decision_id TEXT NOT NULL,
+    state_json TEXT NOT NULL,
+    recorded_at_ns INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS tick_state_records_tenant_tick_idx
+    ON tick_state_records (tenant_id, tick);
 """
 
 
@@ -208,6 +219,45 @@ class SqliteTickRecorder:
             raise RecorderError(
                 f"failed to persist tick record for tenant {tenant!r}: {exc}"
             ) from exc
+
+    def record_tick_state(
+        self,
+        observation: TurnObservation,
+        decision: Decision | None,
+        result: TickResult,
+    ) -> None:
+        """Persist the rich tick_state snapshot as a JSON blob.
+
+        The sqlite backend stores the full serialized state alongside the
+        thin tick record so offline analysis can join both without a second
+        backend. Failures are best-effort and never block the tick loop.
+        """
+        connection = self._require_open()
+        tenant = self._config.tenant_id.value
+        record = serialize_tick_state(
+            observation,
+            decision,
+            result,
+            tenant_id=self._config.tenant_id,
+            recorded_at_ns=time.time_ns(),
+        )
+        try:
+            with connection:
+                connection.execute(
+                    "INSERT INTO tick_state_records "
+                    "(tenant_id, tick, decision_id, state_json, recorded_at_ns) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (
+                        tenant,
+                        result.tick,
+                        result.decision_id.value,
+                        json.dumps(record, ensure_ascii=False, separators=(",", ":")),
+                        time.time_ns(),
+                    ),
+                )
+        except sqlite3.Error:
+            # Best-effort: state capture must never block the tick loop.
+            pass
 
     def _row_matches(self, result: TickResult, tenant: str) -> bool:
         connection = self._connection

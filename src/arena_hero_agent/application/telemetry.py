@@ -49,13 +49,16 @@ def runtime_trace_record(
     process_run_id: str = DEFAULT_PROCESS_RUN_ID,
     run_id: str | None = None,
     rotation_generation: int = 0,
+    config_hash: str | None = None,
+    strategy_hash: str | None = None,
 ) -> RuntimeTraceRecord:
     """Map one finalized tick outcome to a runtime trace record.
 
     The per-tick ``runId`` defaults to the deterministic decision id so the
     three trace streams stay correlated without wall-clock input.
-    ``agentLatencyMs`` is ``None`` and ``selectionLatencyMs`` is ``0`` because
-    the P4-4 loop tracks deadline budget exhaustion, not wall latencies.
+    Latencies come from the monotonic timing captured by the tick loop.  Hashes
+    are optional so offline callers can keep using this mapper without a
+    strategy composition root.
     """
     fields: dict[str, object] = {
         "processRunId": process_run_id,
@@ -63,12 +66,16 @@ def runtime_trace_record(
         "tick": result.tick,
         "runId": run_id if run_id is not None else str(result.decision_id),
         "deadlineOutcome": result.deadline_outcome.value,
-        "agentLatencyMs": None,
-        "selectionLatencyMs": 0,
+        "agentLatencyMs": result.agent_latency_ms,
+        "selectionLatencyMs": result.selection_latency_ms,
         "abortRequested": False,
         "rotationGeneration": rotation_generation,
         "submitResult": result.submit_result.value,
     }
+    if config_hash is not None:
+        fields["configHash"] = config_hash
+    if strategy_hash is not None:
+        fields["strategyHash"] = strategy_hash
     if result.submit_error is not None:
         fields["submitError"] = result.submit_error
     return runtime_trace(fields)
@@ -81,6 +88,8 @@ def loop_trace_record(
     process_run_id: str = DEFAULT_PROCESS_RUN_ID,
     run_id: str | None = None,
     rotation_generation: int = 0,
+    config_hash: str | None = None,
+    strategy_hash: str | None = None,
 ) -> RuntimeTraceRecord:
     """Map a loop summary to a runtime trace record at the final tick.
 
@@ -92,8 +101,7 @@ def loop_trace_record(
     summary_tick = result.last_tick
     if summary_tick == 0 and result.outcomes:
         summary_tick = result.outcomes[-1].tick
-    return runtime_trace(
-        {
+    fields: dict[str, object] = {
             "processRunId": process_run_id,
             "tenantId": tenant_id.value,
             "tick": summary_tick,
@@ -104,8 +112,12 @@ def loop_trace_record(
             "abortRequested": False,
             "rotationGeneration": rotation_generation,
             "submitResult": SubmitResult.NOT_SUBMITTED.value,
-        }
-    )
+    }
+    if config_hash is not None:
+        fields["configHash"] = config_hash
+    if strategy_hash is not None:
+        fields["strategyHash"] = strategy_hash
+    return runtime_trace(fields)
 
 
 @runtime_checkable

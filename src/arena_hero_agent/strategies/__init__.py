@@ -8,6 +8,15 @@ from .composition import (
     plan_to_decision,
     snapshot_from_turn,
 )
+from .configuration import (
+    CONFIG_JSON_ENV,
+    CONFIG_PATH_ENV,
+    config_document,
+    config_from_mapping,
+    config_hash,
+    load_config,
+    strategy_hash,
+)
 from .safety_helpers import (
     VisibleEnemy,
     aggressive_shot_priority,
@@ -119,10 +128,17 @@ __all__ = [
     "detect_stuck_unit_ids",
     "ComposedDecider",
     "ComposedDeciderConfig",
+    "CONFIG_JSON_ENV",
+    "CONFIG_PATH_ENV",
+    "config_document",
+    "config_from_mapping",
+    "config_hash",
     "compose_decider",
+    "load_config",
     "merge_worker_tasks",
     "plan_to_decision",
     "snapshot_from_turn",
+    "strategy_hash",
     "apply_variant_overrides",
     "is_safety_variant",
     "resolve_safety_variant_config",

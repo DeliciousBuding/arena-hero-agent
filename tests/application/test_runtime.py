@@ -147,6 +147,9 @@ class RecordingRecorder:
             raise RuntimeError("recorder tick failure")
         self.ticks.append(result)
 
+    def record_tick_state(self, observation, decision, result: TickResult) -> None:
+        pass
+
     def record_loop(self, result: TickLoopResult) -> None:
         if self.fail_record_loop:
             raise RuntimeError("recorder loop failure")

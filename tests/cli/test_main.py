@@ -180,7 +180,7 @@ def test_run_happy_path_writes_artifacts(
     assert (tenant_dir / "health.json").exists()
     assert (tenant_dir / "telemetry.jsonl").exists()
     ticks_lines = (tenant_dir / "ticks.jsonl").read_text(encoding="utf-8").strip().splitlines()
-    assert len(ticks_lines) == 4  # three tick records plus one loop record
+    assert len(ticks_lines) == 7  # three tick + three tick_state + one loop record
 
 
 def test_run_jsonl_input(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

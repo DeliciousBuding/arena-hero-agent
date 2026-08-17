@@ -39,6 +39,8 @@ class RuntimeTraceJsonlSink:
         recover_torn_tail: bool = False,
         process_run_id: str = DEFAULT_PROCESS_RUN_ID,
         run_id: str | None = None,
+        config_hash: str | None = None,
+        strategy_hash: str | None = None,
     ) -> None:
         if writer is None:
             if path is None:
@@ -50,6 +52,8 @@ class RuntimeTraceJsonlSink:
         self._tenant_id = tenant_id
         self._process_run_id = process_run_id
         self._run_id = run_id
+        self._config_hash = config_hash
+        self._strategy_hash = strategy_hash
 
     @property
     def writer(self) -> JsonlWriter:
@@ -62,6 +66,8 @@ class RuntimeTraceJsonlSink:
                 tenant_id=self._tenant_id,
                 process_run_id=self._process_run_id,
                 run_id=self._run_id,
+                config_hash=self._config_hash,
+                strategy_hash=self._strategy_hash,
             )
         )
 
@@ -77,6 +83,8 @@ class RuntimeTraceJsonlSink:
                 tenant_id=self._tenant_id,
                 process_run_id=self._process_run_id,
                 run_id=self._run_id,
+                config_hash=self._config_hash,
+                strategy_hash=self._strategy_hash,
             )
         )
 

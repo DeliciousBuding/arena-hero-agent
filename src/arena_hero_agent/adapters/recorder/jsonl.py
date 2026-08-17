@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import BinaryIO
 
 from arena_hero_agent.application import TickLoopResult, TickResult
+from arena_hero_agent.application.turns import Decision, TurnObservation
 from arena_hero_agent.telemetry import (
     DEFAULT_JSONL_ROTATION,
     JsonlWriterError,
@@ -28,10 +29,13 @@ from ._common import (
 from .records import (
     RECORD_TYPE_LOOP,
     RECORD_TYPE_TICK,
+    RECORD_TYPE_TICK_STATE,
     parse_loop,
     parse_tick,
+    parse_tick_state,
     serialize_loop,
     serialize_tick,
+    serialize_tick_state,
 )
 
 
@@ -135,6 +139,23 @@ class JsonlTickRecorder:
         )
         self._append(record)
 
+    def record_tick_state(
+        self,
+        observation: TurnObservation,
+        decision: Decision | None,
+        result: TickResult,
+    ) -> None:
+        """Persist the rich tick_state snapshot alongside the thin tick record."""
+        self._require_open()
+        record = serialize_tick_state(
+            observation,
+            decision,
+            result,
+            tenant_id=self._config.tenant_id,
+            recorded_at_ns=time.time_ns(),
+        )
+        self._append(record)
+
     def record_loop(self, result: TickLoopResult) -> None:
         self._require_open()
         if result.tenant_id != self._config.tenant_id:
@@ -172,6 +193,8 @@ class JsonlTickRecorder:
             record_type = data.get("recordType")
             if record_type == RECORD_TYPE_TICK:
                 ticks.append(parse_tick(data, expected_tenant=self._config.tenant_id))
+            elif record_type == RECORD_TYPE_TICK_STATE:
+                parse_tick_state(data, expected_tenant=self._config.tenant_id)
             elif record_type == RECORD_TYPE_LOOP:
                 parse_loop(data, expected_tenant=self._config.tenant_id)
             else:
@@ -188,6 +211,8 @@ class JsonlTickRecorder:
                 last_loop = parse_loop(data, expected_tenant=self._config.tenant_id)
             elif record_type == RECORD_TYPE_TICK:
                 parse_tick(data, expected_tenant=self._config.tenant_id)
+            elif record_type == RECORD_TYPE_TICK_STATE:
+                parse_tick_state(data, expected_tenant=self._config.tenant_id)
             else:
                 raise RecorderError(f"unknown recorder recordType {record_type!r}")
         return last_loop

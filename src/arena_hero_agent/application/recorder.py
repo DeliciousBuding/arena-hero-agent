@@ -19,6 +19,22 @@ class TickRecorder(Protocol):
 
     def record_tick(self, result: TickResult) -> None: ...
 
+    def record_tick_state(
+        self,
+        observation: object,
+        decision: object | None,
+        result: TickResult,
+    ) -> None:
+        """Persist a rich tick snapshot (state + plan + outcome).
+
+        Implementations MUST treat this as best-effort: a recorder failure
+        must never change the loop's decisions, submissions, or return values.
+        The ``observation`` and ``decision`` are typed as ``object`` here to
+        keep the port free of application-DTO imports; concrete adapters
+        receive ``TurnObservation`` and ``Decision | None``.
+        """
+        ...
+
     def record_loop(self, result: TickLoopResult) -> None: ...
 
     def read_ticks(self) -> tuple[TickResult, ...]: ...

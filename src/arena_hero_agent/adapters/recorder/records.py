@@ -26,6 +26,7 @@ from arena_hero_agent.application import (
     TickLoopResult,
     TickResult,
 )
+from arena_hero_agent.application.turns import Decision, TurnObservation
 from arena_hero_agent.domain import DecisionId, TenantId
 
 from ._common import RecorderError
@@ -34,6 +35,9 @@ RECORD_SCHEMA_VERSION: Final = 1
 
 RECORD_TYPE_TICK: Final = "tick"
 RECORD_TYPE_LOOP: Final = "loop"
+RECORD_TYPE_TICK_STATE: Final = "tick_state"
+
+_MAX_STATE_EVENTS: Final = 20
 
 
 def _required_int(data: Mapping[str, object], key: str) -> int:
@@ -154,3 +158,193 @@ def parse_loop(data: Mapping[str, object], *, expected_tenant: TenantId) -> Tick
         )
     except (TypeError, ValueError) as exc:
         raise RecorderError(f"invalid loop record: {exc}") from exc
+
+
+def _chebyshev(ax: int, ay: int, bx: int, by: int) -> int:
+    """Grid distance (max of axis deltas) matching the engine's movement model."""
+    return max(abs(ax - bx), abs(ay - by))
+
+
+def _coordinate_pair(coordinate: object | None) -> list[int] | None:
+    if coordinate is None:
+        return None
+    x = getattr(coordinate, "x", None)
+    y = getattr(coordinate, "y", None)
+    if (
+        isinstance(x, bool)
+        or not isinstance(x, int)
+        or isinstance(y, bool)
+        or not isinstance(y, int)
+    ):
+        return None
+    return [x, y]
+
+
+def _unit_counts_by_role(units: object) -> dict[str, int]:
+    counts: dict[str, int] = {"worker": 0, "vanguard": 0, "ranger": 0}
+    if isinstance(units, tuple | list):
+        for unit in units:
+            role = getattr(unit, "role", None)
+            role_value = getattr(role, "value", role)
+            if isinstance(role_value, str) and role_value in counts:
+                counts[role_value] += 1
+    return counts
+
+
+def _intent_counts_by_action(intents: object) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    if isinstance(intents, tuple | list):
+        for intent in intents:
+            action = getattr(intent, "action", None)
+            action_value = getattr(action, "value", action)
+            if isinstance(action_value, str):
+                counts[action_value] = counts.get(action_value, 0) + 1
+    return counts
+
+
+def _serialize_events(events: object) -> tuple[list[dict[str, object]], int]:
+    """Return (capped event list, total event count) for a TurnEvent tuple."""
+    if not isinstance(events, tuple | list):
+        return [], 0
+    total = len(events)
+    serialized: list[dict[str, object]] = []
+    for event in events[:_MAX_STATE_EVENTS]:
+        actor_id = getattr(event, "actor_id", None)
+        target_id = getattr(event, "target_id", None)
+        serialized.append(
+            {
+                "id": getattr(getattr(event, "id", None), "value", None),
+                "tick": getattr(event, "tick", None),
+                "kind": getattr(event, "kind", None),
+                "reason": getattr(event, "reason", None),
+                "actorId": getattr(actor_id, "value", None) if actor_id is not None else None,
+                "targetId": getattr(target_id, "value", None) if target_id is not None else None,
+                "pos": _coordinate_pair(getattr(event, "position", None)),
+            }
+        )
+    return serialized, total
+
+
+def serialize_tick_state(
+    observation: TurnObservation,
+    decision: Decision | None,
+    result: TickResult,
+    *,
+    tenant_id: TenantId,
+    recorded_at_ns: int,
+) -> dict[str, object]:
+    """Serialize one rich tick snapshot: input state + plan + outcome.
+
+    Pairs with the thin ``tick`` record on (tenantId, tick, recordedAtNs) so
+    offline analysis can join decision metadata, full world projection
+    aggregates, and the submitted plan without live probes.
+    """
+    projection = observation.projection
+    core = projection.core
+    core_pos = _coordinate_pair(getattr(core, "position", None)) if core is not None else None
+    core_record: dict[str, object] | None = None
+    if core is not None:
+        core_record = {
+            "pos": core_pos,
+            "hp": getattr(core, "health", None),
+            "shield": getattr(core, "shield", None),
+            "state": getattr(getattr(core, "state", None), "value", getattr(core, "state", None)),
+        }
+
+    units_by_role = _unit_counts_by_role(projection.units)
+    units_total = sum(units_by_role.values())
+
+    resource_positions = list(projection.resources)
+    resource_cells = len(resource_positions)
+    nearest_resource_dist: int | None = None
+    if core_pos is not None and resource_positions:
+        nearest_resource_dist = min(
+            _chebyshev(core_pos[0], core_pos[1], res.position.x, res.position.y)
+            for res in resource_positions
+        )
+
+    entity_list = list(projection.entities)
+    visible_enemies = len(entity_list)
+    nearest_enemy_dist: int | None = None
+    if core_pos is not None and entity_list:
+        nearest_enemy_dist = min(
+            _chebyshev(core_pos[0], core_pos[1], e.position.x, e.position.y) for e in entity_list
+        )
+
+    beacon_record: dict[str, object] | None = None
+    if projection.beacon is not None:
+        beacon = projection.beacon
+        beacon_record = {
+            "pos": _coordinate_pair(getattr(beacon, "position", None)),
+            "status": getattr(
+                getattr(beacon, "status", None), "value", getattr(beacon, "status", None)
+            ),
+        }
+
+    events_serialized, event_count = _serialize_events(observation.events)
+
+    plan_record: dict[str, object] | None = None
+    if decision is not None:
+        core_intent = decision.core_intent
+        core_intent_record: dict[str, object] | None = None
+        if core_intent is not None:
+            core_intent_record = {
+                "action": getattr(getattr(core_intent, "action", None), "value", None),
+                "unitRole": getattr(getattr(core_intent, "unit_role", None), "value", None),
+            }
+        plan_record = {
+            "coreIntent": core_intent_record,
+            "unitIntentsByAction": _intent_counts_by_action(decision.unit_intents),
+            "unitIntentsTotal": len(decision.unit_intents),
+        }
+
+    return {
+        "schemaVersion": RECORD_SCHEMA_VERSION,
+        "recordType": RECORD_TYPE_TICK_STATE,
+        "tenantId": tenant_id.value,
+        "recordedAtNs": recorded_at_ns,
+        "tick": result.tick,
+        "decisionId": result.decision_id.value,
+        "deadlineOutcome": result.deadline_outcome.value,
+        "submitResult": result.submit_result.value,
+        "submitError": result.submit_error,
+        "agentLatencyMs": result.agent_latency_ms,
+        "selectionLatencyMs": result.selection_latency_ms,
+        "lifecycle": observation.lifecycle.value,
+        "resources": observation.resources,
+        "population": observation.population,
+        "respawnAtTick": observation.respawn_at_tick,
+        "core": core_record,
+        "unitsByRole": units_by_role,
+        "unitsTotal": units_total,
+        "visibleEnemies": visible_enemies,
+        "nearestEnemyDist": nearest_enemy_dist,
+        "resourceCells": resource_cells,
+        "nearestResourceDist": nearest_resource_dist,
+        "terrainObstacles": len(projection.terrain),
+        "beacon": beacon_record,
+        "events": events_serialized,
+        "eventCount": event_count,
+        "plan": plan_record,
+    }
+
+
+def parse_tick_state(data: Mapping[str, object], *, expected_tenant: TenantId) -> dict[str, object]:
+    """Validate one tick_state record's common envelope; returns the raw dict.
+
+    The full state payload is large and application-owned; this check enforces
+    the stable envelope (schemaVersion, recordType, tenantId, tick, decisionId,
+    deadline/submit vocabulary) so corrupt records fail loudly without
+    re-instantiating every domain value.
+    """
+    _check_common(data, expected_tenant, RECORD_TYPE_TICK_STATE)
+    _required_int(data, "tick")
+    decision_id = data.get("decisionId")
+    if not isinstance(decision_id, str):
+        raise RecorderError(f"decisionId must be a string; actual={decision_id!r}")
+    DeadlineOutcome(_require_enum(data, "deadlineOutcome", DeadlineOutcome))
+    SubmitResult(_require_enum(data, "submitResult", SubmitResult))
+    submit_error = data.get("submitError")
+    if submit_error is not None and not isinstance(submit_error, str):
+        raise RecorderError(f"submitError must be a string or null; actual={submit_error!r}")
+    return dict(data)
