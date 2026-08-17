@@ -626,19 +626,15 @@ def assign_worker_tasks(
                 )
                 assignments.append(Assignment(unit_id=worker.id.value, task=task))
     elif pool:
-        # No candidate cells at all: the whole pool is idle; role arbitration
-        # sends the first cap (by id) out exploring and keeps the rest at home.
-        leftover_surveyors = (
-            frozenset()
-            if survey_burst_active
-            else surveyor_ids(tuple(pool), config.mission, survey_burst_active=False)
-        )
+        # No candidate cells at all: when there is nothing to harvest, every
+        # idle worker should explore outward. Waiting only deepens the economy
+        # deadlock (no resources -> no spawning -> no exploration -> no resources
+        # found). The survey_burst_active flag suppresses surveyors to avoid
+        # duplicating exploration effort when resources exist; with zero
+        # resource cells that rationale does not apply and exploring is the
+        # only productive action.
         for worker in pool:
-            task = (
-                _explore_task(worker.id.value, exploration_targets)
-                if worker.id.value in leftover_surveyors
-                else Task(type=TaskType.WAIT)
-            )
+            task = _explore_task(worker.id.value, exploration_targets)
             assignments.append(Assignment(unit_id=worker.id.value, task=task))
 
     claims_next = _update_claims(

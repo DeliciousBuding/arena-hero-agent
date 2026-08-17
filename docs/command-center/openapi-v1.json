@@ -2,7 +2,7 @@
   "info": {
     "description": "Loopback-only JSON polling API for the Arena Hero Command Center (66 API + 5 static routes). Every route is request/response poll-json; there is no SSE or WebSocket surface. Only /api/map uses a weak HTTP ETag (304 when If-None-Match matches) with cache-control public, max-age=2. The WebSocket wire contract lives in the arena-hero-ts package.",
     "title": "Arena Hero Command Center API",
-    "version": "0.1.7"
+    "version": "0.1.8"
   },
   "openapi": "3.1.0",
   "paths": {

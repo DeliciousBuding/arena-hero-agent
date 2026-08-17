@@ -1226,10 +1226,20 @@ class ComposedDecider:
             )
             observe_exploration(snapshot, self._previous_assignments, self._exploration_state)
             snapshot = with_memory_resource_cells(snapshot, self._exploration_state)
+            # During respawn in a resource-barren area, expand the exploration
+            # rings immediately (hunger mode: 8/16/24/32/40 radii + 8-ring
+            # sweep) instead of waiting HUNGER_TICKS (200) for the hunger
+            # clock to trip. This reaches further out per tick so workers
+            # find resources faster after a barren respawn.
+            respawn_barren = (
+                self._config.respawn_recovery_enabled
+                and self._respawn_state.active
+                and not snapshot.resource_cells
+            )
             exploration_targets = build_exploration_targets(
                 snapshot,
                 self._exploration_state,
-                hungry=is_hungry(self._exploration_state, snapshot.tick),
+                hungry=is_hungry(self._exploration_state, snapshot.tick) or respawn_barren,
             )
 
         result = assign_worker_tasks(
