@@ -118,9 +118,11 @@ class BarrenMigrationState:
         if elapsed < barren_threshold:
             return False
 
-        if self.migration_started_tick is not None:
-            if tick - self.migration_started_tick < cooldown:
-                return False
+        if (
+            self.migration_started_tick is not None
+            and tick - self.migration_started_tick < cooldown
+        ):
+            return False
 
         self.migration_started_tick = tick
         self.barren_since_tick = tick
