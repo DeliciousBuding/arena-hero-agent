@@ -367,3 +367,40 @@ def test_next_step_toward_straight_when_clear() -> None:
 
 def test_next_step_toward_returns_none_when_target_blocked() -> None:
     assert next_step_toward(Coordinate(0, 0), Coordinate(1, 0), frozenset({"1,0"})) is None
+
+
+def test_survey_burst_keeps_one_harvester_when_resources_wait() -> None:
+    """The survey-burst pre-reserve must not starve collection (release-030).
+
+    Regression for the live t2 stall: with ``survey_burst_active`` on and a
+    ``survey_worker_cap`` exceeding the worker count, every worker used to be
+    pre-reserved as an EXPLORE surveyor before the resource matrix ran, so a
+    visible resource right beside the Core was never assigned a harvester.
+    """
+    record = {
+        "tick": 1,
+        "resources": 0,
+        "resourceCapacity": 10,
+        "resourceSpace": 10,
+        "population": 2,
+        "units": [
+            {"id": "w1", "unitType": "WORKER", "position": [0, 0], "hp": 2, "cargo": 0},
+            {"id": "w2", "unitType": "WORKER", "position": [1, 0], "hp": 2, "cargo": 0},
+        ],
+        "resourceCells": {
+            "5,0": {"position": [5, 0], "visible": True, "lastSeenTick": 1, "seeded": False},
+        },
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "corePosition": [0, 0],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {"position": [0, 0], "status": None, "carrierId": None},
+        "threatMap": {},
+    }
+    snapshot = _snapshot(record)
+    config = WorkerTaskPlannerConfig(mission=MissionConfig(survey_worker_cap=3))
+    result = assign_worker_tasks(snapshot, (), config=config, survey_burst_active=True)
+    task_types = {assignment.task.type for assignment in result.plan.assignments}
+    assert TaskType.GO_RESOURCE in task_types
