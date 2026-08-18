@@ -832,18 +832,17 @@ class ComposedDecider:
             target = self._movement_target_for(assignment)
             if should_pause_move(backoff, tick=snapshot.tick):
                 pause_ids.add(unit_id)
-            elif (
-                backoff.fail_streak >= 2
-                and target is not None
-            ):
-                step = forced_escape_step(
-                    unit.position,
-                    target,
-                    soft_obstacles_from_trail(trail, unit.position),
-                    repath_side=trail.repath_side,
-                )
-                if step is not None:
-                    escape_steps[unit_id] = step
+            elif backoff.fail_streak >= 2:
+                escape_target = target if target is not None else core
+                if escape_target is not None:
+                    step = forced_escape_step(
+                        unit.position,
+                        escape_target,
+                        soft_obstacles_from_trail(trail, unit.position),
+                        repath_side=trail.repath_side,
+                    )
+                    if step is not None:
+                        escape_steps[unit_id] = step
             loop = detect_spatial_loop(
                 trail,
                 target=target,
