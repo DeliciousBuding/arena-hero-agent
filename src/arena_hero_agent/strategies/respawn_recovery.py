@@ -26,13 +26,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final
 
-from arena_hero_agent.domain import Coordinate, manhattan
+from arena_hero_agent.domain import Coordinate, cell_key, manhattan
 
 DEFAULT_DETECTION_DISTANCE: Final = 32
 DEFAULT_RECOVERY_WORKERS: Final = 16
 DEFAULT_BARREN_MIGRATION_TICKS: Final = 30
 DEFAULT_BARREN_MIGRATION_COOLDOWN: Final = 30
 DEFAULT_STUCK_RESOURCES_TICKS: Final = 20
+DEFAULT_BARREN_RESET_LIMIT: Final = 3
 
 
 def detect_respawn(
@@ -81,10 +82,17 @@ class BarrenMigrationState:
     density is highest. The migration is slow (4 ticks per cell) but automatic;
     workers continue exploring during migration. A cooldown prevents jitter:
     after each migration attempt, ``cooldown`` ticks must pass before the next.
+
+    Phantom-resource protection: if the agent briefly sees resource cells but
+    can't reach them (population doesn't grow), the barren counter would
+    oscillate indefinitely. After ``max_resets`` such resets, the resource
+    cells are treated as phantom and the counter stops resetting — allowing
+    migration to proceed.
     """
 
     barren_since_tick: int | None = None
     migration_started_tick: int | None = None
+    reset_count: int = 0
 
     def observe(
         self,
@@ -94,6 +102,7 @@ class BarrenMigrationState:
         core_migrating: bool,
         barren_threshold: int = DEFAULT_BARREN_MIGRATION_TICKS,
         cooldown: int = DEFAULT_BARREN_MIGRATION_COOLDOWN,
+        max_resets: int = DEFAULT_BARREN_RESET_LIMIT,
     ) -> bool:
         """Track barren condition; return True when migration should start.
 
@@ -107,9 +116,13 @@ class BarrenMigrationState:
             return False
 
         if has_resource_cells:
-            self.barren_since_tick = None
-            self.migration_started_tick = None
-            return False
+            self.reset_count += 1
+            if self.reset_count <= max_resets:
+                self.barren_since_tick = None
+                self.migration_started_tick = None
+                return False
+            # Phantom resources: briefly visible but unreachable.
+            # Don't reset barren_since_tick — let the counter continue.
 
         if self.barren_since_tick is None:
             self.barren_since_tick = tick
@@ -127,11 +140,13 @@ class BarrenMigrationState:
 
         self.migration_started_tick = tick
         self.barren_since_tick = tick
+        self.reset_count = 0
         return True
 
     def reset(self) -> None:
         self.barren_since_tick = None
         self.migration_started_tick = None
+        self.reset_count = 0
 
 
 @dataclass(slots=True)
@@ -191,21 +206,48 @@ def migration_direction_toward_origin(
     """Return the cardinal direction from ``core`` toward [0, 0], or None.
 
     Chooses the axis with the larger absolute offset (so the Core heads toward
-    the origin on its dominant axis first). Returns a plain string ("E", "W",
-    "N", "S") for the composition layer to map to its Direction enum.
+    the origin on its dominant axis first). If the adjacent cell in that
+    direction is blocked by terrain, falls back to the secondary axis. If both
+    are blocked, returns None — the terrain trap hook should handle it.
     """
 
     dx = -core.x
     dy = -core.y
     if dx == 0 and dy == 0:
         return None
+
     if abs(dx) >= abs(dy):
-        return "E" if dx > 0 else "W"
-    return "S" if dy > 0 else "N"
+        primary = "E" if dx > 0 else "W"
+        secondary = "S" if dy > 0 else "N" if dy < 0 else None
+    else:
+        primary = "S" if dy > 0 else "N"
+        secondary = "E" if dx > 0 else "W" if dx < 0 else None
+
+    for direction in (primary, secondary):
+        if direction is None:
+            continue
+        adjacent = _adjacent_coordinate(core, direction)
+        if cell_key(adjacent) not in obstacles:
+            return direction
+
+    return None
+
+
+def _adjacent_coordinate(core: Coordinate, direction: str) -> Coordinate:
+    """Return the Coordinate one step in the given cardinal direction."""
+
+    if direction == "E":
+        return Coordinate(core.x + 1, core.y)
+    if direction == "W":
+        return Coordinate(core.x - 1, core.y)
+    if direction == "S":
+        return Coordinate(core.x, core.y + 1)
+    return Coordinate(core.x, core.y - 1)
 
 
 __all__ = [
     "DEFAULT_BARREN_MIGRATION_TICKS",
+    "DEFAULT_BARREN_RESET_LIMIT",
     "DEFAULT_DETECTION_DISTANCE",
     "DEFAULT_RECOVERY_WORKERS",
     "DEFAULT_STUCK_RESOURCES_TICKS",
