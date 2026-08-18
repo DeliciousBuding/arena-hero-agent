@@ -367,20 +367,61 @@ def _worker_ordinal(snapshot: PlanningSnapshot, unit: PlanningUnit) -> int:
     return index
 
 
+def _directions_toward_target(
+    position: Coordinate,
+    target: Coordinate,
+) -> tuple[Direction, ...]:
+    """Return cardinal directions ordered toward ``target`` first, then lateral.
+
+    Mirrors the legacy TS oracle's ``orderedDirections``: axis-aligned steps
+    that reduce Manhattan distance come first, then the remaining directions.
+    Used by the obstacle-aware greedy fallback so a worker never steps into a
+    visible obstacle when the primary pathfinder returns None.
+    """
+
+    dx = target.x - position.x
+    dy = target.y - position.y
+    ordered: list[Direction] = []
+    if dx != 0:
+        ordered.append(Direction.EAST if dx > 0 else Direction.WEST)
+    if dy != 0:
+        ordered.append(Direction.SOUTH if dy > 0 else Direction.NORTH)
+    for candidate in (Direction.EAST, Direction.SOUTH, Direction.WEST, Direction.NORTH):
+        if candidate not in ordered:
+            ordered.append(candidate)
+    return tuple(ordered)
+
+
 def _route_direction(
     unit: PlanningUnit,
     target: Coordinate,
     obstacles: frozenset[str],
 ) -> Direction:
-    """Obstacle-aware first step toward ``target``, falling back to greedy.
+    """Obstacle-aware first step toward ``target``, with layered fallbacks.
 
-    Uses A* (Manhattan heuristic, 32k node budget, 128 radius) for efficient
-    long-distance routing with per-tick visible obstacles. Falls back to
-    greedy ``step_toward`` if A* can't find a path within the budget.
+    Layer 1: A* (Manhattan heuristic, 32k node budget, 128 radius) for
+    efficient long-distance routing around visible obstacles.
+
+    Layer 2 (fallback): obstacle-aware greedy step matching the legacy TS
+    oracle's tier-3 fail-safe — tries directions toward the target but never
+    steps into a cell present in ``obstacles``. This guarantees a visible
+    obstacle is never walked into when the primary pathfinder gives up.
+
+    Layer 3 (last resort): terrain-blind ``step_toward``. Only reached when
+    every adjacent cell is an obstacle (worker fully surrounded), at which
+    point the movement guard's sticky escape and barren-migration hooks take
+    over.
     """
 
     direction = astar_next_step(unit.position, target, obstacles)
-    return step_toward(unit.position, target) if direction is None else direction
+    if direction is not None:
+        return direction
+    for candidate in _directions_toward_target(unit.position, target):
+        delta_x, delta_y = candidate.delta
+        neighbor_key = f"{unit.position.x + delta_x},{unit.position.y + delta_y}"
+        if neighbor_key not in obstacles:
+            return candidate
+    return step_toward(unit.position, target)
 
 
 def _core_return_wait(
