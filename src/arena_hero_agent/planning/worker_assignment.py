@@ -491,6 +491,13 @@ def assign_worker_tasks(
     # workers (by id) become EXPLORE before the matrix so the floor guarantee
     # cannot be stolen by abundant mines.
     surveyors = surveyor_ids(tuple(pool), config.mission, survey_burst_active=survey_burst_active)
+    if survey_burst_active and surveyors and available_cells and len(surveyors) >= len(pool):
+        # The survey burst must not starve collection: when resources are
+        # waiting and the pre-reserve would claim every worker, leave one
+        # worker out so the matrix can still assign a harvester. Without this,
+        # a small population (e.g. 2 workers vs cap 3) surveys forever while
+        # an adjacent resource goes uncollected (observed live on t2).
+        surveyors = frozenset(sorted(surveyors)[: len(pool) - 1])
     if survey_burst_active and surveyors:
         remaining: list[PlanningUnit] = []
         for worker in pool:

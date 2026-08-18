@@ -1,6 +1,6 @@
 [project]
 name = "arena-hero-agent"
-version = "0.1.29"
+version = "0.1.30"
 description = "Deterministic Python agent runtime and control plane for Arena Hero"
 readme = "README.md"
 license = "Apache-2.0"
