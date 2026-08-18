@@ -822,15 +822,6 @@ class ComposedDecider:
                 and previous_position is not None
                 and previous_position == unit.position
             )
-            if blocked:
-                planned_direction = self._previous_planned_directions.get(unit_id)
-                if planned_direction is not None:
-                    delta_x, delta_y = planned_direction.delta
-                    blocked_destination = Coordinate(
-                        unit.position.x + delta_x,
-                        unit.position.y + delta_y,
-                    )
-                    self._terrain_map.record_blocked_move(blocked_destination)
             backoff = update_move_backoff(
                 self._move_backoff.get(unit_id),
                 tick=snapshot.tick,
