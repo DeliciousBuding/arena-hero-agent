@@ -34,6 +34,7 @@ DEFAULT_BARREN_MIGRATION_TICKS: Final = 30
 DEFAULT_BARREN_MIGRATION_COOLDOWN: Final = 30
 DEFAULT_STUCK_RESOURCES_TICKS: Final = 20
 DEFAULT_BARREN_RESET_LIMIT: Final = 3
+DEFAULT_BARREN_MIGRATION_FAIL_LIMIT: Final = 3
 
 
 def detect_respawn(
@@ -93,6 +94,7 @@ class BarrenMigrationState:
     barren_since_tick: int | None = None
     migration_started_tick: int | None = None
     reset_count: int = 0
+    migration_fail_count: int = 0
 
     def observe(
         self,
@@ -246,6 +248,7 @@ def _adjacent_coordinate(core: Coordinate, direction: str) -> Coordinate:
 
 
 __all__ = [
+    "DEFAULT_BARREN_MIGRATION_FAIL_LIMIT",
     "DEFAULT_BARREN_MIGRATION_TICKS",
     "DEFAULT_BARREN_RESET_LIMIT",
     "DEFAULT_DETECTION_DISTANCE",

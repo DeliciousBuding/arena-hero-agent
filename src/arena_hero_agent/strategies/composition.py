@@ -132,6 +132,7 @@ from .raid_quota import (
     select_strike_group,
 )
 from .respawn_recovery import (
+    DEFAULT_BARREN_MIGRATION_FAIL_LIMIT,
     DEFAULT_BARREN_MIGRATION_TICKS,
     DEFAULT_DETECTION_DISTANCE,
     DEFAULT_RECOVERY_WORKERS,
@@ -1035,7 +1036,17 @@ class ComposedDecider:
             return plan
         direction_label = migration_direction_toward_origin(core, snapshot.obstacle_cells)
         if direction_label is None:
+            self._barren_migration.migration_fail_count += 1
+            if self._barren_migration.migration_fail_count >= DEFAULT_BARREN_MIGRATION_FAIL_LIMIT:
+                return Plan(
+                    tick=plan.tick,
+                    unit_actions=plan.unit_actions,
+                    core_action=PlanningCoreAction(
+                        type=CoreActionType.SELF_DESTRUCT,
+                    ),
+                )
             return plan
+        self._barren_migration.migration_fail_count = 0
         direction = {
             "E": Direction.EAST,
             "W": Direction.WEST,
