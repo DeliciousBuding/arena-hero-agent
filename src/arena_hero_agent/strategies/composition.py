@@ -201,6 +201,7 @@ _CORE_ACTION_TYPES: Final[dict[CoreActionType, ApplicationCoreAction]] = {
 
 EXPANSION_SURVEY_CAP: Final = 3
 EXPANSION_EARLY_RESERVE: Final = 0
+ESCAPE_STICKY_TICKS: Final = 5
 
 
 @dataclass(frozen=True, slots=True)
@@ -661,6 +662,7 @@ class ComposedDecider:
         self._respawn_state = RespawnRecoveryState()
         self._barren_migration = BarrenMigrationState()
         self._stuck_resources = StuckWithResourcesState()
+        self._escape_sticky: dict[str, tuple[Direction, int]] = {}
         self._previous_core_position: Coordinate | None = None
 
     @property
@@ -830,7 +832,12 @@ class ComposedDecider:
             )
             assignment = self._previous_assignment_for(unit_id)
             target = self._movement_target_for(assignment)
-            if should_pause_move(backoff, tick=snapshot.tick):
+            if blocked:
+                self._escape_sticky.pop(unit_id, None)
+            sticky_entry = self._escape_sticky.get(unit_id)
+            if sticky_entry is not None and snapshot.tick < sticky_entry[1]:
+                escape_steps[unit_id] = sticky_entry[0]
+            elif should_pause_move(backoff, tick=snapshot.tick):
                 pause_ids.add(unit_id)
             elif backoff.fail_streak >= 2:
                 escape_target = target if target is not None else core
@@ -843,6 +850,10 @@ class ComposedDecider:
                     )
                     if step is not None:
                         escape_steps[unit_id] = step
+                        self._escape_sticky[unit_id] = (
+                            step,
+                            snapshot.tick + ESCAPE_STICKY_TICKS,
+                        )
             loop = detect_spatial_loop(
                 trail,
                 target=target,
