@@ -374,10 +374,9 @@ def _route_direction(
 ) -> Direction:
     """Obstacle-aware first step toward ``target``, falling back to greedy.
 
-    Uses A* (Manhattan heuristic, 4-connected, 16k node budget) for efficient
-    long-distance routing. The persistent TerrainMap feeds accumulated
-    obstacles here, so the A* routes around all previously-seen terrain.
-    Falls back to greedy ``step_toward`` if A* can't find a path.
+    Uses A* (Manhattan heuristic, 32k node budget, 128 radius) for efficient
+    long-distance routing with per-tick visible obstacles. Falls back to
+    greedy ``step_toward`` if A* can't find a path within the budget.
     """
 
     direction = astar_next_step(unit.position, target, obstacles)
@@ -1340,13 +1339,6 @@ class ComposedDecider:
 
     def decide_snapshot(self, snapshot: PlanningSnapshot) -> Plan:
         """Produce one merged plan for a planning snapshot (pure aside from state)."""
-
-        if self._previous_tick is not None and snapshot.tick < self._previous_tick:
-            self._terrain_map.reset()
-        self._previous_tick = snapshot.tick
-        accumulated_obstacles = self._terrain_map.observe(snapshot.obstacle_cells)
-        if accumulated_obstacles != snapshot.obstacle_cells:
-            snapshot = replace(snapshot, obstacle_cells=accumulated_obstacles)
 
         baseline = self._safety.decide(snapshot).plan
         blocked_cells = (
