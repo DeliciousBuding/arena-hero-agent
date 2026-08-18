@@ -432,6 +432,50 @@ def _route_direction(
     return step_toward(unit.position, target)
 
 
+_MIGRATION_WAYPOINT_RADIUS: Final = 60
+
+
+def _migration_step_toward_origin(
+    core: Coordinate,
+    obstacles: frozenset[str],
+) -> Direction | None:
+    """A*-routed first migration step toward the origin.
+
+    The legacy ``migration_direction_toward_origin`` probe only tests the two
+    toward-origin neighbors, so a migrating Core that ran into any terrain
+    obstacle received ``None`` and — after three strikes — self-destructed
+    instead of going around it (observed live: two Cores destroyed themselves
+    mid-trek). Routing through ``astar_next_step`` against a waypoint clamped
+    inside the pathfinder's search radius slides the Core around obstacles.
+    ``None`` now means the Core is genuinely enclosed, which is the only case
+    where the self-destruct fail-safe is appropriate.
+    """
+
+    if core.x == 0 and core.y == 0:
+        return None
+    waypoint_x = max(
+        core.x - _MIGRATION_WAYPOINT_RADIUS,
+        min(core.x + _MIGRATION_WAYPOINT_RADIUS, 0),
+    )
+    waypoint_y = max(
+        core.y - _MIGRATION_WAYPOINT_RADIUS,
+        min(core.y + _MIGRATION_WAYPOINT_RADIUS, 0),
+    )
+    waypoint = Coordinate(waypoint_x, waypoint_y)
+    direction = astar_next_step(core, waypoint, obstacles)
+    if direction is not None:
+        return direction
+    label = migration_direction_toward_origin(core, obstacles)
+    if label is None:
+        return None
+    return {
+        "E": Direction.EAST,
+        "W": Direction.WEST,
+        "S": Direction.SOUTH,
+        "N": Direction.NORTH,
+    }[label]
+
+
 def _core_return_wait(
     snapshot: PlanningSnapshot,
     unit: PlanningUnit,
@@ -1123,8 +1167,8 @@ class ComposedDecider:
         )
         if not should_migrate:
             return plan
-        direction_label = migration_direction_toward_origin(core, snapshot.obstacle_cells)
-        if direction_label is None:
+        direction = _migration_step_toward_origin(core, snapshot.obstacle_cells)
+        if direction is None:
             self._barren_migration.migration_fail_count += 1
             if self._barren_migration.migration_fail_count >= DEFAULT_BARREN_MIGRATION_FAIL_LIMIT:
                 return Plan(
@@ -1136,12 +1180,6 @@ class ComposedDecider:
                 )
             return plan
         self._barren_migration.migration_fail_count = 0
-        direction = {
-            "E": Direction.EAST,
-            "W": Direction.WEST,
-            "S": Direction.SOUTH,
-            "N": Direction.NORTH,
-        }[direction_label]
         return Plan(
             tick=plan.tick,
             unit_actions=plan.unit_actions,
