@@ -205,6 +205,7 @@ _CORE_ACTION_TYPES: Final[dict[CoreActionType, ApplicationCoreAction]] = {
 EXPANSION_SURVEY_CAP: Final = 3
 EXPANSION_EARLY_RESERVE: Final = 0
 ESCAPE_STICKY_TICKS: Final = 5
+DEFAULT_BARREN_RESOURCE_DISTANCE: Final = 40
 
 
 @dataclass(frozen=True, slots=True)
@@ -243,6 +244,7 @@ class ComposedDeciderConfig:
     raid_min_fighters: int = RAID_MIN_FIGHTERS
     barren_migration_enabled: bool = True
     barren_migration_ticks: int = DEFAULT_BARREN_MIGRATION_TICKS
+    barren_resource_distance: int = DEFAULT_BARREN_RESOURCE_DISTANCE
     stuck_resources_enabled: bool = True
     stuck_resources_ticks: int = DEFAULT_STUCK_RESOURCES_TICKS
 
@@ -294,6 +296,7 @@ class ComposedDeciderConfig:
             "respawn_worker_target",
             "respawn_detection_distance",
             "barren_migration_ticks",
+            "barren_resource_distance",
             "stuck_resources_ticks",
         ):
             value = getattr(self, name)
@@ -1094,8 +1097,26 @@ class ComposedDecider:
         if core is None:
             return plan
         core_migrating = snapshot.core_state == "moving"
+        # A visible/remembered resource sitting beyond ``barren_resource_distance``
+        # tiles is treated as effectively absent: workers cannot bootstrap an
+        # economy against a target that far, so the Core should migrate toward
+        # origin (higher resource density) rather than send workers on a 90+
+        # tile trek. This closes the gap where the original barren trigger
+        # (``resource_cells`` empty) never fired because a distant resource kept
+        # the set non-empty — observed live with the nearest resource 96 tiles
+        # away and workers never harvesting.
+        nearest_resource_distance: int | None = None
+        if snapshot.resource_cells and core is not None:
+            nearest_resource_distance = min(
+                manhattan(core, cell_info.position)
+                for cell_info in snapshot.resource_cells.values()
+            )
+        has_reachable_resources = bool(snapshot.resource_cells) and (
+            nearest_resource_distance is not None
+            and nearest_resource_distance <= self._config.barren_resource_distance
+        )
         should_migrate = self._barren_migration.observe(
-            has_resource_cells=bool(snapshot.resource_cells),
+            has_resource_cells=has_reachable_resources,
             tick=snapshot.tick,
             core_migrating=core_migrating,
             barren_threshold=self._config.barren_migration_ticks,
@@ -1158,7 +1179,8 @@ class ComposedDecider:
         if core_pos is None:
             return plan
         trapped_workers = [
-            unit for unit in snapshot.units
+            unit
+            for unit in snapshot.units
             if unit.position == core_pos and unit.unit_role is UnitRole.WORKER
         ]
         if not trapped_workers:
@@ -1169,7 +1191,8 @@ class ComposedDecider:
                 unit_id=trapped_id,
                 type=UnitActionType.SELF_DESTRUCT,
             )
-            if action.unit_id == trapped_id else action
+            if action.unit_id == trapped_id
+            else action
             for action in plan.unit_actions
         )
         return replace(plan, unit_actions=new_unit_actions)

@@ -102,16 +102,16 @@ def loop_trace_record(
     if summary_tick == 0 and result.outcomes:
         summary_tick = result.outcomes[-1].tick
     fields: dict[str, object] = {
-            "processRunId": process_run_id,
-            "tenantId": tenant_id.value,
-            "tick": summary_tick,
-            "runId": (run_id if run_id is not None else default_run_id(process_run_id, tenant_id)),
-            "deadlineOutcome": _LOOP_DEADLINE_OUTCOME[result.stopped_reason].value,
-            "agentLatencyMs": None,
-            "selectionLatencyMs": 0,
-            "abortRequested": False,
-            "rotationGeneration": rotation_generation,
-            "submitResult": SubmitResult.NOT_SUBMITTED.value,
+        "processRunId": process_run_id,
+        "tenantId": tenant_id.value,
+        "tick": summary_tick,
+        "runId": (run_id if run_id is not None else default_run_id(process_run_id, tenant_id)),
+        "deadlineOutcome": _LOOP_DEADLINE_OUTCOME[result.stopped_reason].value,
+        "agentLatencyMs": None,
+        "selectionLatencyMs": 0,
+        "abortRequested": False,
+        "rotationGeneration": rotation_generation,
+        "submitResult": SubmitResult.NOT_SUBMITTED.value,
     }
     if config_hash is not None:
         fields["configHash"] = config_hash

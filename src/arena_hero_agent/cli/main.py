@@ -995,6 +995,7 @@ def _decider_with_live_status(
 
     fallback = getattr(decider, "safety_fallback", None)
     if callable(fallback):
+
         def safety_fallback(observation: TurnObservation) -> Decision:
             decision = fallback(observation)
             writer.write(observation)

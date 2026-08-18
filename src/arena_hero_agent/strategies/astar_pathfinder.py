@@ -53,7 +53,7 @@ def _decode_obstacles(obstacles: frozenset[str]) -> frozenset[tuple[int, int]]:
         if comma < 0:
             continue
         try:
-            decoded.add((int(key[:comma]), int(key[comma + 1:])))
+            decoded.add((int(key[:comma]), int(key[comma + 1 :])))
         except ValueError:
             continue
     return frozenset(decoded)
