@@ -32,7 +32,7 @@ from arena_hero_agent.domain import Coordinate, Direction
 
 _DISCOURAGED_PENALTY: Final = 4
 _DEFAULT_SEARCH_RADIUS: Final = 64
-_DEFAULT_NODE_BUDGET: Final = 4096
+_DEFAULT_NODE_BUDGET: Final = 16384
 
 _ASTAR_DELTAS: Final[tuple[tuple[int, int, Direction], ...]] = (
     (1, 0, Direction.EAST),

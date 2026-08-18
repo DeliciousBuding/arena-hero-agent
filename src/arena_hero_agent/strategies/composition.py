@@ -374,9 +374,10 @@ def _route_direction(
 ) -> Direction:
     """Obstacle-aware first step toward ``target``, falling back to greedy.
 
-    Uses A* (Manhattan heuristic, 4-connected) for efficient long-distance
-    routing. Falls back to greedy ``step_toward`` if A* can't find a path
-    within the node budget.
+    Uses A* (Manhattan heuristic, 4-connected, 16k node budget) for efficient
+    long-distance routing. The persistent TerrainMap feeds accumulated
+    obstacles here, so the A* routes around all previously-seen terrain.
+    Falls back to greedy ``step_toward`` if A* can't find a path.
     """
 
     direction = astar_next_step(unit.position, target, obstacles)
