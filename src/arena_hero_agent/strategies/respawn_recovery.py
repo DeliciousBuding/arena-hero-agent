@@ -95,6 +95,7 @@ class BarrenMigrationState:
     migration_started_tick: int | None = None
     reset_count: int = 0
     migration_fail_count: int = 0
+    migration_active: bool = False
 
     def observe(
         self,
@@ -109,15 +110,21 @@ class BarrenMigrationState:
         """Track barren condition; return True when migration should start.
 
         Call once per tick before the core_action decision. Returns ``True``
-        only on the tick the migration should be triggered. After firing, the
-        cooldown prevents re-triggering until ``cooldown`` ticks have passed.
+        only on the tick a migration step should be issued. The first step
+        requires ``barren_threshold`` consecutive barren ticks to confirm the
+        area is genuinely resource-sparse. Once migration is latched
+        (``migration_active``), every subsequent step fires as soon as the
+        previous move completes — no repeated barren-threshold wait between
+        cells. This turns a multi-hundred-cell trek toward origin from
+        roughly one cell per ``barren_threshold`` ticks into one cell per
+        move cycle. The latch clears as soon as reachable resources are seen.
         """
 
         if core_migrating:
-            self.barren_since_tick = None
             return False
 
         if has_resource_cells:
+            self.migration_active = False
             self.reset_count += 1
             if self.reset_count <= max_resets:
                 self.barren_since_tick = None
@@ -125,6 +132,10 @@ class BarrenMigrationState:
                 return False
             # Phantom resources: briefly visible but unreachable.
             # Don't reset barren_since_tick — let the counter continue.
+
+        if self.migration_active:
+            self.migration_started_tick = tick
+            return True
 
         if self.barren_since_tick is None:
             self.barren_since_tick = tick
@@ -143,12 +154,14 @@ class BarrenMigrationState:
         self.migration_started_tick = tick
         self.barren_since_tick = tick
         self.reset_count = 0
+        self.migration_active = True
         return True
 
     def reset(self) -> None:
         self.barren_since_tick = None
         self.migration_started_tick = None
         self.reset_count = 0
+        self.migration_active = False
 
 
 @dataclass(slots=True)
