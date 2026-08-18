@@ -51,6 +51,7 @@ from arena_hero_agent.domain import (
     EconomyState,
     EconomyTurnInput,
     UnitRole,
+    cell_key,
     manhattan,
     parse_cell_key,
     unit_price,
@@ -396,11 +397,15 @@ def _route_direction(
     unit: PlanningUnit,
     target: Coordinate,
     obstacles: frozenset[str],
+    discouraged: frozenset[str] | None = None,
 ) -> Direction:
     """Obstacle-aware first step toward ``target``, with layered fallbacks.
 
     Layer 1: A* (Manhattan heuristic, 32k node budget, 128 radius) for
-    efficient long-distance routing around visible obstacles.
+    efficient long-distance routing around visible obstacles. When
+    ``discouraged`` is provided, those cells receive a +4 cost penalty
+    (soft avoidance) — used for the worker's recent trail to prevent
+    retracing the same path.
 
     Layer 2 (fallback): obstacle-aware greedy step matching the legacy TS
     oracle's tier-3 fail-safe — tries directions toward the target but never
@@ -413,7 +418,7 @@ def _route_direction(
     over.
     """
 
-    direction = astar_next_step(unit.position, target, obstacles)
+    direction = astar_next_step(unit.position, target, obstacles, discouraged=discouraged)
     if direction is not None:
         return direction
     for candidate in _directions_toward_target(unit.position, target):
@@ -453,6 +458,7 @@ def _task_action(
     snapshot: PlanningSnapshot,
     *,
     route_aware: bool = False,
+    trails: Mapping[str, LoopTrail] | None = None,
 ) -> PlanningUnitAction:
     """Convert one deterministic worker task into a planning unit action.
 
@@ -460,6 +466,10 @@ def _task_action(
     GO_RESOURCE and EXPLORE conversions mirror the oracle's
     ``DeterministicPlanner`` (GO_RESOURCE steps toward the cell, EXPLORE uses a
     deterministic patrol direction).
+
+    When ``trails`` is provided, the worker's recent footprint is fed to the
+    A* pathfinder as discouraged cells (+4 cost penalty), preventing the
+    worker from retracing the same path and helping it break out of loops.
     """
 
     unit = next(
@@ -468,6 +478,13 @@ def _task_action(
     )
     if unit is None:
         raise ValueError(f"worker assignment references unknown unit {assignment.unit_id!r}")
+    discouraged: frozenset[str] | None = None
+    if trails is not None:
+        trail = trails.get(assignment.unit_id)
+        if trail is not None:
+            soft_positions = soft_obstacles_from_trail(trail, unit.position)
+            if soft_positions:
+                discouraged = frozenset(cell_key(position) for position in soft_positions)
     task = assignment.task
     if task.type is TaskType.DEPOSIT:
         assert task.target is not None
@@ -478,7 +495,7 @@ def _task_action(
             if wait is not None:
                 return wait
         direction = (
-            _route_direction(unit, task.target, snapshot.obstacle_cells)
+            _route_direction(unit, task.target, snapshot.obstacle_cells, discouraged)
             if route_aware
             else step_toward(unit.position, task.target)
         )
@@ -494,7 +511,7 @@ def _task_action(
             if wait is not None:
                 return wait
         direction = (
-            _route_direction(unit, task.target, snapshot.obstacle_cells)
+            _route_direction(unit, task.target, snapshot.obstacle_cells, discouraged)
             if route_aware
             else step_toward(unit.position, task.target)
         )
@@ -504,7 +521,7 @@ def _task_action(
         if unit.position == task.target:
             return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.HARVEST)
         direction = (
-            _route_direction(unit, task.target, snapshot.obstacle_cells)
+            _route_direction(unit, task.target, snapshot.obstacle_cells, discouraged)
             if route_aware
             else step_toward(unit.position, task.target)
         )
@@ -514,7 +531,7 @@ def _task_action(
             if unit.position == task.target:
                 return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.WAIT)
             direction = (
-                _route_direction(unit, task.target, snapshot.obstacle_cells)
+                _route_direction(unit, task.target, snapshot.obstacle_cells, discouraged)
                 if route_aware
                 else step_toward(unit.position, task.target)
             )
@@ -536,16 +553,22 @@ def merge_worker_tasks(
     snapshot: PlanningSnapshot,
     *,
     route_aware: bool = False,
+    trails: Mapping[str, LoopTrail] | None = None,
 ) -> Plan:
     """Override the baseline plan's worker actions with the assignment layer.
 
     WorkerTaskPlanner is the resource-task SSOT in the oracle; forced tasks and
     matrix/explore assignments replace the baseline safety actions for workers.
+
+    When ``trails`` is provided, each worker's recent footprint is fed to the
+    A* pathfinder as discouraged cells to prevent path retracing.
     """
 
     actions = {action.unit_id.value: action for action in plan.unit_actions}
     for assignment in assignments:
-        actions[assignment.unit_id] = _task_action(assignment, snapshot, route_aware=route_aware)
+        actions[assignment.unit_id] = _task_action(
+            assignment, snapshot, route_aware=route_aware, trails=trails
+        )
     return Plan(
         tick=plan.tick,
         unit_actions=tuple(actions.values()),
@@ -1454,6 +1477,7 @@ class ComposedDecider:
             result.plan.assignments,
             snapshot,
             route_aware=self._config.exploration_v2_enabled,
+            trails=self._loop_trails,
         )
 
         if self._config.movement_guard_enabled:
