@@ -1030,35 +1030,48 @@ class ComposedDecider:
         )
 
     def _terrain_trap_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
-        """Break terrain-trap deadlock by issuing SELF_DESTRUCT.
+        """Break terrain-trap deadlock by self-destructing the trapped worker.
 
         When the Core has resources (> 0) but the population hasn't grown for
         ``stuck_resources_ticks`` consecutive ticks, the most likely cause is
         a terrain trap: the worker is stuck on the Core's cell
         (MOVE_BLOCKED_TERRAIN) and the Core can't spawn (CELL_UNIT_LIMIT).
-        SELF_DESTRUCT respawns the Core at a new terrain-passable location
-        with fresh resources, breaking the deadlock.
+        Self-destructing the trapped worker frees the Core's cell so the Core
+        can spawn a replacement — much less disruptive than self-destructing
+        the Core itself (which respawns at a random location that may be worse).
         """
 
         if not self._config.stuck_resources_enabled:
             return plan
         if snapshot.core_state != "normal":
             return plan
-        should_self_destruct = self._stuck_resources.observe(
+        should_fire = self._stuck_resources.observe(
             resources=snapshot.resources,
             population=snapshot.population,
             tick=snapshot.tick,
             threshold=self._config.stuck_resources_ticks,
         )
-        if not should_self_destruct:
+        if not should_fire:
             return plan
-        return Plan(
-            tick=plan.tick,
-            unit_actions=plan.unit_actions,
-            core_action=PlanningCoreAction(
-                type=CoreActionType.SELF_DESTRUCT,
-            ),
+        core_pos = snapshot.core_position
+        if core_pos is None:
+            return plan
+        trapped_workers = [
+            unit for unit in snapshot.units
+            if unit.position == core_pos and unit.unit_role is UnitRole.WORKER
+        ]
+        if not trapped_workers:
+            return plan
+        trapped_id = trapped_workers[0].id
+        new_unit_actions = tuple(
+            PlanningUnitAction(
+                unit_id=trapped_id,
+                type=UnitActionType.SELF_DESTRUCT,
+            )
+            if action.unit_id == trapped_id else action
+            for action in plan.unit_actions
         )
+        return replace(plan, unit_actions=new_unit_actions)
 
     def _economy_budget_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
         """Skip Core SPAWN when same-tick deposits minus heal reserve cannot pay."""
