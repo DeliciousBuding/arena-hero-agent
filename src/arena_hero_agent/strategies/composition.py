@@ -72,7 +72,6 @@ from arena_hero_agent.planning import (
     extract_planning_snapshot,
     is_hungry,
     mark_reached,
-    next_step_toward,
     observe_exploration,
     with_memory_resource_cells,
 )
@@ -83,6 +82,7 @@ from arena_hero_agent.planning import (
     UnitAction as PlanningUnitAction,
 )
 
+from .astar_pathfinder import astar_next_step
 from .economy_budget import (
     heal_reserve,
     projected_core_resources,
@@ -151,6 +151,7 @@ from .stuck_guard import (
     detect_stuck_unit_ids,
 )
 from .tactical_squads import reconcile_tactical_squads
+from .terrain_map import TerrainMap
 from .variant_registry import apply_variant_overrides
 
 # Legacy TS DENSE_DELTAS table (safety-planner.ts): 16 dense scan slots. The
@@ -373,12 +374,12 @@ def _route_direction(
 ) -> Direction:
     """Obstacle-aware first step toward ``target``, falling back to greedy.
 
-    The assignment matrix prices routes with BFS distances, so the actual move
-    must also be BFS-routed or workers repeatedly push into walls (MOVE_BLOCKED
-    death-loop) whenever a mine or the Core is behind an obstacle.
+    Uses A* (Manhattan heuristic, 4-connected) for efficient long-distance
+    routing. Falls back to greedy ``step_toward`` if A* can't find a path
+    within the node budget.
     """
 
-    direction = next_step_toward(unit.position, target, obstacles)
+    direction = astar_next_step(unit.position, target, obstacles)
     return step_toward(unit.position, target) if direction is None else direction
 
 
@@ -653,6 +654,7 @@ class ComposedDecider:
         self._deposit_progress: dict[str, DepositProgress] = {}
         self._move_backoff: dict[str, MoveBackoffState] = {}
         self._previous_move_actions: dict[str, bool] = {}
+        self._previous_planned_directions: dict[str, Direction] = {}
         self._squad_by_unit: dict[str, str] = {}
         self._stationary_cores: dict[str, StationaryCore] = {}
         self._cargo_spin_history: dict[str, tuple[Coordinate, ...]] = {}
@@ -664,6 +666,8 @@ class ComposedDecider:
         self._barren_migration = BarrenMigrationState()
         self._stuck_resources = StuckWithResourcesState()
         self._escape_sticky: dict[str, tuple[Direction, int]] = {}
+        self._terrain_map = TerrainMap()
+        self._previous_tick: int | None = None
         self._previous_core_position: Coordinate | None = None
 
     @property
@@ -818,6 +822,15 @@ class ComposedDecider:
                 and previous_position is not None
                 and previous_position == unit.position
             )
+            if blocked:
+                planned_direction = self._previous_planned_directions.get(unit_id)
+                if planned_direction is not None:
+                    delta_x, delta_y = planned_direction.delta
+                    blocked_destination = Coordinate(
+                        unit.position.x + delta_x,
+                        unit.position.y + delta_y,
+                    )
+                    self._terrain_map.record_blocked_move(blocked_destination)
             backoff = update_move_backoff(
                 self._move_backoff.get(unit_id),
                 tick=snapshot.tick,
@@ -1336,6 +1349,13 @@ class ComposedDecider:
     def decide_snapshot(self, snapshot: PlanningSnapshot) -> Plan:
         """Produce one merged plan for a planning snapshot (pure aside from state)."""
 
+        if self._previous_tick is not None and snapshot.tick < self._previous_tick:
+            self._terrain_map.reset()
+        self._previous_tick = snapshot.tick
+        accumulated_obstacles = self._terrain_map.observe(snapshot.obstacle_cells)
+        if accumulated_obstacles != snapshot.obstacle_cells:
+            snapshot = replace(snapshot, obstacle_cells=accumulated_obstacles)
+
         baseline = self._safety.decide(snapshot).plan
         blocked_cells = (
             self._stuck_blocked_cells(snapshot) if self._config.stuck_guard_enabled else frozenset()
@@ -1442,6 +1462,11 @@ class ComposedDecider:
             self._previous_move_actions = {
                 action.unit_id.value: action.type is UnitActionType.MOVE
                 for action in plan.unit_actions
+            }
+            self._previous_planned_directions = {
+                action.unit_id.value: action.direction
+                for action in plan.unit_actions
+                if action.type is UnitActionType.MOVE and action.direction is not None
             }
 
         return plan
