@@ -19,16 +19,19 @@ from typing import cast
 
 import pytest
 
+from arena_hero_agent.application.turns import PlayerLifecycle, TurnEvent, TurnObservation
 from arena_hero_agent.domain import (
     CURRENT_RULES_VERSION,
     Coordinate,
     Direction,
     EntityId,
     UnitRole,
+    WorldProjection,
 )
 from arena_hero_agent.planning import (
     BeaconInfo,
     CoreActionType,
+    MoveFailureEvent,
     Plan,
     PlanningSnapshot,
     PlanningUnit,
@@ -39,7 +42,8 @@ from arena_hero_agent.planning import (
     UnitAction as PlanningUnitAction,
 )
 from arena_hero_agent.strategies import ComposedDecider, ComposedDeciderConfig
-from arena_hero_agent.strategies.composition import _apply_raid_strike
+from arena_hero_agent.strategies.composition import _apply_raid_strike, snapshot_from_turn
+from arena_hero_agent.strategies.movement_guard import forced_escape_step
 from arena_hero_agent.strategies.raid_quota import StrikeGroup
 
 RULES = CURRENT_RULES_VERSION
@@ -91,6 +95,7 @@ def _snapshot(
     enemy_units: tuple = (),
     core_position: Coordinate | None = None,
     core_state: str = "normal",
+    move_failures: tuple[MoveFailureEvent, ...] = (),
 ) -> PlanningSnapshot:
     return PlanningSnapshot(
         tick=tick,
@@ -111,6 +116,7 @@ def _snapshot(
         core_state=None if core_position is None else core_state,
         beacon=BeaconInfo(position=Coordinate(0, 0), status=None),
         threat_map={},
+        move_failures=move_failures,
     )
 
 
@@ -703,3 +709,84 @@ def test_terrain_trap_hook_fires_only_when_replacement_affordable() -> None:
         rich_actions.append(_action(rich_plan, "w1"))
     assert UnitActionType.SELF_DESTRUCT not in poor_actions
     assert UnitActionType.SELF_DESTRUCT in rich_actions
+
+
+def test_terrain_map_learns_terrain_move_failures() -> None:
+    """A MOVE_BLOCKED_TERRAIN rejection pairs with the previous planned
+    direction to infer an obstacle the vision never reported; the next tick's
+    pathfinding must avoid it (production: t1 worker stuck 13+ ticks re-issuing
+    move north into an invisible blocked cell)."""
+    decider = ComposedDecider(_all_off())
+    # The previous tick planned EAST; the engine rejected it as terrain.
+    decider._previous_planned_directions = {"w1": Direction.EAST}
+    snapshot = _snapshot(
+        tick=2,
+        units=(_worker("w1", 0, 0),),
+        core_position=Coordinate(0, 0),
+        move_failures=(MoveFailureEvent(unit_id="w1", reason="MOVE_BLOCKED_TERRAIN"),),
+    )
+    decider.decide_snapshot(snapshot)
+    assert decider._terrain_map.known_obstacle_count == 1
+    assert "1,0" in decider._terrain_map
+
+
+def test_terrain_map_ignores_transient_move_failures() -> None:
+    """Occupancy reasons are transient (units move); only the terrain reason
+    becomes permanent obstacle knowledge."""
+    decider = ComposedDecider(_all_off())
+    decider._previous_planned_directions = {"w1": Direction.EAST}
+    snapshot = _snapshot(
+        tick=2,
+        units=(_worker("w1", 0, 0),),
+        core_position=Coordinate(0, 0),
+        move_failures=(
+            MoveFailureEvent(unit_id="w1", reason="MOVE_DESTINATION_OCCUPIED"),
+            MoveFailureEvent(unit_id="w1", reason="CELL_UNIT_LIMIT"),
+        ),
+    )
+    decider.decide_snapshot(snapshot)
+    assert decider._terrain_map.known_obstacle_count == 0
+
+
+def test_forced_escape_avoids_known_obstacles() -> None:
+    """The escape planner must not walk into a known obstacle cell (regression:
+    escape kept returning the blocked primary direction and the worker never
+    left the death loop)."""
+    step = forced_escape_step(
+        Coordinate(0, 0),
+        Coordinate(0, 5),  # target lies south
+        frozenset({Coordinate(0, 1)}),  # south is terrain-blocked
+        repath_side=0,
+    )
+    assert step is not Direction.SOUTH
+    assert step is not None
+
+
+def test_snapshot_from_turn_extracts_move_failures() -> None:
+    """Move-failure events survive the turn -> snapshot projection."""
+    observation = TurnObservation(
+        tick=2,
+        lifecycle=PlayerLifecycle.ACTIVE,
+        resources=5,
+        population=1,
+        projection=WorldProjection(tick=2, rules_version=RULES),
+        events=(
+            TurnEvent(
+                id=EntityId("ev-1"),
+                tick=1,
+                kind="UNIT_MOVE_FAILED",
+                reason="MOVE_BLOCKED_TERRAIN",
+                actor_id=EntityId("w1"),
+            ),
+            TurnEvent(
+                id=EntityId("ev-2"),
+                tick=1,
+                kind="UNIT_HARVESTED",
+                actor_id=EntityId("w1"),
+            ),
+        ),
+    )
+    snapshot = snapshot_from_turn(observation)
+    assert snapshot.move_failures == (
+        MoveFailureEvent(unit_id="w1", reason="MOVE_BLOCKED_TERRAIN"),
+    )

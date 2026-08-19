@@ -61,6 +61,7 @@ from arena_hero_agent.planning import (
     Assignment,
     CoreActionType,
     ExplorationState,
+    MoveFailureEvent,
     Plan,
     PlanningSnapshot,
     PlanningUnit,
@@ -326,7 +327,21 @@ def snapshot_from_turn(observation: TurnObservation) -> PlanningSnapshot:
             population=observation.population,
         )
     )
-    return extract_planning_snapshot(observation.projection, economy)
+    snapshot = extract_planning_snapshot(observation.projection, economy)
+    # Previous-tick resolution events carry the engine's move-failure reasons;
+    # the movement guard pairs them with the previously planned direction to
+    # infer obstacles that were outside vision (see _infer_blocked_cells).
+    move_failures = tuple(
+        MoveFailureEvent(
+            unit_id=event.actor_id.value,
+            reason=event.reason if event.reason is not None else "",
+        )
+        for event in observation.events
+        if event.actor_id is not None and event.kind == "UNIT_MOVE_FAILED"
+    )
+    if not move_failures:
+        return snapshot
+    return replace(snapshot, move_failures=move_failures)
 
 
 def _dense_to_cardinal(dense_index: int) -> Direction:
@@ -986,6 +1001,12 @@ class ComposedDecider:
         escape_steps: dict[str, Direction] = {}
         pause_ids: set[str] = set()
         core = snapshot.core_position
+        # The escape planner speaks Coordinate obstacles; the snapshot carries
+        # cell-key strings, so convert once per tick.
+        hard_obstacles = frozenset(
+            Coordinate(x, y)
+            for x, y in (parse_cell_key(key) for key in snapshot.obstacle_cells)
+        )
         for unit in snapshot.units:
             if unit.unit_role is not UnitRole.WORKER:
                 continue
@@ -1032,7 +1053,7 @@ class ComposedDecider:
                     step = forced_escape_step(
                         unit.position,
                         escape_target,
-                        soft_obstacles_from_trail(trail, unit.position),
+                        soft_obstacles_from_trail(trail, unit.position) | hard_obstacles,
                         repath_side=trail.repath_side,
                     )
                     if step is not None:
@@ -1055,7 +1076,7 @@ class ComposedDecider:
                 step = forced_escape_step(
                     unit.position,
                     target,
-                    soft_obstacles_from_trail(trail, unit.position),
+                    soft_obstacles_from_trail(trail, unit.position) | hard_obstacles,
                     repath_side=trail.repath_side,
                 )
                 if step is not None:
@@ -1076,7 +1097,7 @@ class ComposedDecider:
                     step = forced_escape_step(
                         unit.position,
                         core,
-                        soft_obstacles_from_trail(trail, unit.position),
+                        soft_obstacles_from_trail(trail, unit.position) | hard_obstacles,
                         repath_side=trail.repath_side,
                     )
                     if step is not None:
@@ -1579,8 +1600,53 @@ class ComposedDecider:
         self._raid_state = state
         return plan
 
+    def _infer_blocked_cells(self, snapshot: PlanningSnapshot) -> frozenset[str]:
+        """Infer permanent obstacles from the previous tick's move failures.
+
+        When a worker planned a MOVE and the engine rejected it with
+        ``MOVE_BLOCKED_TERRAIN``, the destination cell is terrain that was
+        outside vision (or behind a route the pathfinder trusted). Pairing
+        the failure with the previously planned direction yields the blocked
+        cell; only the terrain reason is learned — unit-occupancy reasons
+        (``MOVE_DESTINATION_OCCUPIED`` / ``CELL_UNIT_LIMIT``) are transient
+        and must not become permanent terrain knowledge.
+        """
+
+        if not snapshot.move_failures:
+            return frozenset()
+        terrain_blocked_units = {
+            failure.unit_id
+            for failure in snapshot.move_failures
+            if failure.reason == "MOVE_BLOCKED_TERRAIN"
+        }
+        if not terrain_blocked_units:
+            return frozenset()
+        inferred: set[str] = set()
+        for unit in snapshot.units:
+            if unit.unit_role is not UnitRole.WORKER:
+                continue
+            unit_id = unit.id.value
+            if unit_id not in terrain_blocked_units:
+                continue
+            direction = self._previous_planned_directions.get(unit_id)
+            if direction is None:
+                continue
+            inferred.add(unit.position.step(direction).cell_key)
+        return frozenset(inferred)
+
     def decide_snapshot(self, snapshot: PlanningSnapshot) -> Plan:
         """Produce one merged plan for a planning snapshot (pure aside from state)."""
+
+        # Obstacles are permanent terrain: accumulate them across ticks so
+        # pathfinding never re-routes through a cell it has already seen
+        # blocked, and learn the previous tick's MOVE_BLOCKED_TERRAIN
+        # destinations (invisible obstacles the engine just rejected).
+        inferred_blocked = self._infer_blocked_cells(snapshot)
+        for key in sorted(inferred_blocked):
+            self._terrain_map.record_blocked_move(parse_cell_key(key))
+        accumulated_obstacles = self._terrain_map.observe(snapshot.obstacle_cells)
+        if accumulated_obstacles != snapshot.obstacle_cells:
+            snapshot = replace(snapshot, obstacle_cells=accumulated_obstacles)
 
         baseline = self._safety.decide(snapshot).plan
         blocked_cells = (

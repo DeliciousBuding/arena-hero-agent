@@ -55,6 +55,27 @@ class EnemyUnit:
 
 
 @dataclass(frozen=True, slots=True)
+class MoveFailureEvent:
+    """One unit move-resolution failure from the previous tick.
+
+    Only the unit id and engine reason string are kept; the blocked cell is
+    derived by pairing the failure with the previous planned direction, so no
+    position needs to be stored here.
+    """
+
+    __canonical_name__ = "arena-hero.planning-move-failure.v1"
+
+    unit_id: str
+    reason: str
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.unit_id, str) or not self.unit_id:
+            raise TypeError("move failure unit_id must be a non-empty string")
+        if not isinstance(self.reason, str) or not self.reason:
+            raise TypeError("move failure reason must be a non-empty string")
+
+
+@dataclass(frozen=True, slots=True)
 class PlanningUnit:
     """One controlled unit downsample for planning."""
 
@@ -142,6 +163,7 @@ class PlanningSnapshot:
     core_state: str | None
     beacon: BeaconInfo
     threat_map: Mapping[str, float]
+    move_failures: tuple[MoveFailureEvent, ...] = ()
 
     def __post_init__(self) -> None:
         _safe_int("snapshot tick", self.tick, minimum=1)
@@ -183,6 +205,10 @@ class PlanningSnapshot:
             raise TypeError("snapshot beacon must be a BeaconInfo")
         if not isinstance(self.threat_map, Mapping):
             raise TypeError("snapshot threat_map must be a Mapping")
+        if not isinstance(self.move_failures, tuple) or any(
+            not isinstance(failure, MoveFailureEvent) for failure in self.move_failures
+        ):
+            raise TypeError("snapshot move_failures must be a tuple of MoveFailureEvent")
 
     @property
     def core_present(self) -> bool:
