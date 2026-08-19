@@ -24,6 +24,7 @@ class TickRecorder(Protocol):
         observation: object,
         decision: object | None,
         result: TickResult,
+        decider_state: object | None = None,
     ) -> None:
         """Persist a rich tick snapshot (state + plan + outcome).
 
@@ -31,7 +32,9 @@ class TickRecorder(Protocol):
         must never change the loop's decisions, submissions, or return values.
         The ``observation`` and ``decision`` are typed as ``object`` here to
         keep the port free of application-DTO imports; concrete adapters
-        receive ``TurnObservation`` and ``Decision | None``.
+        receive ``TurnObservation`` and ``Decision | None``. ``decider_state``
+        is the optional read-only decider-state digest (e.g. ComposedDecider
+        ``state_summary``) that explains why hooks fired or stayed silent.
         """
         ...
 

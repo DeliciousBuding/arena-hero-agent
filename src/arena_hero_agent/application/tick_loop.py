@@ -301,17 +301,21 @@ async def _notify_on_tick(
 
 
 async def _notify_on_tick_observed(
-    on_tick_observed: Callable[[TurnObservation, Decision | None, TickResult], Awaitable[None]]
+    on_tick_observed: Callable[
+        [TurnObservation, Decision | None, TickResult, dict[str, object] | None],
+        Awaitable[None],
+    ]
     | None,
     observation: TurnObservation,
     decision: Decision | None,
     result: TickResult,
+    decider_state: dict[str, object] | None,
 ) -> None:
     """Best-effort rich-observer hook mirroring :func:`_notify_on_tick`."""
     if on_tick_observed is None:
         return
     with contextlib.suppress(Exception):
-        await on_tick_observed(observation, decision, result)
+        await on_tick_observed(observation, decision, result, decider_state)
 
 
 class SingleTenantTickLoop:
@@ -327,7 +331,10 @@ class SingleTenantTickLoop:
         submit: Submitter,
         *,
         on_tick: Callable[[TickResult], Awaitable[None]] | None = None,
-        on_tick_observed: Callable[[TurnObservation, Decision | None, TickResult], Awaitable[None]]
+        on_tick_observed: Callable[
+            [TurnObservation, Decision | None, TickResult, dict[str, object] | None],
+            Awaitable[None],
+        ]
         | None = None,
     ) -> TickLoopResult:
         """Consume the source until it ends, a deadline fires, or a stop policy applies.
@@ -336,9 +343,11 @@ class SingleTenantTickLoop:
         exactly once before the exception leaves this method. When provided,
         ``on_tick`` is awaited after each finalized outcome; observer failures
         never affect loop results. ``on_tick_observed`` extends the hook with
-        the full ``TurnObservation`` and the decided ``Decision`` (or ``None``
-        for deadline-exhausted ticks where no decision was made), so a rich
-        recorder can persist state + plan alongside the thin outcome.
+        the full ``TurnObservation``, the decided ``Decision`` (or ``None``
+        for deadline-exhausted ticks where no decision was made), and an
+        optional read-only decider-state digest (via a ``state_summary``
+        callable on the decider, when present) so a rich recorder can persist
+        state + plan + hook state alongside the thin outcome.
         """
         config = self._config
         last_tick = 0
@@ -424,7 +433,9 @@ class SingleTenantTickLoop:
                     )
                     outcomes.append(result)
                     await _notify_on_tick(on_tick, result)
-                    await _notify_on_tick_observed(on_tick_observed, observation, None, result)
+                    await _notify_on_tick_observed(
+                        on_tick_observed, observation, None, result, None
+                    )
                     break
 
                 started = config.clock.monotonic_ns()
@@ -432,6 +443,10 @@ class SingleTenantTickLoop:
                 elapsed_nanoseconds = config.clock.monotonic_ns() - started
                 elapsed_milliseconds = elapsed_nanoseconds / 1_000_000
                 remaining = budget.consume(elapsed_nanoseconds)
+                summary_getter = getattr(decide, "state_summary", None)
+                decider_state: dict[str, object] | None = (
+                    summary_getter() if callable(summary_getter) else None
+                )
                 if remaining.exhausted:
                     fallback_factory = getattr(decide, "safety_fallback", None)
                     if callable(fallback_factory):
@@ -453,7 +468,11 @@ class SingleTenantTickLoop:
                         outcomes.append(fallback_result)
                         await _notify_on_tick(on_tick, fallback_result)
                         await _notify_on_tick_observed(
-                            on_tick_observed, observation, fallback_decision, fallback_result
+                            on_tick_observed,
+                            observation,
+                            fallback_decision,
+                            fallback_result,
+                            None,
                         )
                         last_tick = tick
                         ticks_processed += 1
@@ -474,7 +493,9 @@ class SingleTenantTickLoop:
                         )
                         outcomes.append(result)
                         await _notify_on_tick(on_tick, result)
-                        await _notify_on_tick_observed(on_tick_observed, observation, None, result)
+                        await _notify_on_tick_observed(
+                            on_tick_observed, observation, None, result, None
+                        )
                     if not config.continue_on_selection_timeout:
                         stopped_reason = StoppedReason.SELECTION_TIMEOUT
                         break
@@ -515,7 +536,9 @@ class SingleTenantTickLoop:
                 )
                 outcomes.append(result)
                 await _notify_on_tick(on_tick, result)
-                await _notify_on_tick_observed(on_tick_observed, observation, decision, result)
+                await _notify_on_tick_observed(
+                    on_tick_observed, observation, decision, result, decider_state
+                )
                 last_tick = tick
                 ticks_processed += 1
                 if (

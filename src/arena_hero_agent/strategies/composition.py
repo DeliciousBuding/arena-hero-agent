@@ -835,6 +835,49 @@ class ComposedDecider:
         snapshot = snapshot_from_turn(observation)
         return plan_to_decision(self._safety.decide(snapshot).plan)
 
+    def state_summary(self) -> dict[str, object]:
+        """Export a compact decider-state digest for offline stall diagnosis.
+
+        Read-only: persisting this never affects decisions. It answers the
+        "why did the Core wait / why is migration not firing" questions
+        directly from the hooks' own state machines instead of reverse-
+        engineering them from positions and events.
+        """
+        barren = self._barren_migration
+        stuck = self._stuck_resources
+        raid = self._raid_state
+        return {
+            "barrenMigration": {
+                "active": barren.migration_active,
+                "barrenSinceTick": barren.barren_since_tick,
+                "migrationStartedTick": barren.migration_started_tick,
+                "resetCount": barren.reset_count,
+                "failCount": barren.migration_fail_count,
+            },
+            "noWorkerDeadlockTicks": self._no_worker_deadlock_ticks,
+            "stuckResources": {
+                "lastPopulation": stuck.last_population,
+                "stuckSinceTick": stuck.stuck_since_tick,
+            },
+            "respawnRecovery": {
+                "active": self._respawn_state.active,
+                "detectedTick": self._respawn_state.detected_tick,
+            },
+            "raid": {
+                "enabled": raid.enabled,
+                "recall": raid.recall,
+                "corePosition": (
+                    None
+                    if raid.core_position is None
+                    else [raid.core_position.x, raid.core_position.y]
+                ),
+                "vanguards": len(raid.vanguard_ids),
+                "rangers": len(raid.ranger_ids),
+            },
+            "loopTrails": len(self._loop_trails),
+            "moveBackoff": len(self._move_backoff),
+        }
+
     @property
     def raid_state(self) -> RaidState:
         return self._raid_state

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 import time
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from pathlib import Path
 from typing import BinaryIO
 
@@ -144,6 +144,7 @@ class JsonlTickRecorder:
         observation: TurnObservation,
         decision: Decision | None,
         result: TickResult,
+        decider_state: Mapping[str, object] | None = None,
     ) -> None:
         """Persist the rich tick_state snapshot alongside the thin tick record."""
         self._require_open()
@@ -153,6 +154,7 @@ class JsonlTickRecorder:
             result,
             tenant_id=self._config.tenant_id,
             recorded_at_ns=time.time_ns(),
+            decider_state=decider_state,
         )
         self._append(record)
 

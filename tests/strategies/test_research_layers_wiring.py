@@ -607,7 +607,24 @@ def test_barren_migration_routes_around_blocking_worker() -> None:
     assert plan.core_action.direction is not Direction.WEST
 
 
-def test_no_worker_deadlock_escapes_via_self_destruct() -> None:
+def test_decider_state_summary_exposes_hook_state() -> None:
+    """The read-only state digest is what tick_state telemetry persists."""
+    decider = ComposedDecider(ComposedDeciderConfig())
+    summary = decider.state_summary()
+    assert set(summary) >= {
+        "barrenMigration",
+        "noWorkerDeadlockTicks",
+        "stuckResources",
+        "respawnRecovery",
+        "raid",
+        "loopTrails",
+        "moveBackoff",
+    }
+    assert summary["barrenMigration"]["active"] is False
+    assert summary["noWorkerDeadlockTicks"] == 0
+    # The digest is read-only: calling it must not mutate decision state.
+    again = decider.state_summary()
+    assert again == summary
     """Regression for the pop=0 + under-priced-worker deadlock.
 
     With no workers alive and stock below the worker price, income can never

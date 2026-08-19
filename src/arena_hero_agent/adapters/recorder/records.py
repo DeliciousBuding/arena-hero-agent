@@ -225,6 +225,35 @@ def _intent_counts_by_action(intents: object) -> dict[str, int]:
     return counts
 
 
+def _unit_intent_details(intents: object) -> list[dict[str, object]]:
+    """Per-unit intent detail: unitId/action/direction/targetId/expectedCell.
+
+    The aggregated action counts hide which unit wanted which move. The
+    individual direction + expected cell make a failed move diagnosable (pair
+    with the next tick's UNIT_MOVE_FAILED position) and expose per-worker
+    stalls directly, e.g. a worker repeatedly MOVEing into the same obstacle.
+    """
+    details: list[dict[str, object]] = []
+    if isinstance(intents, tuple | list):
+        for intent in intents:
+            unit_id = getattr(intent, "unit_id", None)
+            direction = getattr(intent, "direction", None)
+            target_id = getattr(intent, "target_id", None)
+            expected_cell = getattr(intent, "expected_cell", None)
+            details.append(
+                {
+                    "unitId": getattr(unit_id, "value", None),
+                    "action": getattr(getattr(intent, "action", None), "value", None),
+                    "direction": getattr(direction, "value", direction),
+                    "targetId": (
+                        getattr(target_id, "value", None) if target_id is not None else None
+                    ),
+                    "expectedCell": _coordinate_pair(expected_cell),
+                }
+            )
+    return details
+
+
 def _serialize_events(events: object) -> tuple[list[dict[str, object]], int]:
     """Return (capped event list, total event count) for a TurnEvent tuple."""
     if not isinstance(events, tuple | list):
@@ -255,12 +284,15 @@ def serialize_tick_state(
     *,
     tenant_id: TenantId,
     recorded_at_ns: int,
+    decider_state: Mapping[str, object] | None = None,
 ) -> dict[str, object]:
     """Serialize one rich tick snapshot: input state + plan + outcome.
 
     Pairs with the thin ``tick`` record on (tenantId, tick, recordedAtNs) so
     offline analysis can join decision metadata, full world projection
-    aggregates, and the submitted plan without live probes.
+    aggregates, and the submitted plan without live probes. ``decider_state``
+    (the ComposedDecider ``state_summary`` digest) records why hooks did or
+    did not fire; it is read-only and never affects decisions.
     """
     projection = observation.projection
     core = projection.core
@@ -311,13 +343,16 @@ def serialize_tick_state(
         core_intent = decision.core_intent
         core_intent_record: dict[str, object] | None = None
         if core_intent is not None:
+            direction = getattr(core_intent, "direction", None)
             core_intent_record = {
                 "action": getattr(getattr(core_intent, "action", None), "value", None),
                 "unitRole": getattr(getattr(core_intent, "unit_role", None), "value", None),
+                "direction": getattr(direction, "value", direction),
             }
         plan_record = {
             "coreIntent": core_intent_record,
             "unitIntentsByAction": _intent_counts_by_action(decision.unit_intents),
+            "unitIntents": _unit_intent_details(decision.unit_intents),
             "unitIntentsTotal": len(decision.unit_intents),
         }
 
@@ -350,6 +385,7 @@ def serialize_tick_state(
         "events": events_serialized,
         "eventCount": event_count,
         "plan": plan_record,
+        "deciderState": None if decider_state is None else dict(decider_state),
     }
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from typing import BinaryIO
 
@@ -225,6 +226,7 @@ class SqliteTickRecorder:
         observation: TurnObservation,
         decision: Decision | None,
         result: TickResult,
+        decider_state: Mapping[str, object] | None = None,
     ) -> None:
         """Persist the rich tick_state snapshot as a JSON blob.
 
@@ -240,6 +242,7 @@ class SqliteTickRecorder:
             result,
             tenant_id=self._config.tenant_id,
             recorded_at_ns=time.time_ns(),
+            decider_state=decider_state,
         )
         try:
             with connection:
