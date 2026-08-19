@@ -113,6 +113,13 @@ class ExplorationState:
     cell_positions: dict[str, Coordinate] = field(default_factory=dict)
     cell_last_seen: dict[str, int] = field(default_factory=dict)
     prev_cargo: dict[str, int] = field(default_factory=dict)
+    # Cells harvested this tick are scheduled for memory re-admission at the
+    # chunk's next refill boundary (official replenishment runs every 4
+    # resolved ticks). Without this, a harvested cell is erased from memory
+    # forever and the matrix loses the near-Core mines while stale far-memory
+    # cells stay — the observed driver of long-haul worker preference.
+    # Maps cell key -> (position, ready_at_tick).
+    harvested_cells: dict[str, tuple[Coordinate, int]] = field(default_factory=dict)
     known_obstacles: set[str] = field(default_factory=set)
 
     def reset_location_state(self) -> None:
@@ -136,6 +143,7 @@ class ExplorationState:
         self.cell_positions.clear()
         self.cell_last_seen.clear()
         self.prev_cargo.clear()
+        self.harvested_cells.clear()
 
 
 def explorer_slot(unit_id: str) -> int:
@@ -261,10 +269,27 @@ def observe_exploration(
         state.chunk_anchor[chunk] = cell
         state.hungry_since = snapshot.tick
 
+    # Promote harvested cells whose refill boundary has passed back into the
+    # resource-cell memory. Official replenishment runs every 4 resolved ticks
+    # (``REFILL_RECHECK_TICKS``), so a harvested mine becomes collectable
+    # again shortly after; without re-admission the near-Core cells vanish
+    # from the assignment matrix while stale far-memory cells remain, biasing
+    # workers toward long hauls.
+    due_keys = [
+        key
+        for key, (_, ready_tick) in state.harvested_cells.items()
+        if ready_tick <= snapshot.tick
+    ]
+    for key in due_keys:
+        position, _ = state.harvested_cells.pop(key)
+        state.cell_positions[key] = position
+        state.cell_last_seen[key] = snapshot.tick
+
     # Cargo 0 -> >0 means this worker just harvested the natural resource it is
     # standing on (GO_RESOURCE that converted to HARVEST is not visible as a
-    # HARVEST_CURRENT assignment, so infer it from cargo instead). Remove the
-    # cell from memory and schedule the chunk refill recheck.
+    # HARVEST_CURRENT assignment, so infer it from cargo instead). Move the
+    # cell out of the live memory and schedule its re-admission at the chunk's
+    # next refill boundary instead of forgetting it permanently.
     for unit in snapshot.units:
         if unit.unit_role is not UnitRole.WORKER:
             continue
@@ -275,7 +300,9 @@ def observe_exploration(
             state.cell_last_seen.pop(unit.position.cell_key, None)
             chunk = chunk_of(unit.position)
             state.chunk_last_harvest_tick[chunk] = snapshot.tick
-            state.chunk_next_refill_tick[chunk] = refill_tick_at_or_after(snapshot.tick)
+            refill_tick = refill_tick_at_or_after(snapshot.tick)
+            state.chunk_next_refill_tick[chunk] = refill_tick
+            state.harvested_cells[unit.position.cell_key] = (unit.position, refill_tick)
             state.chunk_harvest_count[chunk] = state.chunk_harvest_count.get(chunk, 0) + 1
             state.chunk_anchor[chunk] = unit.position
             state.hungry_since = snapshot.tick

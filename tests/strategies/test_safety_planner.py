@@ -34,6 +34,7 @@ def _snapshot(
     resource_capacity: int = 10,
     core_state: str | None = None,
     core_position: Coordinate | None = None,
+    core_health: int | None = None,
     core_shield: int | None = None,
     obstacle_cells: frozenset[str] = frozenset(),
 ) -> PlanningSnapshot:
@@ -51,7 +52,7 @@ def _snapshot(
         enemy_units=(),
         core_id=None if core_position is None else "core",
         core_position=core_position,
-        core_health=None if core_position is None else 5,
+        core_health=None if core_position is None else (core_health or 5),
         core_shield=core_shield,
         core_state=core_state,
         beacon=BeaconInfo(position=Coordinate(0, 0), status=None),
@@ -185,6 +186,57 @@ def test_core_does_not_spawn_when_unaffordable() -> None:
     )
     decision = planner.decide(snapshot)
     assert decision.plan.core_action is None
+
+
+def test_core_heals_when_critically_damaged() -> None:
+    planner = SafetyPlanner()
+    snapshot = _snapshot(
+        units=(_worker(1, 0),),
+        resources=9,
+        resource_capacity=100,
+        population=1,
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        core_health=2,
+        core_shield=5,
+    )
+    decision = planner.decide(snapshot)
+    assert decision.plan.core_action is not None
+    assert decision.plan.core_action.type is CoreActionType.HEAL
+
+
+def test_core_skips_heal_when_reserve_too_low() -> None:
+    planner = SafetyPlanner()
+    snapshot = _snapshot(
+        units=(_worker(1, 0),),
+        resources=6,
+        resource_capacity=100,
+        population=1,
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        core_health=1,
+        core_shield=5,
+    )
+    decision = planner.decide(snapshot)
+    # 6 < CRITICAL_HEAL_MIN_RESOURCES (7): heal must not drain the economy.
+    assert decision.plan.core_action is None or decision.plan.core_action.type is not CoreActionType.HEAL
+
+
+def test_core_repairs_shield_when_idle_and_full_hp() -> None:
+    planner = SafetyPlanner(config=SafetyPlannerConfig(worker_target=1))
+    snapshot = _snapshot(
+        units=(_worker(1, 0),),
+        resources=6,
+        resource_capacity=100,
+        population=1,
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        core_health=5,
+        core_shield=3,
+    )
+    decision = planner.decide(snapshot)
+    assert decision.plan.core_action is not None
+    assert decision.plan.core_action.type is CoreActionType.REPAIR_SHIELD
 
 
 def test_planner_rejects_invalid_config_and_inputs() -> None:

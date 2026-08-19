@@ -106,6 +106,7 @@ class BarrenMigrationState:
         barren_threshold: int = DEFAULT_BARREN_MIGRATION_TICKS,
         cooldown: int = DEFAULT_BARREN_MIGRATION_COOLDOWN,
         max_resets: int = DEFAULT_BARREN_RESET_LIMIT,
+        economic_activity: bool = False,
     ) -> bool:
         """Track barren condition; return True when migration should start.
 
@@ -118,9 +119,26 @@ class BarrenMigrationState:
         cells. This turns a multi-hundred-cell trek toward origin from
         roughly one cell per ``barren_threshold`` ticks into one cell per
         move cycle. The latch clears as soon as reachable resources are seen.
+
+        ``economic_activity`` is hard evidence the current region still
+        yields: a deposit (resources grew) or a successful spawn (population
+        grew) since the previous tick. Uniformly sparse rings have only two
+        resources per 32x32 chunk, so ``resource_cells`` is empty most ticks
+        even though the region is harvestable; a visible-cell-only trigger
+        misclassified such regions as barren and migrated the Core away from
+        them (production: t4 lost 111 deposits in 400 ticks to CORE_MOVING
+        while the Core constantly migrated). Economic activity therefore
+        resets the state fully — the region is productive, stay put.
         """
 
         if core_migrating:
+            return False
+
+        if economic_activity:
+            self.migration_active = False
+            self.reset_count = 0
+            self.barren_since_tick = None
+            self.migration_started_tick = None
             return False
 
         if has_resource_cells:

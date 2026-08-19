@@ -82,7 +82,12 @@ class SafetyPlannerConfig:
     reserve_wealthy: int = 3
     reserve_early: int = 1
     wealthy_threshold: int = 10
-    worker_target: int = 8
+    # Economy scaling: evolve's champion gene keeps workers at ~55% of a
+    # 30-pop fleet (~16) and massarmy's farmer stage runs 12 workers; the
+    # previous 8-starved small fleets (production tenants sat at pop 1-2 with
+    # worker_target 8, so every harvested resource went to military builds the
+    # economy could not sustain).
+    worker_target: int = 12
     population_ceiling: int = 20
     explore_radius: int = 8
     threat_enemy_distance: int = 5

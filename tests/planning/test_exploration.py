@@ -326,3 +326,33 @@ def test_observe_exploration_removes_harvested_cell_from_memory() -> None:
     assert state.chunk_harvest_count[chunk_of(resource)] == 1
     assert state.chunk_next_refill_tick[chunk_of(resource)] == 8
     assert state.prev_cargo["w1"] == 1
+
+
+def test_harvested_cell_readmitted_after_refill_boundary() -> None:
+    state = ExplorationState()
+    resource = Coordinate(10, 0)
+    state.cell_positions[resource.cell_key] = resource
+    state.cell_last_seen[resource.cell_key] = 4
+    state.prev_cargo["w1"] = 0
+    # Harvest at tick 5: refill boundary is tick 8.
+    unit = _worker("w1", 10, 0, cargo=1)
+    observe_exploration(_snapshot(tick=5, units=(unit,)), (), state)
+    assert resource.cell_key not in state.cell_positions
+    assert state.harvested_cells[resource.cell_key] == (resource, 8)
+    # Before the boundary the cell stays out of memory.
+    observe_exploration(_snapshot(tick=6, units=(unit,)), (), state)
+    assert resource.cell_key not in state.cell_positions
+    # At the boundary the cell re-enters memory as a historical candidate.
+    observe_exploration(_snapshot(tick=8, units=(unit,)), (), state)
+    assert state.cell_positions[resource.cell_key] == resource
+    assert state.cell_last_seen[resource.cell_key] == 8
+    assert resource.cell_key not in state.harvested_cells
+
+
+def test_reset_location_state_clears_harvested_cells() -> None:
+    state = ExplorationState()
+    state.harvested_cells["10,0"] = 8
+    state.cell_positions["30,0"] = Coordinate(30, 0)
+    state.reset_location_state()
+    assert state.harvested_cells == {}
+    assert state.cell_positions == {}

@@ -8,11 +8,93 @@ from arena_hero_agent.domain import CURRENT_RULES_VERSION, Coordinate, UnitRole
 from arena_hero_agent.planning import Plan, PlanningSnapshot
 from arena_hero_agent.strategies import ComposedDecider, ComposedDeciderConfig
 from arena_hero_agent.strategies.respawn_recovery import (
+    BarrenMigrationState,
     RespawnRecoveryState,
     detect_respawn,
 )
 
 RULES = CURRENT_RULES_VERSION
+
+
+def test_barren_migration_requires_consecutive_ticks() -> None:
+    state = BarrenMigrationState()
+    assert state.observe(has_resource_cells=False, tick=1, core_migrating=False) is False
+    assert (
+        state.observe(
+            has_resource_cells=False,
+            tick=1 + 29,
+            core_migrating=False,
+        )
+        is False
+    )
+    assert state.observe(has_resource_cells=False, tick=31, core_migrating=False) is True
+
+
+def test_barren_migration_economic_activity_resets_latch() -> None:
+    state = BarrenMigrationState()
+    # First barren tick only records the start; the threshold elapses later.
+    assert (
+        state.observe(
+            has_resource_cells=False,
+            tick=40,
+            core_migrating=False,
+            barren_threshold=10,
+        )
+        is False
+    )
+    # Migration latches once the barren threshold has passed.
+    assert (
+        state.observe(
+            has_resource_cells=False,
+            tick=50,
+            core_migrating=False,
+            barren_threshold=10,
+        )
+        is True
+    )
+    assert state.migration_active is True
+    # A deposit or spawn proves the region yields: cancel the migration latch.
+    assert (
+        state.observe(
+            has_resource_cells=False,
+            tick=51,
+            core_migrating=False,
+            barren_threshold=10,
+            economic_activity=True,
+        )
+        is False
+    )
+    assert state.migration_active is False
+    assert state.barren_since_tick is None
+    # The counter restarts from scratch.
+    assert state.observe(has_resource_cells=False, tick=52, core_migrating=False) is False
+    assert state.barren_since_tick == 52
+
+
+def test_barren_migration_activity_resets_phantom_reset_count() -> None:
+    state = BarrenMigrationState()
+    # Two phantom resets (visible cells that never yield) would normally arm
+    # the phantom protection at max_resets=3.
+    for tick in (10, 20):
+        assert (
+            state.observe(
+                has_resource_cells=True,
+                tick=tick,
+                core_migrating=False,
+                barren_threshold=5,
+                max_resets=3,
+            )
+            is False
+        )
+    assert state.reset_count == 2
+    # Hard economic evidence fully resets the phantom counter too.
+    state.observe(
+        has_resource_cells=False,
+        tick=21,
+        core_migrating=False,
+        economic_activity=True,
+    )
+    assert state.reset_count == 0
 
 
 def test_detect_respawn_requires_previous_observation() -> None:
@@ -116,25 +198,26 @@ def test_recovery_forces_worker_after_teleport() -> None:
             respawn_detection_distance=32,
         )
     )
-    # Establish the pre-respawn position: 8 workers -> baseline chooses military.
+    # Establish the pre-respawn position: at the worker target (12) the
+    # baseline chooses military.
     pre = _snapshot(
         tick=1,
         core_position=Coordinate(0, 0),
-        workers=8,
+        workers=12,
         resources=100,
-        population=8,
+        population=12,
     )
     pre_plan = decider.decide_snapshot(pre)
     assert _core_role(pre_plan) in (UnitRole.VANGUARD, UnitRole.RANGER)
 
-    # Teleport the Core far away with 10 workers: recovery must force WORKER,
-    # even though the baseline would still choose military at 10 workers.
+    # Teleport the Core far away with 14 workers: recovery must force WORKER,
+    # even though the baseline would still choose military past the target.
     post = _snapshot(
         tick=2,
         core_position=Coordinate(100, 100),
-        workers=10,
+        workers=14,
         resources=100,
-        population=10,
+        population=14,
     )
     post_plan = decider.decide_snapshot(post)
     assert _core_role(post_plan) is UnitRole.WORKER
@@ -181,18 +264,18 @@ def test_disabled_recovery_leaves_teleport_untouched() -> None:
         _snapshot(
             tick=1,
             core_position=Coordinate(0, 0),
-            workers=8,
+            workers=12,
             resources=100,
-            population=8,
+            population=12,
         )
     )
     plan = decider.decide_snapshot(
         _snapshot(
             tick=2,
             core_position=Coordinate(100, 100),
-            workers=10,
+            workers=14,
             resources=100,
-            population=10,
+            population=14,
         )
     )
     # Disabled: recovery does not override the military spawn chosen by baseline.

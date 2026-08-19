@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cmp_to_key
+from typing import Final
 
 from arena_hero_agent.domain import (
     CURRENT_RULES_VERSION,
@@ -50,6 +51,16 @@ from .safety_helpers import (
 from .safety_planner_config import DEFAULT_SAFETY_CONFIG, SafetyPlannerConfig
 
 EXPLORE_DIRECTION_COUNT = 8
+
+# Official core attributes (rules/core-and-economy.md): HP 5, shield 5.
+CORE_MAX_HP: Final = 5
+CORE_MAX_SHIELD: Final = 5
+# Heal once at or below this HP, keeping enough resources for the next Worker
+# (base price 5) plus a small margin after HEAL resolves.
+CRITICAL_CORE_HP: Final = 2
+CRITICAL_HEAL_MIN_RESOURCES: Final = 7
+# One shield point costs exactly one resource; repair only when idle at full HP.
+SHIELD_REPAIR_MIN_RESOURCES: Final = 6
 
 
 def worker_dense_direction(index: int) -> int:
@@ -173,10 +184,34 @@ class SafetyPlanner:
         vanguards = sum(1 for unit in snapshot.units if unit.unit_role is UnitRole.VANGUARD)
         rangers = sum(1 for unit in snapshot.units if unit.unit_role is UnitRole.RANGER)
 
+        # Survival first: a critically damaged Core heals before any other
+        # spending. HEAL auto-continues until full HP or empty resources, so
+        # gate it on a reserve that keeps the next Worker affordable
+        # (production: t3 took CORE_DAMAGED 10 times in 400 ticks while never
+        # healing; a 1-resource-per-HP repair is the cheapest survival layer).
+        core_health = snapshot.core_health
+        if (
+            core_health is not None
+            and core_health <= CRITICAL_CORE_HP
+            and snapshot.resources >= CRITICAL_HEAL_MIN_RESOURCES
+        ):
+            return CoreAction(type=CoreActionType.HEAL)
+
         role = next_spawn(workers, vanguards, rangers, self._config.worker_target, self._config)
         cost = unit_price(role, snapshot.population, CURRENT_RULES_VERSION)
         if snapshot.resources >= cost:
             return CoreAction(type=CoreActionType.SPAWN, unit_role=role)
+
+        # Shield repair only when idle and at full HP: one resource per shield
+        # point, keeping the Core at max defense before the next raid window.
+        core_shield = snapshot.core_shield
+        if (
+            core_health == CORE_MAX_HP
+            and core_shield is not None
+            and core_shield < CORE_MAX_SHIELD
+            and snapshot.resources >= SHIELD_REPAIR_MIN_RESOURCES
+        ):
+            return CoreAction(type=CoreActionType.REPAIR_SHIELD)
         return None
 
     def _decide_unit(self, snapshot: PlanningSnapshot, unit: PlanningUnit) -> UnitAction:
