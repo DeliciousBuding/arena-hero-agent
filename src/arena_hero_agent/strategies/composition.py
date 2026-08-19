@@ -207,6 +207,7 @@ EXPANSION_SURVEY_CAP: Final = 3
 EXPANSION_EARLY_RESERVE: Final = 0
 ESCAPE_STICKY_TICKS: Final = 5
 DEFAULT_BARREN_RESOURCE_DISTANCE: Final = 40
+DEFAULT_NO_WORKER_DEADLOCK_TICKS: Final = 12
 
 
 @dataclass(frozen=True, slots=True)
@@ -802,6 +803,7 @@ class ComposedDecider:
         self._respawn_state = RespawnRecoveryState()
         self._barren_migration = BarrenMigrationState()
         self._stuck_resources = StuckWithResourcesState()
+        self._no_worker_deadlock_ticks = 0
         self._escape_sticky: dict[str, tuple[Direction, int]] = {}
         self._terrain_map = TerrainMap()
         self._previous_tick: int | None = None
@@ -1326,6 +1328,8 @@ class ComposedDecider:
         if snapshot.core_state != "normal":
             return plan
         workers = sum(1 for unit in snapshot.units if unit.unit_role is UnitRole.WORKER)
+        if workers > 0:
+            self._no_worker_deadlock_ticks = 0
         if workers >= self._safety.config.worker_target:
             return plan
         deposit_cargo = 0
@@ -1350,6 +1354,7 @@ class ComposedDecider:
             late_expansion_reserve=0,
         )
         if projected >= threshold:
+            self._no_worker_deadlock_ticks = 0
             return Plan(
                 tick=plan.tick,
                 unit_actions=plan.unit_actions,
@@ -1358,6 +1363,19 @@ class ComposedDecider:
                     unit_role=UnitRole.WORKER,
                 ),
             )
+        if workers == 0:
+            # Deadlock: no worker is alive and the Core cannot afford another,
+            # so income can never resume. Count the stuck ticks and, after the
+            # grace window, self-destruct to force a respawn (fresh Core with
+            # starting resources and a worker) instead of waiting forever.
+            self._no_worker_deadlock_ticks += 1
+            if self._no_worker_deadlock_ticks >= DEFAULT_NO_WORKER_DEADLOCK_TICKS:
+                self._no_worker_deadlock_ticks = 0
+                return Plan(
+                    tick=plan.tick,
+                    unit_actions=plan.unit_actions,
+                    core_action=PlanningCoreAction(type=CoreActionType.SELF_DESTRUCT),
+                )
         return Plan(
             tick=plan.tick,
             unit_actions=plan.unit_actions,

@@ -605,3 +605,25 @@ def test_barren_migration_routes_around_blocking_worker() -> None:
     assert plan.core_action.type is CoreActionType.START_MOVE
     # The Core must not try to move west into the worker-occupied cell.
     assert plan.core_action.direction is not Direction.WEST
+
+
+def test_no_worker_deadlock_escapes_via_self_destruct() -> None:
+    """Regression for the pop=0 + under-priced-worker deadlock.
+
+    With no workers alive and stock below the worker price, income can never
+    resume (nothing can harvest), so after a grace window the Core must
+    self-destruct to force a respawn instead of waiting forever.
+    """
+    config = replace(_all_off(), economy_expansion_enabled=True)
+    decider = ComposedDecider(config)
+    core_actions: list[CoreActionType | None] = []
+    for tick in range(1, 20):
+        plan = decider.decide_snapshot(
+            _snapshot(tick=tick, units=(), resources=4, core_position=Coordinate(0, 0))
+        )
+        core_actions.append(
+            plan.core_action.type if plan.core_action is not None else None
+        )
+    assert CoreActionType.SELF_DESTRUCT in core_actions
+    # It must not self-destruct on the very first deadlocked tick (grace window).
+    assert core_actions[0] is not CoreActionType.SELF_DESTRUCT
