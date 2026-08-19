@@ -408,6 +408,11 @@ def test_decider_with_live_status_forwards_state_summary() -> None:
     summary = getattr(wrapped, "state_summary", None)
     assert callable(summary)
     assert summary() == {"noWorkerDeadlockTicks": 2}
+    # The protocol check must succeed through the wrapper: runtime-checked
+    # protocols inspect static attributes, so the wrapper binds the delegated
+    # capability as a real instance attribute (observed live: deciderState
+    # stayed null when the capability was only reachable via __getattr__).
+    assert isinstance(wrapped, DiagnosticDecider)
 
 
 def test_decider_with_live_status_delegates_fallback_and_unknown_attrs() -> None:

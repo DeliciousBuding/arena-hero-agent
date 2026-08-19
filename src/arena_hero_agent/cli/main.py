@@ -984,37 +984,31 @@ class _LiveStatusDecider:
     The write is best-effort and never changes the returned decision, so the
     inner decider stays deterministic while resource observability stays live.
     Optional extension attributes (``safety_fallback``, ``state_summary``) are
-    delegated through ``__getattr__`` so the wrapper exposes exactly the
-    capability surface of the inner decider — the tick loop's structural
-    ``isinstance`` checks keep working through the wrapper.
+    bound as real instance attributes at construction so the tick loop's
+    ``isinstance`` protocol checks work through the wrapper (runtime-checked
+    protocols use ``inspect.getattr_static``, which ignores ``__getattr__``).
     """
 
     def __init__(self, decider: Decider, writer: LiveStatusWriter) -> None:
         self._decider = decider
         self._writer = writer
-        self._wrapped_fallback: Callable[[TurnObservation], Decision] | None = None
+        fallback = getattr(decider, "safety_fallback", None)
+        if callable(fallback):
+
+            def wrapped_fallback(observation: TurnObservation) -> Decision:
+                decision = fallback(observation)
+                self._writer.write(observation)
+                return decision
+
+            self.safety_fallback = wrapped_fallback
+        summary = getattr(decider, "state_summary", None)
+        if callable(summary):
+            self.state_summary = summary
 
     def __call__(self, observation: TurnObservation, budget: DeadlineBudget) -> Decision:
         decision = self._decider(observation, budget)
         self._writer.write(observation)
         return decision
-
-    def __getattr__(self, name: str) -> Any:
-        if name == "safety_fallback":
-            if self._wrapped_fallback is not None:
-                return self._wrapped_fallback
-            fallback = getattr(self._decider, "safety_fallback", None)
-            if not callable(fallback):
-                raise AttributeError("wrapped decider has no safety_fallback")
-
-            def wrapped(observation: TurnObservation) -> Decision:
-                decision = fallback(observation)
-                self._writer.write(observation)
-                return decision
-
-            self._wrapped_fallback = wrapped
-            return wrapped
-        return getattr(self._decider, name)
 
 
 def _decider_with_live_status(
