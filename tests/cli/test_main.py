@@ -9,8 +9,12 @@ from pathlib import Path
 
 import pytest
 
-from arena_hero_agent.application.tick_loop import TurnStream
-from arena_hero_agent.application.turns import Decision, TurnObservation
+from arena_hero_agent.application.tick_loop import (
+    DiagnosticDecider,
+    FallbackDecider,
+    TurnStream,
+)
+from arena_hero_agent.application.turns import Decision, PlayerLifecycle, TurnObservation
 from arena_hero_agent.cli.main import (
     DEFAULT_DATA_ROOT,
     EXIT_ERROR,
@@ -25,6 +29,7 @@ from arena_hero_agent.cli.main import (
     build_parser,
     main,
 )
+from arena_hero_agent.domain import RulesVersion, WorldProjection
 
 FIXTURE = Path(__file__).parent / "fixtures" / "replay_turns_v1.json"
 
@@ -379,11 +384,11 @@ def test_output_privacy_scan(tmp_path: Path, capsys: pytest.CaptureFixture[str])
 
 
 def test_decider_with_live_status_forwards_state_summary() -> None:
-    """The live-status wrapper must forward state_summary to tick_state telemetry.
+    """The live-status wrapper must expose state_summary to tick_state telemetry.
 
-    The tick loop duck-types a ``state_summary`` callable off the decider it
-    receives; the production path wraps the composed decider with
-    ``_decider_with_live_status``, so without the forward the deciderState
+    The tick loop detects the capability structurally (``DiagnosticDecider``
+    protocol); the production path wraps the composed decider with
+    ``_decider_with_live_status``, so without the delegation the deciderState
     telemetry field would silently stay null in production.
     """
 
@@ -403,3 +408,48 @@ def test_decider_with_live_status_forwards_state_summary() -> None:
     summary = getattr(wrapped, "state_summary", None)
     assert callable(summary)
     assert summary() == {"noWorkerDeadlockTicks": 2}
+
+
+def test_decider_with_live_status_delegates_fallback_and_unknown_attrs() -> None:
+    """Optional decider attributes are delegated so the wrapper mirrors the
+    inner decider's capability surface exactly."""
+
+    class _FallbackFakeDecider:
+        def __call__(self, observation, budget):  # noqa: ANN001
+            del budget
+            return Decision(tick=observation.tick)
+
+        def safety_fallback(self, observation):  # noqa: ANN001
+            return Decision(tick=observation.tick)
+
+    class PlainDecider:
+        def __call__(self, observation, budget):  # noqa: ANN001
+            del budget
+            return Decision(tick=observation.tick)
+
+    class FakeWriter:
+        def __init__(self) -> None:
+            self.writes = 0
+
+        def write(self, observation) -> None:  # noqa: ANN001
+            self.writes += 1
+
+    observation = TurnObservation(
+        tick=1,
+        lifecycle=PlayerLifecycle.ACTIVE,
+        resources=0,
+        population=0,
+        projection=WorldProjection(tick=1, rules_version=RulesVersion.V0_14),
+    )
+
+    writer = FakeWriter()
+    with_fallback = _decider_with_live_status(_FallbackFakeDecider(), writer)
+    assert callable(with_fallback.safety_fallback)
+    with_fallback.safety_fallback(observation)
+    assert writer.writes == 1
+
+    plain = _decider_with_live_status(PlainDecider(), FakeWriter())
+    # The wrapper mirrors the inner decider's capability surface, so the
+    # structural protocol checks report exactly what the inner decider has.
+    assert not isinstance(plain, FallbackDecider)
+    assert not isinstance(plain, DiagnosticDecider)

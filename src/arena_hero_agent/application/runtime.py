@@ -211,13 +211,14 @@ class TenantRuntime:
                     self._set_component(_COMPONENT_TELEMETRY, False, f"emit_tick failed: {exc}")
             self._touch()
 
-        async def on_tick_observed(
-            observation, decision, result: TickResult, decider_state=None
-        ) -> None:
+        async def on_tick_observed(observed) -> None:
             if self._recorder is not None:
                 try:
                     self._recorder.record_tick_state(
-                        observation, decision, result, decider_state
+                        observed.observation,
+                        observed.decision,
+                        observed.result,
+                        observed.decider_state,
                     )
                 except Exception as exc:
                     self._set_component(

@@ -625,6 +625,9 @@ def test_decider_state_summary_exposes_hook_state() -> None:
     # The digest is read-only: calling it must not mutate decision state.
     again = decider.state_summary()
     assert again == summary
+
+
+def test_no_worker_deadlock_self_destructs_core() -> None:
     """Regression for the pop=0 + under-priced-worker deadlock.
 
     With no workers alive and stock below the worker price, income can never
@@ -644,3 +647,59 @@ def test_decider_state_summary_exposes_hook_state() -> None:
     assert CoreActionType.SELF_DESTRUCT in core_actions
     # It must not self-destruct on the very first deadlocked tick (grace window).
     assert core_actions[0] is not CoreActionType.SELF_DESTRUCT
+
+
+def test_terrain_trap_hook_spares_cargo_carrying_worker() -> None:
+    """FFA regression: a cargo-carrying worker standing on the Core is
+    mid-deposit, not trapped.  Killing it dropped the cargo and delayed the
+    economy (observed: worker walked 15 cells home, stood on the Core with
+    cargo=1, and was SELF_DESTRUCTed on the stuck-resources timer)."""
+    config = replace(_all_off(), stuck_resources_enabled=True)
+    decider = ComposedDecider(config)
+    core_actions: list[UnitActionType | None] = []
+    for tick in range(1, 30):
+        plan = decider.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=(_worker("w1", 0, 0, cargo=1),),
+                resources=10,
+                population=1,
+                core_position=Coordinate(0, 0),
+            )
+        )
+        core_actions.append(_action(plan, "w1"))
+    assert UnitActionType.SELF_DESTRUCT not in core_actions
+
+
+def test_terrain_trap_hook_fires_only_when_replacement_affordable() -> None:
+    """The trap break only fires when the Core can immediately afford a
+    replacement worker; destroying the fleet's only worker below the worker
+    price would just shrink the economy."""
+    config = replace(_all_off(), stuck_resources_enabled=True)
+    poor = ComposedDecider(config)
+    rich = ComposedDecider(config)
+    poor_actions: list[UnitActionType | None] = []
+    rich_actions: list[UnitActionType | None] = []
+    for tick in range(1, 30):
+        poor_plan = poor.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=(_worker("w1", 0, 0),),
+                resources=1,
+                population=1,
+                core_position=Coordinate(0, 0),
+            )
+        )
+        rich_plan = rich.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=(_worker("w1", 0, 0),),
+                resources=10,
+                population=1,
+                core_position=Coordinate(0, 0),
+            )
+        )
+        poor_actions.append(_action(poor_plan, "w1"))
+        rich_actions.append(_action(rich_plan, "w1"))
+    assert UnitActionType.SELF_DESTRUCT not in poor_actions
+    assert UnitActionType.SELF_DESTRUCT in rich_actions

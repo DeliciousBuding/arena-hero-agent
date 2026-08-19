@@ -978,38 +978,51 @@ async def _run_live_loop(
                 await renew_task
 
 
+class _LiveStatusDecider:
+    """Decider wrapper that refreshes the live status snapshot per tick.
+
+    The write is best-effort and never changes the returned decision, so the
+    inner decider stays deterministic while resource observability stays live.
+    Optional extension attributes (``safety_fallback``, ``state_summary``) are
+    delegated through ``__getattr__`` so the wrapper exposes exactly the
+    capability surface of the inner decider — the tick loop's structural
+    ``isinstance`` checks keep working through the wrapper.
+    """
+
+    def __init__(self, decider: Decider, writer: LiveStatusWriter) -> None:
+        self._decider = decider
+        self._writer = writer
+        self._wrapped_fallback: Callable[[TurnObservation], Decision] | None = None
+
+    def __call__(self, observation: TurnObservation, budget: DeadlineBudget) -> Decision:
+        decision = self._decider(observation, budget)
+        self._writer.write(observation)
+        return decision
+
+    def __getattr__(self, name: str) -> Any:
+        if name == "safety_fallback":
+            if self._wrapped_fallback is not None:
+                return self._wrapped_fallback
+            fallback = getattr(self._decider, "safety_fallback", None)
+            if not callable(fallback):
+                raise AttributeError("wrapped decider has no safety_fallback")
+
+            def wrapped(observation: TurnObservation) -> Decision:
+                decision = fallback(observation)
+                self._writer.write(observation)
+                return decision
+
+            self._wrapped_fallback = wrapped
+            return wrapped
+        return getattr(self._decider, name)
+
+
 def _decider_with_live_status(
     decider: Decider,
     writer: LiveStatusWriter,
 ) -> Decider:
-    """Wrap a decider so each observation also refreshes the live status snapshot.
-
-    The write is best-effort and never changes the returned decision, so the
-    inner decider stays deterministic while resource observability stays live.
-    """
-
-    def decide(observation: TurnObservation, budget: DeadlineBudget) -> Decision:
-        decision = decider(observation, budget)
-        writer.write(observation)
-        return decision
-
-    fallback = getattr(decider, "safety_fallback", None)
-    if callable(fallback):
-
-        def safety_fallback(observation: TurnObservation) -> Decision:
-            decision = fallback(observation)
-            writer.write(observation)
-            return decision
-
-        decide.safety_fallback = safety_fallback
-
-    # Forward the read-only state digest so tick_state telemetry can record
-    # why hooks fired even though the tick loop only sees this wrapper.
-    summary = getattr(decider, "state_summary", None)
-    if callable(summary):
-        decide.state_summary = summary
-
-    return decide
+    """Wrap a decider so each observation also refreshes the live status snapshot."""
+    return _LiveStatusDecider(decider, writer)
 
 
 async def _execute_live(

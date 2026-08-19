@@ -1304,12 +1304,25 @@ class ComposedDecider:
         core_pos = snapshot.core_position
         if core_pos is None:
             return plan
+        # A cargo-carrying worker standing on the Core is mid-deposit, not
+        # trapped: killing it would drop the cargo and delay the economy.
+        # Only an empty-cargo worker that keeps occupying the Core's cell
+        # (blocking SPAWN) is a trap candidate.
         trapped_workers = [
             unit
             for unit in snapshot.units
-            if unit.position == core_pos and unit.unit_role is UnitRole.WORKER
+            if unit.position == core_pos
+            and unit.unit_role is UnitRole.WORKER
+            and unit.cargo == 0
         ]
         if not trapped_workers:
+            return plan
+        # Self-destructing only helps when the Core can immediately afford a
+        # replacement; otherwise it just shrinks the fleet for nothing.
+        replacement_cost = unit_price(
+            UnitRole.WORKER, snapshot.population, snapshot.rules_version
+        )
+        if snapshot.resources < replacement_cost:
             return plan
         trapped_id = trapped_workers[0].id
         new_unit_actions = tuple(
