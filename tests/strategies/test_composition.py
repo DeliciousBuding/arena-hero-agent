@@ -266,6 +266,7 @@ def test_survey_burst_pre_reserve_pins_explore_patrol() -> None:
     config = ComposedDeciderConfig(
         worker_config=WorkerTaskPlannerConfig(mission=_mission(case.get("mission"))),
         survey_burst_active=True,
+        exploration_v2_enabled=False,
     )
     plan = ComposedDecider(config).decide_snapshot(_fixture_snapshot(case["snapshot"]))
     assert _action(plan, "w1") is UnitActionType.MOVE
@@ -280,6 +281,84 @@ def test_survey_burst_pre_reserve_pins_explore_patrol() -> None:
     assert _action(plan, "w4") is UnitActionType.MOVE
     direction = _direction(plan, "w4")
     assert direction is not None and direction.value == "east"
+
+
+def test_exploration_v2_shrinks_survey_cap_when_cells_exist() -> None:
+    """With collectable cells the burst pre-reserve shrinks to one surveyor.
+
+    The permanent burst previously claimed three workers as explorers before
+    the matrix ran, leaving pop 2-4 tenants with a single harvester
+    (production: doubling workers did not double income). The exploration-v2
+    composition path caps the pre-reserve at one when resource cells exist.
+    """
+
+    fixture = load_oracle_fixture()
+    case = next(
+        item
+        for item in fixture["worker_assignments"]
+        if item["name"] == "survey_burst_pre_reserve"
+    )
+    config = ComposedDeciderConfig(
+        worker_config=WorkerTaskPlannerConfig(mission=_mission(case.get("mission"))),
+        survey_burst_active=True,
+        exploration_v2_enabled=True,
+        movement_guard_enabled=False,
+        economy_expansion_enabled=False,
+        respawn_recovery_enabled=False,
+        barren_migration_enabled=False,
+        stuck_resources_enabled=False,
+        raid_quota_enabled=False,
+        stuck_guard_enabled=False,
+        economy_budget_enabled=False,
+    )
+    plan = ComposedDecider(config).decide_snapshot(_fixture_snapshot(case["snapshot"]))
+    # Exactly one surveyor explores (w1, dense patrol east); the remaining
+    # three workers are assigned to resource cells by the matrix.
+    direction = _direction(plan, "w1")
+    assert direction is not None and direction.value == "east"
+    for worker_id in ("w2", "w3", "w4"):
+        assert _action(plan, worker_id) is UnitActionType.MOVE
+
+
+def test_idle_worker_vacates_crowded_core_cell_for_deposit() -> None:
+    """An idle worker vacates the Core cell even when every neighbor holds one unit.
+
+    Cell capacity is two (Core plus one unit), so a single friendly occupant
+    does not block the vacate. The state-seed replay harness reproduced a
+    500-tick deposit stall where cargo workers ringed the Core while a WAIT
+    worker held the Core cell and the old vacate treated any occupant as a
+    wall. The vacate must step into a cell with one free slot so the deposit
+    chain resumes.
+    """
+
+    core = Coordinate(0, 0)
+    idle_worker = _worker("w_idle", 0, 0)
+    cargo_worker = _worker("w_cargo", 1, 0, cargo=1)
+    ring = (
+        _worker("w_n", 0, 1),
+        _worker("w_s", 0, -1),
+        _worker("w_w", -1, 0),
+    )
+    snapshot = _worker_snapshot(
+        units=(idle_worker, cargo_worker, *ring),
+        core_position=core,
+        resources=5,
+        population=5,
+    )
+    config = ComposedDeciderConfig(
+        survey_burst_active=False,
+        exploration_v2_enabled=True,
+        movement_guard_enabled=False,
+        economy_expansion_enabled=False,
+        respawn_recovery_enabled=False,
+        barren_migration_enabled=False,
+        stuck_resources_enabled=False,
+        raid_quota_enabled=False,
+        stuck_guard_enabled=False,
+        economy_budget_enabled=False,
+    )
+    plan = ComposedDecider(config).decide_snapshot(snapshot)
+    assert _action(plan, "w_idle") is UnitActionType.MOVE
 
 
 def test_two_tick_claim_sequence_is_sticky() -> None:

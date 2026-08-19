@@ -74,6 +74,7 @@ from arena_hero_agent.planning import (
     extract_planning_snapshot,
     is_hungry,
     mark_reached,
+    next_step_toward,
     observe_exploration,
     with_memory_resource_cells,
 )
@@ -222,6 +223,16 @@ ENEMY_FLEE_RADIUS: Final = 25
 # trekking 40+ tiles (production: workers pushed 96-156 tiles toward a single
 # remembered cell while the Core had already migrated).
 COLLECTION_MAX_DISTANCE: Final = 40.0
+# Soon-refilling harvested cells re-enter the assignment matrix within this
+# many ticks of their refill boundary and gain REFILL_BONUS_VALUE, so workers
+# wait near the Core for the next harvest instead of trekking (cheap
+# approximation of evolve's rollout harvest rhythm).
+REFILL_LOOKAHEAD_TICKS: Final = 4
+REFILL_BONUS_VALUE: Final = 2.0
+# Idle workers farther than this from the Core are recalled home (stranded
+# survivors of old migrations; production t3 workers idled 45-89 tiles away
+# harvesting nothing). Aligned with COLLECTION_MAX_DISTANCE.
+STRANDED_RECALL_DISTANCE: Final = 40
 
 
 @dataclass(frozen=True, slots=True)
@@ -531,25 +542,52 @@ def _migration_step_away_from(
     return max(candidates, key=lambda candidate: candidate[0])[1]
 
 
+def _routing_obstacles(snapshot: PlanningSnapshot) -> frozenset[str]:
+    """Terrain obstacles plus the Core cell for non-deposit worker routing.
+
+    The Core cell is transit-forbidden: a worker walking to a mine would
+    otherwise path straight through it every tick (the cell legally holds the
+    Core plus one unit), oscillating with the vacate override and blocking
+    deposits from cargo workers (reproduced by the state-seed replay harness
+    as a 500-tick deposit stall). Deposits remain the only way onto the Core
+    cell.
+    """
+
+    obstacles = snapshot.obstacle_cells
+    core = snapshot.core_position
+    if core is None:
+        return obstacles
+    return obstacles | {core.cell_key}
+
+
 def _vacate_core_cell_actions(
     snapshot: PlanningSnapshot,
     unit_actions: tuple[PlanningUnitAction, ...],
 ) -> tuple[PlanningUnitAction, ...]:
-    """Override idle workers on the Core cell to vacate it before a SPAWN.
+    """Override idle workers on the Core cell to vacate it.
 
     A cell holds two occupying entities and the Core always takes one slot, so
-    an empty-cargo worker standing on the Core cell makes SPAWN fail with
-    CELL_UNIT_LIMIT. Movement resolves before the Core action, so issuing a
-    one-cell vacate MOVE in the same tick frees the slot for the spawn. Only
-    WAIT-actions are overridden: a worker with a real task (deposit, harvest,
-    an existing move) already has somewhere to go.
+    an empty-cargo worker standing on the Core cell blocks deposits from other
+    workers (CORE_MOVING-free but CELL_UNIT_LIMIT) and any SPAWN. Movement
+    resolves before the Core action, so issuing a one-cell vacate MOVE frees
+    the slot. Cells at capacity two are avoided, but a single friendly or
+    enemy occupant does not block the vacate — the target cell can legally
+    hold one more. Only WAIT-actions are overridden: a worker with a real
+    task (deposit, harvest, an existing move) already has somewhere to go.
     """
 
     core = snapshot.core_position
     if core is None:
         return unit_actions
-    blocked = {cell_key(unit.position) for unit in snapshot.units if unit.position != core}
-    blocked |= {cell_key(enemy.position) for enemy in snapshot.enemy_units}
+    occupancy: dict[str, int] = {}
+    for unit in snapshot.units:
+        if unit.position == core:
+            continue
+        key = unit.position.cell_key
+        occupancy[key] = occupancy.get(key, 0) + 1
+    for enemy in snapshot.enemy_units:
+        key = enemy.position.cell_key
+        occupancy[key] = occupancy.get(key, 0) + 1
     vacate_candidates = [
         unit
         for unit in snapshot.units
@@ -564,7 +602,7 @@ def _vacate_core_cell_actions(
         current = unit_actions_by_id.get(worker.id)
         if current is not None and current.type is not UnitActionType.WAIT:
             continue
-        direction = _vacate_step(core, blocked, snapshot.obstacle_cells)
+        direction = _vacate_step(core, occupancy, snapshot.obstacle_cells)
         if direction is None:
             continue
         unit_actions = tuple(
@@ -582,18 +620,64 @@ def _vacate_core_cell_actions(
 
 def _vacate_step(
     core: Coordinate,
-    blocked_keys: frozenset[str],
+    occupancy: Mapping[str, int],
     obstacles: frozenset[str],
 ) -> Direction | None:
-    """Return the first cardinal step off the Core cell that is not blocked."""
+    """Return the first cardinal step off the Core cell with a free slot."""
 
     for direction in (Direction.EAST, Direction.SOUTH, Direction.NORTH, Direction.WEST):
         neighbor = core.step(direction)
         key = cell_key(neighbor)
-        if key in obstacles or key in blocked_keys:
+        if key in obstacles or occupancy.get(key, 0) >= 2:
             continue
         return direction
     return None
+
+
+def _recall_stranded_workers(snapshot: PlanningSnapshot, plan: Plan) -> Plan:
+    """Override idle WAIT workers far from the Core to walk home.
+
+    Workers that survived an old migration (or a respawn sweep) can idle tens
+    of tiles from the Core with no collectable cells nearby; the collection
+    cap keeps them out of the matrix but nothing brought them back, so they
+    sat WAIT forever (production: t3 workers idled 45-89 tiles away). Idle
+    workers beyond ``STRANDED_RECALL_DISTANCE`` step toward the nearest
+    Core-adjacent parking cell instead of waiting in place.
+    """
+
+    core = snapshot.core_position
+    if core is None:
+        return plan
+    units_by_id = {unit.id: unit for unit in snapshot.units}
+    parking_cells = [core.step(direction) for direction in Direction]
+    open_parking = [
+        cell for cell in parking_cells if cell_key(cell) not in snapshot.obstacle_cells
+    ]
+    if not open_parking:
+        return plan
+    new_actions = list(plan.unit_actions)
+    for index, action in enumerate(new_actions):
+        if action.type is not UnitActionType.WAIT:
+            continue
+        unit = units_by_id.get(action.unit_id)
+        if unit is None or unit.unit_role is not UnitRole.WORKER or unit.cargo != 0:
+            continue
+        if manhattan(unit.position, core) <= STRANDED_RECALL_DISTANCE:
+            continue
+        parking = min(open_parking, key=lambda cell: manhattan(unit.position, cell))
+        direction = next_step_toward(unit.position, parking, _routing_obstacles(snapshot))
+        if direction is None:
+            continue
+        new_actions[index] = PlanningUnitAction(
+            unit_id=action.unit_id,
+            type=UnitActionType.MOVE,
+            direction=direction,
+        )
+    return Plan(
+        tick=plan.tick,
+        unit_actions=tuple(new_actions),
+        core_action=plan.core_action,
+    )
 
 
 def _core_return_wait(
@@ -678,7 +762,7 @@ def _task_action(
             if wait is not None:
                 return wait
         direction = (
-            _route_direction(unit, task.target, snapshot.obstacle_cells, discouraged)
+            _route_direction(unit, task.target, _routing_obstacles(snapshot), discouraged)
             if route_aware
             else step_toward(unit.position, task.target)
         )
@@ -688,7 +772,7 @@ def _task_action(
         if unit.position == task.target:
             return PlanningUnitAction(unit_id=unit.id, type=UnitActionType.HARVEST)
         direction = (
-            _route_direction(unit, task.target, snapshot.obstacle_cells, discouraged)
+            _route_direction(unit, task.target, _routing_obstacles(snapshot), discouraged)
             if route_aware
             else step_toward(unit.position, task.target)
         )
@@ -1285,13 +1369,26 @@ class ComposedDecider:
             # A moving (migrating) Core is handled by migration; do not fight it.
             return plan
         # Survival actions from the safety baseline always win over forced
-        # worker production.
+        # worker production. A threat-triggered military spawn also wins: a
+        # Vanguard at the door defends the fresh Core while recovery rebuilds
+        # the economy; a normal (non-threat) military spawn is overridden so
+        # recovery stays economy-first.
         baseline_core = plan.core_action
-        if baseline_core is not None and baseline_core.type in (
-            CoreActionType.HEAL,
-            CoreActionType.REPAIR_SHIELD,
-        ):
-            return plan
+        if baseline_core is not None:
+            if baseline_core.type in (CoreActionType.HEAL, CoreActionType.REPAIR_SHIELD):
+                return plan
+            if (
+                baseline_core.type is CoreActionType.SPAWN
+                and baseline_core.unit_role is not UnitRole.WORKER
+            ):
+                core_position = snapshot.core_position
+                if core_position is not None and snapshot.enemy_units:
+                    nearest_threat = min(
+                        manhattan(core_position, enemy.position)
+                        for enemy in snapshot.enemy_units
+                    )
+                    if nearest_threat <= self._safety.config.threat_enemy_distance:
+                        return plan
 
         workers = sum(1 for unit in snapshot.units if unit.unit_role is UnitRole.WORKER)
         if workers >= self._config.respawn_worker_target:
@@ -1365,6 +1462,49 @@ class ComposedDecider:
             )
         )
 
+        # A cargo-carrying worker near the Core is about to deposit; the engine
+        # rejects deposits while the Core is migrating (CORE_MOVING), and the
+        # continuous-stepping migration latch leaves almost no stationary
+        # window. Hold the next START_MOVE so the deposit lands — the
+        # resulting economic activity then cancels the migration latch.
+        for unit in snapshot.units:
+            if (
+                unit.unit_role is UnitRole.WORKER
+                and unit.cargo > 0
+                and manhattan(unit.position, core) <= DEPOSIT_HOLD_RADIUS
+            ):
+                return plan
+
+        # During respawn recovery in a war zone, prefer stepping away from a
+        # nearby enemy over stepping toward origin: respawn placement is 20-30
+        # tiles from the nearest living Core, and walking straight back toward
+        # the attacker re-enters its kill range (production: t3 destroyed 14
+        # times, respawning in place each time). This fires independently of
+        # the barren latch — a visible threat outweighs "no resources seen".
+        flee_blocked = snapshot.obstacle_cells | frozenset(
+            cell_key(unit.position) for unit in snapshot.units
+        ) | frozenset(cell_key(enemy.position) for enemy in snapshot.enemy_units)
+        if self._respawn_state.active:
+            nearest_enemy = min(
+                (manhattan(core, enemy.position) for enemy in snapshot.enemy_units),
+                default=None,
+            )
+            if nearest_enemy is not None and nearest_enemy <= ENEMY_FLEE_RADIUS:
+                nearest = min(
+                    snapshot.enemy_units,
+                    key=lambda enemy: manhattan(core, enemy.position),
+                )
+                flee_step = _migration_step_away_from(core, nearest.position, flee_blocked)
+                if flee_step is not None:
+                    return Plan(
+                        tick=plan.tick,
+                        unit_actions=plan.unit_actions,
+                        core_action=PlanningCoreAction(
+                            type=CoreActionType.START_MOVE,
+                            direction=flee_step,
+                        ),
+                    )
+
         # A visible/remembered resource sitting beyond ``barren_resource_distance``
         # tiles is treated as effectively absent: workers cannot bootstrap an
         # economy against a target that far, so the Core should migrate toward
@@ -1392,47 +1532,6 @@ class ComposedDecider:
         )
         if not should_migrate:
             return plan
-
-        # A cargo-carrying worker near the Core is about to deposit; the engine
-        # rejects deposits while the Core is migrating (CORE_MOVING), and the
-        # continuous-stepping migration latch leaves almost no stationary
-        # window. Hold the next START_MOVE so the deposit lands — the
-        # resulting economic activity then cancels the migration latch.
-        for unit in snapshot.units:
-            if (
-                unit.unit_role is UnitRole.WORKER
-                and unit.cargo > 0
-                and manhattan(unit.position, core) <= DEPOSIT_HOLD_RADIUS
-            ):
-                return plan
-
-        # During respawn recovery in a war zone, prefer stepping away from a
-        # nearby enemy over stepping toward origin: respawn placement is 20-30
-        # tiles from the nearest living Core, and walking straight back toward
-        # the attacker re-enters its kill range (production: t3 destroyed 14
-        # times, respawning in place each time).
-        if self._respawn_state.active:
-            nearest_enemy = min(
-                (manhattan(core, enemy.position) for enemy in snapshot.enemy_units),
-                default=None,
-            )
-            if nearest_enemy is not None and nearest_enemy <= ENEMY_FLEE_RADIUS:
-                nearest = min(
-                    snapshot.enemy_units,
-                    key=lambda enemy: manhattan(core, enemy.position),
-                )
-                flee_step = _migration_step_away_from(
-                    core, nearest.position, snapshot.obstacle_cells
-                )
-                if flee_step is not None:
-                    return Plan(
-                        tick=plan.tick,
-                        unit_actions=plan.unit_actions,
-                        core_action=PlanningCoreAction(
-                            type=CoreActionType.START_MOVE,
-                            direction=flee_step,
-                        ),
-                    )
 
         terrain_step = _migration_step_toward_origin(core, snapshot.obstacle_cells)
         if terrain_step is None:
@@ -1580,11 +1679,15 @@ class ComposedDecider:
         if snapshot.core_state != "normal":
             return plan
         # Survival actions from the safety baseline (critical HEAL, shield
-        # repair) always win over aggressive worker expansion.
+        # repair) and threat-response military spawns always win over
+        # aggressive worker expansion.
         baseline_core = plan.core_action
-        if baseline_core is not None and baseline_core.type in (
-            CoreActionType.HEAL,
-            CoreActionType.REPAIR_SHIELD,
+        if baseline_core is not None and (
+            baseline_core.type in (CoreActionType.HEAL, CoreActionType.REPAIR_SHIELD)
+            or (
+                baseline_core.type is CoreActionType.SPAWN
+                and baseline_core.unit_role is not UnitRole.WORKER
+            )
         ):
             return plan
         workers = sum(1 for unit in snapshot.units if unit.unit_role is UnitRole.WORKER)
@@ -1861,6 +1964,7 @@ class ComposedDecider:
             )
 
         exploration_targets: Mapping[str, Coordinate] | None = None
+        refill_predictions: Mapping[str, int] | None = None
         if self._config.exploration_v2_enabled:
             worker_config = replace(
                 worker_config,
@@ -1870,10 +1974,34 @@ class ComposedDecider:
                         worker_config.mission.survey_worker_cap, EXPLORATION_SURVEY_CAP
                     ),
                     max_collection_distance=COLLECTION_MAX_DISTANCE,
+                    refill_lookahead=REFILL_LOOKAHEAD_TICKS,
+                    refill_bonus=REFILL_BONUS_VALUE,
                 ),
             )
             observe_exploration(snapshot, self._previous_assignments, self._exploration_state)
             snapshot = with_memory_resource_cells(snapshot, self._exploration_state)
+            # The permanent survey burst must not starve harvesting: when
+            # collectable cells exist, shrink the pre-reserve cap to one so
+            # the matrix keeps all but one worker harvesting (production:
+            # with cap 3 and pop 2-4 only one harvester remained, so doubling
+            # workers did not double income).
+            if snapshot.resource_cells:
+                worker_config = replace(
+                    worker_config,
+                    mission=replace(
+                        worker_config.mission,
+                        survey_worker_cap=min(worker_config.mission.survey_worker_cap, 1),
+                    ),
+                )
+            # Soon-refilling harvested cells re-enter the matrix as early
+            # candidates with a bonus, so workers arrive right at the refill
+            # boundary instead of trekking to far mines (evolve's rollout
+            # harvest rhythm, cheap approximation).
+            refill_predictions = {
+                key: ready_at - snapshot.tick
+                for key, (_, ready_at) in self._exploration_state.harvested_cells.items()
+                if ready_at - snapshot.tick <= REFILL_LOOKAHEAD_TICKS
+            }
             # During respawn in a resource-barren area, expand the exploration
             # rings immediately (hunger mode: 8/16/24/32/40 radii + 8-ring
             # sweep) instead of waiting HUNGER_TICKS (200) for the hunger
@@ -1899,6 +2027,7 @@ class ComposedDecider:
             claims=self._claims,
             blocked_cells=blocked_cells,
             exploration_targets=exploration_targets,
+            refill_predictions=refill_predictions,
         )
         self._previous_assignments = result.plan.assignments
         self._claims = result.claims
@@ -1913,6 +2042,23 @@ class ComposedDecider:
             route_aware=self._config.exploration_v2_enabled,
             trails=self._loop_trails,
         )
+
+        if self._config.exploration_v2_enabled:
+            # A cell holds two entities and the Core occupies one slot, so an
+            # idle worker standing on the Core cell blocks deposits from other
+            # workers AND any SPAWN (CELL_UNIT_LIMIT). Vacate it every tick,
+            # not only when a spawn is decided (the state-seed replay harness
+            # reproduced a 500-tick deposit stall exactly this way: a cargo
+            # worker waited adjacent while a WAIT unit held the Core cell).
+            plan = Plan(
+                tick=plan.tick,
+                unit_actions=_vacate_core_cell_actions(snapshot, plan.unit_actions),
+                core_action=plan.core_action,
+            )
+            # Stranded idle workers far from the Core are recalled home
+            # (survivors of old migrations: production t3 workers idled 45-89
+            # tiles away harvesting nothing while the Core sat elsewhere).
+            plan = _recall_stranded_workers(snapshot, plan)
 
         if self._config.movement_guard_enabled:
             plan = _apply_movement_overrides(plan, escape_steps, pause_ids)

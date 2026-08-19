@@ -219,7 +219,10 @@ def test_core_skips_heal_when_reserve_too_low() -> None:
     )
     decision = planner.decide(snapshot)
     # 6 < CRITICAL_HEAL_MIN_RESOURCES (7): heal must not drain the economy.
-    assert decision.plan.core_action is None or decision.plan.core_action.type is not CoreActionType.HEAL
+    assert (
+        decision.plan.core_action is None
+        or decision.plan.core_action.type is not CoreActionType.HEAL
+    )
 
 
 def test_core_repairs_shield_when_idle_and_full_hp() -> None:

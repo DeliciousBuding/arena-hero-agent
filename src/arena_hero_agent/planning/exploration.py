@@ -120,6 +120,10 @@ class ExplorationState:
     # cells stay — the observed driver of long-haul worker preference.
     # Maps cell key -> (position, ready_at_tick).
     harvested_cells: dict[str, tuple[Coordinate, int]] = field(default_factory=dict)
+    # Consecutive empty-harvest confirmations per cell key; two strikes remove
+    # the cell from memory permanently (C2: the cell never refills, or was
+    # consumed by a rival).
+    empty_harvest_count: dict[str, int] = field(default_factory=dict)
     known_obstacles: set[str] = field(default_factory=set)
 
     def reset_location_state(self) -> None:
@@ -144,6 +148,7 @@ class ExplorationState:
         self.cell_last_seen.clear()
         self.prev_cargo.clear()
         self.harvested_cells.clear()
+        self.empty_harvest_count.clear()
 
 
 def explorer_slot(unit_id: str) -> int:
@@ -308,6 +313,40 @@ def observe_exploration(
             state.hungry_since = snapshot.tick
         state.prev_cargo[key] = unit.cargo
 
+    # Empty-harvest confirmation (C2): a worker standing on a memory cell with
+    # cargo still 0 after its refill boundary has passed confirms the cell is
+    # stale (consumed by a rival or never refilled). Early arrivals (the
+    # boundary is still in the future) are skipped — the cell may still
+    # refill. One confirmation parks the cell for two refill windows; a
+    # second consecutive confirmation deletes it from memory permanently.
+    for unit in snapshot.units:
+        if unit.unit_role is not UnitRole.WORKER:
+            continue
+        if unit.cargo > 0:
+            continue
+        cell_key_value = unit.position.cell_key
+        if cell_key_value not in state.cell_positions:
+            continue
+        chunk = chunk_of(unit.position)
+        refill_tick = state.chunk_next_refill_tick.get(chunk)
+        if refill_tick is not None and refill_tick > snapshot.tick:
+            # The boundary has not passed yet: not evidence of staleness.
+            continue
+        strikes = state.empty_harvest_count.get(cell_key_value, 0) + 1
+        if strikes >= 2:
+            state.cell_positions.pop(cell_key_value, None)
+            state.cell_last_seen.pop(cell_key_value, None)
+            state.harvested_cells.pop(cell_key_value, None)
+            state.empty_harvest_count.pop(cell_key_value, None)
+            continue
+        state.empty_harvest_count[cell_key_value] = strikes
+        state.cell_positions.pop(cell_key_value, None)
+        state.cell_last_seen.pop(cell_key_value, None)
+        state.harvested_cells[cell_key_value] = (
+            unit.position,
+            refill_tick_at_or_after(snapshot.tick) + REFILL_RECHECK_TICKS,
+        )
+
 
 def with_memory_resource_cells(
     snapshot: PlanningSnapshot,
@@ -319,6 +358,12 @@ def with_memory_resource_cells(
     matrix as historical candidates so every worker can route to a mine that a
     single scout discovered, instead of only the workers whose vision currently
     covers that cell. Cells already visible keep their ``visible=True`` form.
+
+    Harvested cells whose refill boundary is within ``REFILL_RECHECK_TICKS``
+    also merge early: the worker arrives at (or right after) the boundary and
+    harvests the refilled point immediately, the cheap approximation of a
+    refill-rhythm rollout. The caller passes matching ``refill_predictions``
+    so these cells earn the refill bonus in the matrix.
     """
 
     if not isinstance(snapshot, PlanningSnapshot):
@@ -334,6 +379,16 @@ def with_memory_resource_cells(
             position=position,
             visible=False,
             last_seen_tick=state.cell_last_seen.get(key),
+        )
+    for key, (position, ready_at) in state.harvested_cells.items():
+        if key in merged:
+            continue
+        if ready_at - snapshot.tick > REFILL_RECHECK_TICKS:
+            continue
+        merged[key] = ResourceCellInfo(
+            position=position,
+            visible=False,
+            last_seen_tick=snapshot.tick,
         )
     return replace(snapshot, resource_cells=merged)
 

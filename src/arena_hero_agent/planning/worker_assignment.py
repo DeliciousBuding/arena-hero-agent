@@ -489,7 +489,9 @@ def assign_worker_tasks(
 
     # Surveyor pre-reserve during a post-migration survey burst: the first cap
     # workers (by id) become EXPLORE before the matrix so the floor guarantee
-    # cannot be stolen by abundant mines.
+    # cannot be stolen by abundant mines. Pre-reserved explorers carry their
+    # exploration-v2 ring target when the caller supplies one; otherwise they
+    # walk the legacy dense patrol lines.
     surveyors = surveyor_ids(tuple(pool), config.mission, survey_burst_active=survey_burst_active)
     if survey_burst_active and surveyors and available_cells and len(surveyors) >= len(pool):
         # The survey burst must not starve collection: when resources are
@@ -503,7 +505,10 @@ def assign_worker_tasks(
         for worker in pool:
             if worker.id.value in surveyors:
                 assignments.append(
-                    Assignment(unit_id=worker.id.value, task=Task(type=TaskType.EXPLORE))
+                    Assignment(
+                        unit_id=worker.id.value,
+                        task=_explore_task(worker.id.value, exploration_targets),
+                    )
                 )
             else:
                 remaining.append(worker)

@@ -61,6 +61,9 @@ CRITICAL_CORE_HP: Final = 2
 CRITICAL_HEAL_MIN_RESOURCES: Final = 7
 # One shield point costs exactly one resource; repair only when idle at full HP.
 SHIELD_REPAIR_MIN_RESOURCES: Final = 6
+# Threat-triggered Vanguard: Vanguard base price 10 plus a 3-resource reserve
+# so the economy keeps rolling after the emergency spawn.
+THREAT_VANGUARD_MIN_RESOURCES: Final = 13
 
 
 def worker_dense_direction(index: int) -> int:
@@ -196,6 +199,23 @@ class SafetyPlanner:
             and snapshot.resources >= CRITICAL_HEAL_MIN_RESOURCES
         ):
             return CoreAction(type=CoreActionType.HEAL)
+
+        # Threat response before the economy gate: one Vanguard is the
+        # cheapest active defense (HP 4 absorbs four SWEEPs vs two for a
+        # Worker, and it sweeps back for 1). Only fires when an enemy is
+        # already at the door and the reserve still covers the next Worker
+        # (production tenants were destroyed repeatedly while fielding zero
+        # military because worker_target locked all spawns).
+        if workers >= 1 and snapshot.core_position is not None and snapshot.enemy_units:
+            nearest_enemy_distance = min(
+                manhattan(snapshot.core_position, enemy.position)
+                for enemy in snapshot.enemy_units
+            )
+            if (
+                nearest_enemy_distance <= self._config.threat_enemy_distance
+                and snapshot.resources >= THREAT_VANGUARD_MIN_RESOURCES
+            ):
+                return CoreAction(type=CoreActionType.SPAWN, unit_role=UnitRole.VANGUARD)
 
         role = next_spawn(workers, vanguards, rangers, self._config.worker_target, self._config)
         cost = unit_price(role, snapshot.population, CURRENT_RULES_VERSION)
