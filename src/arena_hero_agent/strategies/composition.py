@@ -1004,8 +1004,7 @@ class ComposedDecider:
         # The escape planner speaks Coordinate obstacles; the snapshot carries
         # cell-key strings, so convert once per tick.
         hard_obstacles = frozenset(
-            Coordinate(x, y)
-            for x, y in (parse_cell_key(key) for key in snapshot.obstacle_cells)
+            parse_cell_key(key) for key in snapshot.obstacle_cells
         )
         for unit in snapshot.units:
             if unit.unit_role is not UnitRole.WORKER:

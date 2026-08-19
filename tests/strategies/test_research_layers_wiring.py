@@ -711,6 +711,24 @@ def test_terrain_trap_hook_fires_only_when_replacement_affordable() -> None:
     assert UnitActionType.SELF_DESTRUCT in rich_actions
 
 
+def test_movement_guard_survives_nonempty_obstacles() -> None:
+    """Regression for the 0.1.39 production crash: the escape planner's
+    obstacle conversion unpacked parse_cell_key's Coordinate return value,
+    which only exploded when snapshot.obstacle_cells was non-empty (the unit
+    fixtures all had empty obstacle sets)."""
+    decider = ComposedDecider(replace(_all_off(), movement_guard_enabled=True))
+    snapshot = _snapshot(
+        tick=1,
+        units=(_worker("w1", 0, 0),),
+        resource_cells={"5,0": _cell(5, 0)},
+        core_position=Coordinate(0, 0),
+    )
+    snapshot = replace(snapshot, obstacle_cells=frozenset({"2,0", "0,2"}))
+    plan = decider.decide_snapshot(snapshot)
+    assert plan is not None
+    assert _action(plan, "w1") is UnitActionType.MOVE
+
+
 def test_terrain_map_learns_terrain_move_failures() -> None:
     """A MOVE_BLOCKED_TERRAIN rejection pairs with the previous planned
     direction to infer an obstacle the vision never reported; the next tick's
