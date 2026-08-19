@@ -140,7 +140,13 @@ def astar_next_step(
 
     open_heap: list[tuple[int, int, int, tuple[int, int]]] = []
     start_h = heuristic(start_position)
-    heapq.heappush(open_heap, (start_h, start_h, 0, start_position))
+    # Heap entries are (f, sequence, g_cost, position): ordered by f with a
+    # deterministic insertion-sequence tie-break. The g_cost slot is what the
+    # staleness check below compares against g_score — storing the sequence
+    # counter there (as before) made the check compare a tie-break counter to a
+    # path cost, skipping nearly every node and returning None even for trivial
+    # unobstructed routes.
+    heapq.heappush(open_heap, (start_h, 0, 0, start_position))
 
     g_score: dict[tuple[int, int], int] = {start_position: 0}
     came_from: dict[tuple[int, int], tuple[tuple[int, int], Direction]] = {}
@@ -185,7 +191,7 @@ def astar_next_step(
             neighbor_h = heuristic(neighbor)
             heapq.heappush(
                 open_heap,
-                (new_cost + neighbor_h, neighbor_h, sequence, neighbor),
+                (new_cost + neighbor_h, sequence, new_cost, neighbor),
             )
 
     return None

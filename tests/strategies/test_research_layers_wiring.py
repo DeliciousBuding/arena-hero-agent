@@ -577,3 +577,31 @@ def test_raid_strike_vanguard_sweeps_adjacent_core_and_ranger_holds_range() -> N
     assert out_action is not None
     assert out_action.type is UnitActionType.MOVE
     assert out_action.direction is Direction.EAST
+
+
+def test_barren_migration_routes_around_blocking_worker() -> None:
+    """Regression for CORE_DESTINATION_OCCUPIED migration stalls.
+
+    The engine rejects a Core START_MOVE into an occupied cell. A worker
+    standing on the Core's natural toward-origin step must not leave the Core
+    retrying that blocked cell forever — the migration step routes around the
+    friendly unit instead.
+    """
+    # Core at [5,0]; origin is west. A worker occupies [4,0], the natural west
+    # step. With no resources the barren migration fires and must avoid [4,0].
+    config = replace(_all_off(), barren_migration_enabled=True, barren_migration_ticks=2)
+    decider = ComposedDecider(config)
+    plan = None
+    for tick in range(1, 8):
+        plan = decider.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=(_worker("w-block", 4, 0),),
+                core_position=Coordinate(5, 0),
+            )
+        )
+    assert plan is not None
+    assert plan.core_action is not None
+    assert plan.core_action.type is CoreActionType.START_MOVE
+    # The Core must not try to move west into the worker-occupied cell.
+    assert plan.core_action.direction is not Direction.WEST

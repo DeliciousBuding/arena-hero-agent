@@ -1193,8 +1193,10 @@ class ComposedDecider:
         )
         if not should_migrate:
             return plan
-        direction = _migration_step_toward_origin(core, snapshot.obstacle_cells)
-        if direction is None:
+        terrain_step = _migration_step_toward_origin(core, snapshot.obstacle_cells)
+        if terrain_step is None:
+            # No terrain-routed path at all: the Core is genuinely enclosed by
+            # obstacles, so keep counting toward the self-destruct fail-safe.
             self._barren_migration.migration_fail_count += 1
             if self._barren_migration.migration_fail_count >= DEFAULT_BARREN_MIGRATION_FAIL_LIMIT:
                 return Plan(
@@ -1205,7 +1207,22 @@ class ComposedDecider:
                     ),
                 )
             return plan
+        # A terrain path exists, so the Core is not terrain-enclosed; reset the
+        # fail-safe counter before checking unit occupancy.
         self._barren_migration.migration_fail_count = 0
+        # The engine rejects a Core START_MOVE into any occupied cell
+        # (CORE_DESTINATION_OCCUPIED). Route the first step around friendly
+        # units and visible enemies too, not just terrain: previously the step
+        # ignored units, so a worker standing on the migration path left the
+        # Core retrying the same blocked cell every cycle (observed live, 21
+        # consecutive CORE_DESTINATION_OCCUPIED). If every routed step is
+        # currently occupied, wait for the unit to move rather than striking.
+        blocked_cells = snapshot.obstacle_cells | frozenset(
+            cell_key(unit.position) for unit in snapshot.units
+        ) | frozenset(cell_key(enemy.position) for enemy in snapshot.enemy_units)
+        direction = _migration_step_toward_origin(core, blocked_cells)
+        if direction is None:
+            return plan
         return Plan(
             tick=plan.tick,
             unit_actions=plan.unit_actions,
