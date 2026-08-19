@@ -191,6 +191,29 @@ def _unit_counts_by_role(units: object) -> dict[str, int]:
     return counts
 
 
+def _unit_details(units: object) -> list[dict[str, object]]:
+    """Per-unit id/role/position/hp/cargo so stalls are diagnosable from logs.
+
+    Aggregated role counts hide where each worker actually stands; a terrain
+    trap (a worker oscillating against an obstacle) is only visible when the
+    individual positions are recorded tick by tick.
+    """
+    details: list[dict[str, object]] = []
+    if isinstance(units, tuple | list):
+        for unit in units:
+            role = getattr(unit, "role", None)
+            details.append(
+                {
+                    "id": getattr(getattr(unit, "id", None), "value", None),
+                    "role": getattr(role, "value", role),
+                    "pos": _coordinate_pair(getattr(unit, "position", None)),
+                    "hp": getattr(unit, "health", None),
+                    "cargo": getattr(unit, "cargo", None),
+                }
+            )
+    return details
+
+
 def _intent_counts_by_action(intents: object) -> dict[str, int]:
     counts: dict[str, int] = {}
     if isinstance(intents, tuple | list):
@@ -316,6 +339,7 @@ def serialize_tick_state(
         "respawnAtTick": observation.respawn_at_tick,
         "core": core_record,
         "unitsByRole": units_by_role,
+        "units": _unit_details(projection.units),
         "unitsTotal": units_total,
         "visibleEnemies": visible_enemies,
         "nearestEnemyDist": nearest_enemy_dist,
