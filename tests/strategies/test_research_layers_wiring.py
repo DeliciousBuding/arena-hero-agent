@@ -35,7 +35,12 @@ from arena_hero_agent.planning import (
     ResourceCellInfo,
     UnitActionType,
 )
+from arena_hero_agent.planning import (
+    UnitAction as PlanningUnitAction,
+)
 from arena_hero_agent.strategies import ComposedDecider, ComposedDeciderConfig
+from arena_hero_agent.strategies.composition import _apply_raid_strike
+from arena_hero_agent.strategies.raid_quota import StrikeGroup
 
 RULES = CURRENT_RULES_VERSION
 
@@ -279,11 +284,11 @@ def test_raid_quota_strikes_confirmed_stationary_core() -> None:
     assert _action(plans[1], "r2") is not UnitActionType.SHOOT
 
     final = plans[2]
-    assert _action(final, "r2") is UnitActionType.SHOOT
-    r2_action = final.action_for("r2")
-    assert r2_action is not None
-    assert r2_action.expected_cell == Coordinate(5, 5)
-    assert _action(final, "r3") is UnitActionType.SHOOT
+    # r2/r3 are confirmed strikers but sit 6 cells out (beyond shot range 3),
+    # so they now close the distance instead of wasting out-of-range shots;
+    # vanguards advance on the core.
+    assert _action(final, "r2") is UnitActionType.MOVE
+    assert _action(final, "r3") is UnitActionType.MOVE
     assert _action(final, "v3") is UnitActionType.MOVE
     # Home-defense members stay behind and keep their baseline actions.
     assert _action(final, "v1") is not UnitActionType.SHOOT
@@ -522,3 +527,53 @@ def test_economy_expansion_waits_when_unaffordable() -> None:
     ).decide_snapshot(snapshot)
     assert enabled.core_action is not None
     assert enabled.core_action.type is CoreActionType.WAIT
+
+
+def test_raid_strike_vanguard_sweeps_adjacent_core_and_ranger_holds_range() -> None:
+    """Regression for the two strike-group combat gaps.
+
+    An adjacent Vanguard must SWEEP the enemy Core (a MOVE only bumps into the
+    occupied Core cell and never damages it), and a Ranger must only SHOOT when
+    actually on a firing line within range 3 — otherwise it advances.
+    """
+    target = Coordinate(5, 5)
+    adjacent_vanguard = _vanguard("v-adj", 4, 5)
+    far_vanguard = _vanguard("v-far", 0, 5)
+    in_range_ranger = _ranger("r-in", 3, 5)
+    out_of_range_ranger = _ranger("r-out", 0, 4)
+    units = (adjacent_vanguard, far_vanguard, in_range_ranger, out_of_range_ranger)
+
+    snapshot = _snapshot(tick=1, units=units, core_position=Coordinate(0, 0))
+    base_plan = Plan(
+        tick=1,
+        unit_actions=tuple(
+            PlanningUnitAction(unit_id=unit.id, type=UnitActionType.WAIT) for unit in units
+        ),
+        core_action=None,
+    )
+    strike = StrikeGroup(
+        vanguard_ids=("v-adj", "v-far"),
+        ranger_ids=("r-in", "r-out"),
+    )
+
+    struck = _apply_raid_strike(base_plan, snapshot, target, strike)
+
+    adjacent_action = struck.action_for("v-adj")
+    assert adjacent_action is not None
+    assert adjacent_action.type is UnitActionType.SWEEP
+    assert adjacent_action.direction is Direction.EAST
+
+    far_action = struck.action_for("v-far")
+    assert far_action is not None
+    assert far_action.type is UnitActionType.MOVE
+    assert far_action.direction is Direction.EAST
+
+    in_range_action = struck.action_for("r-in")
+    assert in_range_action is not None
+    assert in_range_action.type is UnitActionType.SHOOT
+    assert in_range_action.expected_cell == target
+
+    out_action = struck.action_for("r-out")
+    assert out_action is not None
+    assert out_action.type is UnitActionType.MOVE
+    assert out_action.direction is Direction.EAST

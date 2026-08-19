@@ -144,6 +144,7 @@ from .respawn_recovery import (
     detect_respawn,
     migration_direction_toward_origin,
 )
+from .safety_helpers import can_shoot
 from .safety_planner import SafetyPlanner, step_toward, worker_dense_direction
 from .safety_planner_config import DEFAULT_SAFETY_CONFIG, SafetyPlannerConfig
 from .stuck_guard import (
@@ -680,21 +681,46 @@ def _apply_raid_strike(
         if unit is None:
             actions.append(action)
         elif unit_id in strike.ranger_ids:
-            actions.append(
-                PlanningUnitAction(
-                    unit_id=action.unit_id,
-                    type=UnitActionType.SHOOT,
-                    expected_cell=target,
+            if can_shoot(unit.position, target, snapshot.obstacle_cells):
+                actions.append(
+                    PlanningUnitAction(
+                        unit_id=action.unit_id,
+                        type=UnitActionType.SHOOT,
+                        expected_cell=target,
+                    )
                 )
-            )
+            else:
+                # A raid target can be confirmed up to RAID_MAX_DISTANCE (40)
+                # away but a Ranger shot only reaches 3 cells on a firing line,
+                # so an out-of-range Ranger must close the distance first
+                # instead of wasting every shot.
+                actions.append(
+                    PlanningUnitAction(
+                        unit_id=action.unit_id,
+                        type=UnitActionType.MOVE,
+                        direction=step_toward(unit.position, target),
+                    )
+                )
         elif unit_id in strike.vanguard_ids and unit.position != target:
-            actions.append(
-                PlanningUnitAction(
-                    unit_id=action.unit_id,
-                    type=UnitActionType.MOVE,
-                    direction=step_toward(unit.position, target),
+            if manhattan(unit.position, target) == 1:
+                # Adjacent to the enemy Core: SWEEP damages it. A MOVE here
+                # would only bump into the occupied Core cell and never land a
+                # hit, so melee raiders must sweep once in reach.
+                actions.append(
+                    PlanningUnitAction(
+                        unit_id=action.unit_id,
+                        type=UnitActionType.SWEEP,
+                        direction=step_toward(unit.position, target),
+                    )
                 )
-            )
+            else:
+                actions.append(
+                    PlanningUnitAction(
+                        unit_id=action.unit_id,
+                        type=UnitActionType.MOVE,
+                        direction=step_toward(unit.position, target),
+                    )
+                )
         else:
             actions.append(action)
     return Plan(
