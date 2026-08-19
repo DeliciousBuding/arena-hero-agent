@@ -244,7 +244,7 @@
       "path": "tests/domain/fixtures/ts_world_nav_known_answers.json",
       "purpose": "known-answer golden for world navigation",
       "repo": "arena-hero-agent",
-      "sha256": "D60F136CE280F8E4045D92F40BDC061938A47FA2FFC5E3E78B9188D315F23D3F",
+      "sha256": "D50A2667571810D0C78477DF9B3286A6F383BE3DADE3047E04CCB694136AAE78",
       "source": "migrated golden data (TS navigation pinned to Python)",
       "tenant_isolation": "tenant-agnostic; per-tenant runtime data excluded"
     },
@@ -265,7 +265,7 @@
       "tenant_isolation": "tenant-agnostic; per-tenant runtime data excluded"
     }
   ],
-  "manifest_hash": "147d80aff2e69e8c898010ad1efcf77dee2a087241b4d95ec43a69e507639919",
+  "manifest_hash": "dde47906fa67db9c9f7626c38824bb99e27545371bbb24e0028e0b3588bfe835",
   "manifest_version": 1,
   "routes": [
     {

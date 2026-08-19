@@ -61,9 +61,26 @@ CRITICAL_CORE_HP: Final = 2
 CRITICAL_HEAL_MIN_RESOURCES: Final = 7
 # One shield point costs exactly one resource; repair only when idle at full HP.
 SHIELD_REPAIR_MIN_RESOURCES: Final = 6
-# Threat-triggered Vanguard: Vanguard base price 10 plus a 3-resource reserve
-# so the economy keeps rolling after the emergency spawn.
-THREAT_VANGUARD_MIN_RESOURCES: Final = 13
+# Threat-triggered Vanguard: base price 10 plus a 6-resource reserve so the
+# economy keeps rolling after the emergency spawn, and only once the economy
+# already fields THREAT_VANGUARD_MIN_WORKERS workers (a dense-map tenant was
+# stuck at two workers forever because every 13 resources bought a Vanguard).
+THREAT_VANGUARD_MIN_WORKERS: Final = 4
+THREAT_VANGUARD_MIN_RESOURCES: Final = 16
+# Official Champion Beacon shield cap (rules/champion-beacon.md): the
+# carrier's Core shield limit rises 5 -> 10 and clamps back on loss.
+BEACON_SHIELD_CAP: Final = 10
+
+
+def _beacon_held_by_us(snapshot: PlanningSnapshot) -> bool:
+    """True when our Core (or one of our units) carries the Champion Beacon."""
+
+    carrier = snapshot.beacon.carrier_id
+    if carrier is None:
+        return False
+    if carrier == snapshot.core_id:
+        return True
+    return any(unit.id == carrier for unit in snapshot.units)
 
 
 def worker_dense_direction(index: int) -> int:
@@ -202,11 +219,17 @@ class SafetyPlanner:
 
         # Threat response before the economy gate: one Vanguard is the
         # cheapest active defense (HP 4 absorbs four SWEEPs vs two for a
-        # Worker, and it sweeps back for 1). Only fires when an enemy is
-        # already at the door and the reserve still covers the next Worker
-        # (production tenants were destroyed repeatedly while fielding zero
-        # military because worker_target locked all spawns).
-        if workers >= 1 and snapshot.core_position is not None and snapshot.enemy_units:
+        # Worker, and it sweeps back for 1). It must never starve the
+        # economy, though: in a dense map enemies are near constantly, and
+        # buying a 10-resource Vanguard every time res >= 13 kept tenants at
+        # two workers forever (observed in the FFA bench after 0.1.42). The
+        # floor of four workers plus the 16-resource reserve means early
+        # income always goes to Workers first.
+        if (
+            workers >= THREAT_VANGUARD_MIN_WORKERS
+            and snapshot.core_position is not None
+            and snapshot.enemy_units
+        ):
             nearest_enemy_distance = min(
                 manhattan(snapshot.core_position, enemy.position)
                 for enemy in snapshot.enemy_units
@@ -224,17 +247,28 @@ class SafetyPlanner:
 
         # Shield repair only when idle and at full HP: one resource per shield
         # point, keeping the Core at max defense before the next raid window.
+        # Holding the Champion Beacon raises the official shield cap to 10.
         core_shield = snapshot.core_shield
+        shield_cap = (
+            BEACON_SHIELD_CAP if _beacon_held_by_us(snapshot) else CORE_MAX_SHIELD
+        )
         if (
             core_health == CORE_MAX_HP
             and core_shield is not None
-            and core_shield < CORE_MAX_SHIELD
+            and core_shield < shield_cap
             and snapshot.resources >= SHIELD_REPAIR_MIN_RESOURCES
         ):
             return CoreAction(type=CoreActionType.REPAIR_SHIELD)
         return None
 
     def _decide_unit(self, snapshot: PlanningSnapshot, unit: PlanningUnit) -> UnitAction:
+        # A unit carrying our Beacon parks next to the Core (the official
+        # shield cap 10 and double harvest then apply). Cargo-carrying
+        # workers still deposit first — the forced-task contract wins.
+        if snapshot.beacon.carrier_id == unit.id and not (
+            unit.unit_role is UnitRole.WORKER and unit.cargo > 0
+        ):
+            return self._decide_beacon_carrier(snapshot, unit)
         if unit.unit_role is UnitRole.WORKER:
             return self._decide_worker(snapshot, unit)
         if unit.unit_role is UnitRole.VANGUARD:
@@ -242,6 +276,22 @@ class SafetyPlanner:
         if unit.unit_role is UnitRole.RANGER:
             return self._decide_ranger(snapshot, unit)
         return _wait_action(unit)
+
+    def _decide_beacon_carrier(
+        self, snapshot: PlanningSnapshot, unit: PlanningUnit
+    ) -> UnitAction:
+        """Park a unit carrying our Beacon within the Core hold radius."""
+
+        core = snapshot.core_position
+        if core is None:
+            return _wait_action(unit)
+        if manhattan(unit.position, core) <= self._config.beacon_carrier_hold_radius:
+            return _wait_action(unit)
+        return UnitAction(
+            unit_id=unit.id,
+            type=UnitActionType.MOVE,
+            direction=step_toward(unit.position, core),
+        )
 
     def _decide_worker(self, snapshot: PlanningSnapshot, unit: PlanningUnit) -> UnitAction:
         task = forced_task_for(unit, snapshot)
@@ -278,6 +328,9 @@ class SafetyPlanner:
                     type=UnitActionType.SWEEP,
                     direction=direction_to_adjacent(unit.position, enemy.position),
                 )
+        contest = self._decide_beacon_contest(snapshot, unit)
+        if contest is not None:
+            return contest
         return _guard_action(snapshot, unit, enemies, UnitRole.VANGUARD)
 
     def _decide_ranger(self, snapshot: PlanningSnapshot, unit: PlanningUnit) -> UnitAction:
@@ -294,7 +347,40 @@ class SafetyPlanner:
                     target_id=EntityId(enemy.id),
                     expected_cell=enemy.position,
                 )
+        contest = self._decide_beacon_contest(snapshot, unit)
+        if contest is not None:
+            return contest
         return _guard_action(snapshot, unit, enemies, UnitRole.RANGER)
+
+    def _decide_beacon_contest(
+        self, snapshot: PlanningSnapshot, unit: PlanningUnit
+    ) -> UnitAction | None:
+        """Walk toward and pick up a ground Beacon (evolve beacon_go_range).
+
+        Only outside defense windows (no visible enemies), only from outside
+        the Core guard ring (home-guard units never leave), and only when the
+        Beacon actually sits on the ground. The carrier then parks at the Core
+        via ``_decide_beacon_carrier``.
+        """
+
+        beacon = snapshot.beacon
+        if beacon.status != "ground" or beacon.carrier_id is not None:
+            return None
+        if snapshot.enemy_units:
+            return None
+        core = snapshot.core_position
+        if core is not None and manhattan(unit.position, core) <= 1:
+            return None
+        distance = manhattan(unit.position, beacon.position)
+        if distance > self._config.beacon_contest_range:
+            return None
+        if unit.position == beacon.position:
+            return UnitAction(unit_id=unit.id, type=UnitActionType.PICKUP_BEACON)
+        return UnitAction(
+            unit_id=unit.id,
+            type=UnitActionType.MOVE,
+            direction=step_toward(unit.position, beacon.position),
+        )
 
 
 def _visible_enemies(snapshot: PlanningSnapshot) -> tuple[VisibleEnemy, ...]:

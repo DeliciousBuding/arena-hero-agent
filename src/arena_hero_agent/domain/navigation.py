@@ -362,10 +362,38 @@ def vision_line_blocked(
 ) -> bool:
     """Return whether integer-supercover intermediates block line of sight.
 
-    Diagonal corner crossings include both side cells. The target cell itself never
+    Diagonal corner crossings include both side cells (official vision rules:
+    corner cells beside a diagonal block sight). The target cell itself never
     blocks visibility, matching the pinned v0.14 oracle behavior.
     """
 
+    return _supercover_line_blocked(origin, target, obstacles, corner_sides=True)
+
+
+def shot_line_blocked(
+    origin: Coordinate,
+    target: Coordinate,
+    obstacles: frozenset[Coordinate],
+) -> bool:
+    """Return whether on-line intermediates block a Ranger shot.
+
+    Official combat rules (rules/combat.md): only an obstacle in an
+    intermediate shot cell blocks the shot; obstacles beside a diagonal do
+    not. Vision's corner side-cell rule applies to sight, not to shots, so a
+    Ranger may legally fire through a diagonal whose side cells are walls.
+    The target cell itself never blocks.
+    """
+
+    return _supercover_line_blocked(origin, target, obstacles, corner_sides=False)
+
+
+def _supercover_line_blocked(
+    origin: Coordinate,
+    target: Coordinate,
+    obstacles: frozenset[Coordinate],
+    *,
+    corner_sides: bool,
+) -> bool:
     if not isinstance(obstacles, frozenset):
         raise TypeError("obstacles must be a frozenset")
     if any(not isinstance(cell, Coordinate) for cell in obstacles):
@@ -390,12 +418,13 @@ def vision_line_blocked(
             y += sy
             iy += 1
         else:
-            side_x = Coordinate(x + sx, y)
-            side_y = Coordinate(x, y + sy)
-            if side_x != target and side_x in obstacles:
-                return True
-            if side_y != target and side_y in obstacles:
-                return True
+            if corner_sides:
+                side_x = Coordinate(x + sx, y)
+                side_y = Coordinate(x, y + sy)
+                if side_x != target and side_x in obstacles:
+                    return True
+                if side_y != target and side_y in obstacles:
+                    return True
             x += sx
             y += sy
             ix += 1

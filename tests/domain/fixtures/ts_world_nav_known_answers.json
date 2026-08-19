@@ -60,7 +60,8 @@
     "origin": [0, 0],
     "target": [2, 2],
     "corner_blockers": [[1, 0], [0, 1]],
-    "target_obstacle_does_not_block": [2, 2]
+    "target_obstacle_does_not_block": [2, 2],
+    "line_blocker": [1, 1]
   },
   "explore_rings": {
     "base": 8,

@@ -18,7 +18,7 @@ from arena_hero_agent.domain import (
     UnitRole,
     chebyshev,
     manhattan,
-    vision_line_blocked,
+    shot_line_blocked,
 )
 
 from ..planning.planning_snapshot import PlanningUnit
@@ -491,7 +491,7 @@ def _projected_damage_at(
         distance = chebyshev(target, enemy.position)
         if distance == 0 or distance > RANGER_SHOOT_RANGE:
             return 0
-        return 0 if vision_line_blocked(target, enemy.position, blocked_cells) else 1
+        return 0 if shot_line_blocked(target, enemy.position, blocked_cells) else 1
     return 1 if manhattan(target, enemy.position) == 1 else 0
 
 
@@ -645,7 +645,7 @@ def can_shoot(
         distance >= 1
         and distance <= RANGER_SHOOT_RANGE
         and aligned
-        and not vision_line_blocked(from_position, target, _blocked_coordinates(obstacles))
+        and not shot_line_blocked(from_position, target, _blocked_coordinates(obstacles))
     )
 
 

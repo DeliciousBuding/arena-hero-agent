@@ -28,6 +28,7 @@ from .navigation import (
     manhattan,
     reachable_cells,
     shortest_path,
+    shot_line_blocked,
     vision_line_blocked,
 )
 from .rules import (
@@ -137,6 +138,7 @@ __all__ = [
     "reachable_cells",
     "replay_economy",
     "shortest_path",
+    "shot_line_blocked",
     "transition_phase",
     "unit_price",
     "vision_line_blocked",

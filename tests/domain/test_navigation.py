@@ -26,6 +26,7 @@ from arena_hero_agent.domain import (
     manhattan,
     reachable_cells,
     shortest_path,
+    shot_line_blocked,
     vision_line_blocked,
 )
 
@@ -95,6 +96,20 @@ def test_ts_known_answers_are_pinned_with_source_metadata() -> None:
         assert vision_line_blocked(origin, target, frozenset({_coordinate(blocker)}))
     target_obstacle = _coordinate(vision["target_obstacle_does_not_block"])
     assert not vision_line_blocked(origin, target, frozenset({target_obstacle}))
+
+    # Shot lines differ from vision: obstacles beside a diagonal do NOT block
+    # a Ranger shot (official combat rules), while an obstacle on the line
+    # itself still does.
+    shot_origin = _coordinate(vision["origin"])
+    shot_target = _coordinate(vision["target"])
+    for blocker in vision["corner_blockers"]:
+        assert not shot_line_blocked(
+            shot_origin, shot_target, frozenset({_coordinate(blocker)})
+        )
+    line_blocker = vision["line_blocker"]
+    assert shot_line_blocked(
+        shot_origin, shot_target, frozenset({_coordinate(line_blocker)})
+    )
 
     rings = fixture["explore_rings"]
     assert [explore_radius_for_ring(rings["base"], index) for index in rings["indices"]] == rings[

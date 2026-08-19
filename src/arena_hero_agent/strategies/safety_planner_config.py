@@ -95,6 +95,13 @@ class SafetyPlannerConfig:
     guard_resources: int = 30
     guard_force: int = 4
     max_focus_distance: int = 32
+    # Active Beacon contest: a non-guard military unit within this many tiles
+    # of a ground Beacon goes to pick it up when no enemy is visible (the
+    # champion gene value is ~15). The carrier then parks next to the Core,
+    # gaining the shield cap 10 and double harvest for every worker.
+    beacon_contest_range: int = 15
+    # A unit carrying our Beacon parks within this radius of the Core.
+    beacon_carrier_hold_radius: int = 1
     aggression: AggressionLevel = AggressionLevel.DEFENSIVE
     vanguard_ratio: float | None = None
 
@@ -111,6 +118,8 @@ class SafetyPlannerConfig:
             ("guard_resources", self.guard_resources),
             ("guard_force", self.guard_force),
             ("max_focus_distance", self.max_focus_distance),
+            ("beacon_contest_range", self.beacon_contest_range),
+            ("beacon_carrier_hold_radius", self.beacon_carrier_hold_radius),
         ):
             if isinstance(value, bool) or not isinstance(value, int):
                 raise TypeError(f"{name} must be an integer")

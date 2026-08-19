@@ -15,8 +15,8 @@ from arena_hero_agent.domain import (
     CURRENT_RULES_VERSION,
     Coordinate,
     UnitRole,
+    shot_line_blocked,
     unit_price,
-    vision_line_blocked,
 )
 
 from .plan import CoreAction, CoreActionType, Plan, PlanIntent, UnitAction, UnitActionType
@@ -281,7 +281,7 @@ def _validate_shot(
         distance < 1
         or distance > RANGER_SHOOT_RANGE
         or not aligned
-        or vision_line_blocked(unit.position, action.expected_cell, blocked_cells)
+        or shot_line_blocked(unit.position, action.expected_cell, blocked_cells)
     ):
         return _issue(
             ValidationCode.INVALID_SHOT, actor, "target cell is out of line-of-sight range"

@@ -10,6 +10,7 @@ from arena_hero_agent.domain import CURRENT_RULES_VERSION, Coordinate, EntityId,
 from arena_hero_agent.planning import (
     BeaconInfo,
     CoreActionType,
+    EnemyUnit,
     PlanningSnapshot,
     PlanningUnit,
     UnitActionType,
@@ -37,6 +38,8 @@ def _snapshot(
     core_health: int | None = None,
     core_shield: int | None = None,
     obstacle_cells: frozenset[str] = frozenset(),
+    beacon: BeaconInfo | None = None,
+    enemy_units: tuple[EnemyUnit, ...] = (),
 ) -> PlanningSnapshot:
     return PlanningSnapshot(
         tick=tick,
@@ -49,14 +52,34 @@ def _snapshot(
         resource_cells={},
         obstacle_cells=obstacle_cells,
         enemy_cells=frozenset(),
-        enemy_units=(),
+        enemy_units=enemy_units,
         core_id=None if core_position is None else "core",
         core_position=core_position,
         core_health=None if core_position is None else (core_health or 5),
         core_shield=core_shield,
         core_state=core_state,
-        beacon=BeaconInfo(position=Coordinate(0, 0), status=None),
+        beacon=BeaconInfo(position=Coordinate(0, 0), status=None) if beacon is None else beacon,
         threat_map={},
+    )
+
+
+def _vanguard(x: int, y: int) -> PlanningUnit:
+    return PlanningUnit(
+        id=EntityId(f"v{x}_{y}"),
+        unit_role=UnitRole.VANGUARD,
+        position=Coordinate(x, y),
+        health=4,
+        cargo=0,
+    )
+
+
+def _ranger(x: int, y: int) -> PlanningUnit:
+    return PlanningUnit(
+        id=EntityId(f"r{x}_{y}"),
+        unit_role=UnitRole.RANGER,
+        position=Coordinate(x, y),
+        health=2,
+        cargo=0,
     )
 
 
@@ -261,3 +284,189 @@ def test_aggressive_config_is_distinct_and_valid() -> None:
     planner = SafetyPlanner(config=AGGRESSIVE_SAFETY_CONFIG)
     decision = planner.decide(_snapshot())
     assert decision.plan.unit_actions == ()
+
+
+def test_vanguard_contests_ground_beacon_within_range() -> None:
+    vanguard = _vanguard(3, 3)
+    beacon = BeaconInfo(position=Coordinate(10, 10), status="ground", carrier_id=None)
+    snapshot = _snapshot(
+        units=(vanguard,),
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        beacon=beacon,
+    )
+    decision = SafetyPlanner().decide(snapshot)
+    action = decision.plan.action_for(vanguard.id.value)
+    assert action is not None
+    assert action.type is UnitActionType.MOVE
+    assert action.direction == step_toward(Coordinate(3, 3), Coordinate(10, 10))
+
+
+def test_ranger_picks_up_ground_beacon_on_its_cell() -> None:
+    ranger = _ranger(10, 10)
+    beacon = BeaconInfo(position=Coordinate(10, 10), status="ground", carrier_id=None)
+    snapshot = _snapshot(
+        units=(ranger,),
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        beacon=beacon,
+    )
+    decision = SafetyPlanner().decide(snapshot)
+    action = decision.plan.action_for(ranger.id.value)
+    assert action is not None
+    assert action.type is UnitActionType.PICKUP_BEACON
+
+
+def test_beacon_contest_yields_to_visible_enemy() -> None:
+    vanguard = _vanguard(3, 3)
+    beacon = BeaconInfo(position=Coordinate(10, 10), status="ground", carrier_id=None)
+    enemy = EnemyUnit(
+        id=EntityId("enemy-1"),
+        position=Coordinate(2, 3),
+        unit_role=UnitRole.VANGUARD,
+    )
+    snapshot = _snapshot(
+        units=(vanguard,),
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        beacon=beacon,
+        enemy_units=(enemy,),
+    )
+    decision = SafetyPlanner().decide(snapshot)
+    action = decision.plan.action_for(vanguard.id.value)
+    assert action is not None
+    assert action.type is not UnitActionType.PICKUP_BEACON
+    # The adjacent enemy gets swept before anything else.
+    assert action.type is UnitActionType.SWEEP
+
+
+def test_beacon_carrier_returns_and_parks_next_to_core() -> None:
+    vanguard = _vanguard(10, 10)
+    beacon = BeaconInfo(
+        position=Coordinate(10, 10),
+        status="carried",
+        carrier_id=vanguard.id,
+    )
+    snapshot = _snapshot(
+        units=(vanguard,),
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        beacon=beacon,
+    )
+    decision = SafetyPlanner().decide(snapshot)
+    action = decision.plan.action_for(vanguard.id.value)
+    assert action is not None
+    assert action.type is UnitActionType.MOVE
+
+    parked = _vanguard(1, 0)
+    snapshot = _snapshot(
+        units=(parked,),
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        beacon=BeaconInfo(
+            position=Coordinate(1, 0),
+            status="carried",
+            carrier_id=parked.id,
+        ),
+    )
+    decision = SafetyPlanner().decide(snapshot)
+    action = decision.plan.action_for(parked.id.value)
+    assert action is not None
+    assert action.type is UnitActionType.WAIT
+
+
+def test_worker_carrier_deposits_cargo_before_parking() -> None:
+    worker = _worker(3, 0, cargo=2)
+    snapshot = _snapshot(
+        units=(worker,),
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        beacon=BeaconInfo(
+            position=Coordinate(3, 0),
+            status="carried",
+            carrier_id=worker.id,
+        ),
+    )
+    decision = SafetyPlanner().decide(snapshot)
+    action = decision.plan.action_for(worker.id.value)
+    assert action is not None
+    assert action.type is UnitActionType.MOVE
+    assert action.direction == step_toward(Coordinate(3, 0), Coordinate(0, 0))
+
+
+def test_core_repairs_shield_to_beacon_cap_when_held() -> None:
+    carrier = _vanguard(1, 0)
+    worker = _worker(0, 1)
+    snapshot = _snapshot(
+        units=(worker, carrier),
+        resources=6,
+        resource_capacity=100,
+        population=2,
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        core_health=5,
+        core_shield=5,
+        beacon=BeaconInfo(
+            position=Coordinate(1, 0),
+            status="carried",
+            carrier_id=carrier.id,
+        ),
+    )
+    # worker_target 1: the next military spawn (10) is unaffordable at res 6,
+    # so the idle Core repairs toward the Beacon shield cap 10.
+    decision = SafetyPlanner(config=SafetyPlannerConfig(worker_target=1)).decide(snapshot)
+    assert decision.plan.core_action is not None
+    assert decision.plan.core_action.type is CoreActionType.REPAIR_SHIELD
+
+
+def test_core_skips_beacon_shield_repair_when_not_held() -> None:
+    worker = _worker(1, 0)
+    snapshot = _snapshot(
+        units=(worker,),
+        resources=6,
+        resource_capacity=100,
+        population=1,
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        core_health=5,
+        core_shield=5,
+    )
+    # Not holding the Beacon: shield 5 == cap 5, so nothing to repair.
+    decision = SafetyPlanner(config=SafetyPlannerConfig(worker_target=1)).decide(snapshot)
+    assert decision.plan.core_action is None
+
+
+def test_threat_vanguard_waits_for_worker_floor() -> None:
+    enemy = EnemyUnit(
+        id=EntityId("enemy-1"),
+        position=Coordinate(1, 0),
+        unit_role=UnitRole.VANGUARD,
+    )
+    # Two workers: the economy comes first even under threat.
+    snapshot = _snapshot(
+        units=(_worker(0, 1), _worker(0, -1)),
+        resources=15,
+        resource_capacity=100,
+        population=2,
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        enemy_units=(enemy,),
+    )
+    decision = SafetyPlanner().decide(snapshot)
+    assert decision.plan.core_action is not None
+    assert decision.plan.core_action.unit_role is UnitRole.WORKER
+
+    # Four workers and a fat bank: the threat Vanguard is bought.
+    snapshot = _snapshot(
+        units=(_worker(0, 1), _worker(0, -1), _worker(1, 0), _worker(-1, 0)),
+        resources=16,
+        resource_capacity=100,
+        population=4,
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        enemy_units=(enemy,),
+    )
+    decision = SafetyPlanner().decide(snapshot)
+    assert decision.plan.core_action is not None
+    assert decision.plan.core_action.type is CoreActionType.SPAWN
+    assert decision.plan.core_action.unit_role is UnitRole.VANGUARD

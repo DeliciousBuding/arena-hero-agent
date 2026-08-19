@@ -74,7 +74,6 @@ from arena_hero_agent.planning import (
     extract_planning_snapshot,
     is_hungry,
     mark_reached,
-    next_step_toward,
     observe_exploration,
     with_memory_resource_cells,
 )
@@ -233,6 +232,15 @@ REFILL_BONUS_VALUE: Final = 2.0
 # survivors of old migrations; production t3 workers idled 45-89 tiles away
 # harvesting nothing). Aligned with COLLECTION_MAX_DISTANCE.
 STRANDED_RECALL_DISTANCE: Final = 40
+# Recall routing budget: the plain assignment BFS (64 radius / 16k nodes)
+# tops out at ~64 Chebyshev tiles, which silently froze workers stranded
+# farther away (production t3: 111 tiles, hundreds of ticks, replay-verified).
+# A* with a 192-tile radius covers any production-world recall distance.
+RECALL_ROUTE_RADIUS: Final = 192
+RECALL_ROUTE_NODE_BUDGET: Final = 131072
+# Extra cost of switching a worker to a different target cell (production
+# hysteresis; the pure assignment layer defaults to 0.0).
+HYSTERESIS_SWITCH_THRESHOLD: Final = 0.5
 
 
 @dataclass(frozen=True, slots=True)
@@ -665,9 +673,21 @@ def _recall_stranded_workers(snapshot: PlanningSnapshot, plan: Plan) -> Plan:
         if manhattan(unit.position, core) <= STRANDED_RECALL_DISTANCE:
             continue
         parking = min(open_parking, key=lambda cell: manhattan(unit.position, cell))
-        direction = next_step_toward(unit.position, parking, _routing_obstacles(snapshot))
+        # Wide search: the plain BFS (64-radius / 16k-node budget) tops out at
+        # ~64 Chebyshev tiles, so workers stranded 65+ tiles away were
+        # silently skipped and froze forever (production t3: a worker sat 111
+        # tiles from the Core for hundreds of ticks; replay-verified).
+        # A* covers 192 tiles; if even that fails, fall back to the greedy
+        # axis step so the recall never silently no-ops.
+        direction = astar_next_step(
+            unit.position,
+            parking,
+            _routing_obstacles(snapshot),
+            search_radius=RECALL_ROUTE_RADIUS,
+            node_budget=RECALL_ROUTE_NODE_BUDGET,
+        )
         if direction is None:
-            continue
+            direction = step_toward(unit.position, parking)
         new_actions[index] = PlanningUnitAction(
             unit_id=action.unit_id,
             type=UnitActionType.MOVE,
@@ -1976,6 +1996,11 @@ class ComposedDecider:
                     max_collection_distance=COLLECTION_MAX_DISTANCE,
                     refill_lookahead=REFILL_LOOKAHEAD_TICKS,
                     refill_bonus=REFILL_BONUS_VALUE,
+                    # Hysteresis: switching to a different cell costs an extra
+                    # 0.5 net value, damping deposit-return / re-assignment
+                    # churn (the pure layer default is 0.0; the production
+                    # path injects this like the other research knobs).
+                    switch_threshold=HYSTERESIS_SWITCH_THRESHOLD,
                 ),
             )
             observe_exploration(snapshot, self._previous_assignments, self._exploration_state)
