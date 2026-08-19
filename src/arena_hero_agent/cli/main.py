@@ -1003,6 +1003,12 @@ def _decider_with_live_status(
 
         decide.safety_fallback = safety_fallback
 
+    # Forward the read-only state digest so tick_state telemetry can record
+    # why hooks fired even though the tick loop only sees this wrapper.
+    summary = getattr(decider, "state_summary", None)
+    if callable(summary):
+        decide.state_summary = summary
+
     return decide
 
 

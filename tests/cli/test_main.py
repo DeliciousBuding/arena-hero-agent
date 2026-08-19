@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from arena_hero_agent.application.tick_loop import TurnStream
-from arena_hero_agent.application.turns import TurnObservation
+from arena_hero_agent.application.turns import Decision, TurnObservation
 from arena_hero_agent.cli.main import (
     DEFAULT_DATA_ROOT,
     EXIT_ERROR,
@@ -19,6 +19,7 @@ from arena_hero_agent.cli.main import (
     EXIT_OK,
     HealthSnapshot,
     RunState,
+    _decider_with_live_status,
     _run_async,
     _write_health,
     build_parser,
@@ -375,3 +376,30 @@ def test_output_privacy_scan(tmp_path: Path, capsys: pytest.CaptureFixture[str])
     combined = captured.out + captured.err
     for forbidden in FORBIDDEN_OUTPUT:
         assert forbidden not in combined
+
+
+def test_decider_with_live_status_forwards_state_summary() -> None:
+    """The live-status wrapper must forward state_summary to tick_state telemetry.
+
+    The tick loop duck-types a ``state_summary`` callable off the decider it
+    receives; the production path wraps the composed decider with
+    ``_decider_with_live_status``, so without the forward the deciderState
+    telemetry field would silently stay null in production.
+    """
+
+    class FakeDecider:
+        def __call__(self, observation, budget):  # noqa: ANN001
+            del budget
+            return Decision(tick=observation.tick)
+
+        def state_summary(self) -> dict[str, object]:
+            return {"noWorkerDeadlockTicks": 2}
+
+    class FakeWriter:
+        def write(self, observation) -> None:  # noqa: ANN001
+            del observation
+
+    wrapped = _decider_with_live_status(FakeDecider(), FakeWriter())
+    summary = getattr(wrapped, "state_summary", None)
+    assert callable(summary)
+    assert summary() == {"noWorkerDeadlockTicks": 2}
