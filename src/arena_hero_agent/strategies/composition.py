@@ -143,6 +143,7 @@ from .respawn_recovery import (
     RespawnRecoveryState,
     StuckWithResourcesState,
     detect_respawn,
+    has_local_yield,
     migration_direction_toward_origin,
 )
 from .safety_helpers import can_shoot
@@ -1500,7 +1501,15 @@ class ComposedDecider:
         # visible-cell-only trigger misclassified productive regions as barren
         # and migrated the Core away from them (production: t4 lost 111
         # deposits in 400 ticks to CORE_MOVING while the Core constantly
-        # migrated; t2's barren state reset 15 times mid-migration).
+        # migrated). Economic activity therefore resets the state fully — the
+        # region is productive, stay put.
+        #
+        # 2026-08-21 refinement: activity only counts as LOCAL yield. The
+        # deposit must come from a harvest recorded within the barren radius
+        # of the Core; cargo trekked in from far away must NOT cancel the
+        # migration latch. Production t1/t3/t4 crawled one 4-tick migration
+        # cycle at a time for hours because every distant-harvest deposit
+        # reset the latch the moment it landed.
         previous_resources = self._previous_resources
         previous_population = self._previous_population
         self._previous_resources = snapshot.resources
@@ -1510,6 +1519,12 @@ class ComposedDecider:
             and (
                 snapshot.resources > previous_resources
                 or snapshot.population > previous_population
+            )
+            and core is not None
+            and has_local_yield(
+                self._exploration_state.harvested_cells,
+                core,
+                self._config.barren_resource_distance,
             )
         )
 

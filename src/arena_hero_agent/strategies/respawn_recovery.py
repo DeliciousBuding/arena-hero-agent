@@ -23,6 +23,7 @@ the origin where resource density is higher (ring 0 = 16 per chunk).
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Final
 
@@ -35,6 +36,33 @@ DEFAULT_BARREN_MIGRATION_COOLDOWN: Final = 30
 DEFAULT_STUCK_RESOURCES_TICKS: Final = 20
 DEFAULT_BARREN_RESET_LIMIT: Final = 3
 DEFAULT_BARREN_MIGRATION_FAIL_LIMIT: Final = 3
+
+
+def has_local_yield(
+    harvested_cells: Mapping[str, tuple[Coordinate, int]],
+    core: Coordinate,
+    radius: int,
+) -> bool:
+    """Return whether any recorded harvest happened within ``radius`` of the Core.
+
+    The barren-migration latch uses this to tell a productive sparse ring (the
+    tenant harvests inside its own ring, so deposits prove local yield) apart
+    from a genuinely barren region (workers trek out and bring cargo back from
+    far away; those deposits must NOT cancel the migration latch — production
+    t1/t3/t4 crawled one 4-tick migration cycle at a time because every
+    distant-harvest deposit reset the latch).
+    """
+
+    if not isinstance(core, Coordinate):
+        raise TypeError("core must be a Coordinate")
+    if isinstance(radius, bool) or not isinstance(radius, int):
+        raise TypeError("radius must be an integer")
+    if radius < 0:
+        raise ValueError("radius cannot be negative")
+    for _cell_key, (position, _ready_tick) in harvested_cells.items():
+        if manhattan(core, position) <= radius:
+            return True
+    return False
 
 
 def detect_respawn(

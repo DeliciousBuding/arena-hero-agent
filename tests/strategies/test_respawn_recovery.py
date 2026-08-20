@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from arena_hero_agent.domain import CURRENT_RULES_VERSION, Coordinate, UnitRole
@@ -280,3 +282,40 @@ def test_disabled_recovery_leaves_teleport_untouched() -> None:
     )
     # Disabled: recovery does not override the military spawn chosen by baseline.
     assert _core_role(plan) in (UnitRole.VANGUARD, UnitRole.RANGER)
+
+
+def test_has_local_yield_detects_harvest_near_core() -> None:
+    from arena_hero_agent.strategies.respawn_recovery import has_local_yield
+
+    harvested = {
+        "10,12": (Coordinate(10, 12), 100),
+        "60,0": (Coordinate(60, 0), 90),
+    }
+    core = Coordinate(0, 0)
+    assert has_local_yield(harvested, core, radius=40) is True
+
+
+def test_has_local_yield_ignores_distant_harvests() -> None:
+    from arena_hero_agent.strategies.respawn_recovery import has_local_yield
+
+    harvested = {
+        "60,0": (Coordinate(60, 0), 90),
+        "-45,-45": (Coordinate(-45, -45), 90),
+    }
+    core = Coordinate(0, 0)
+    assert has_local_yield(harvested, core, radius=40) is False
+
+
+def test_has_local_yield_empty_ledger_is_not_yield() -> None:
+    from arena_hero_agent.strategies.respawn_recovery import has_local_yield
+
+    assert has_local_yield({}, Coordinate(0, 0), radius=40) is False
+
+
+def test_has_local_yield_rejects_invalid_inputs() -> None:
+    from arena_hero_agent.strategies.respawn_recovery import has_local_yield
+
+    with pytest.raises(TypeError):
+        has_local_yield({}, cast(Coordinate, "core"), radius=40)
+    with pytest.raises(ValueError):
+        has_local_yield({}, Coordinate(0, 0), radius=-1)
