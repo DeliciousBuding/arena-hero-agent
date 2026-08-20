@@ -328,7 +328,7 @@ def test_observe_exploration_removes_harvested_cell_from_memory() -> None:
     assert state.prev_cargo["w1"] == 1
 
 
-def test_harvested_cell_readmitted_after_refill_boundary() -> None:
+def test_harvested_cell_tombstone_expires_without_readmission() -> None:
     state = ExplorationState()
     resource = Coordinate(10, 0)
     state.cell_positions[resource.cell_key] = resource
@@ -339,14 +339,25 @@ def test_harvested_cell_readmitted_after_refill_boundary() -> None:
     observe_exploration(_snapshot(tick=5, units=(unit,)), (), state)
     assert resource.cell_key not in state.cell_positions
     assert state.harvested_cells[resource.cell_key] == (resource, 8)
-    # Before the boundary the cell stays out of memory.
+    # Before the boundary the tombstone persists.
     observe_exploration(_snapshot(tick=6, units=(unit,)), (), state)
     assert resource.cell_key not in state.cell_positions
-    # At the boundary the cell re-enters memory as a historical candidate.
+    assert resource.cell_key in state.harvested_cells
+    # R1a: at the boundary the tombstone simply expires. The cell is NOT
+    # re-admitted — official replenishment places replacements at random
+    # positions inside the chunk, so the old cell is almost always empty.
     observe_exploration(_snapshot(tick=8, units=(unit,)), (), state)
-    assert state.cell_positions[resource.cell_key] == resource
-    assert state.cell_last_seen[resource.cell_key] == 8
+    assert resource.cell_key not in state.cell_positions
     assert resource.cell_key not in state.harvested_cells
+
+
+def test_harvested_cells_stay_out_of_the_assignment_matrix() -> None:
+    state = ExplorationState()
+    resource = Coordinate(10, 0)
+    state.harvested_cells[resource.cell_key] = (resource, 6)
+    snapshot = _snapshot(tick=5, units=())
+    merged = with_memory_resource_cells(snapshot, state)
+    assert resource.cell_key not in merged.resource_cells
 
 
 def test_reset_location_state_clears_harvested_cells() -> None:

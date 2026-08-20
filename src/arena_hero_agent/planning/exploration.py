@@ -113,12 +113,12 @@ class ExplorationState:
     cell_positions: dict[str, Coordinate] = field(default_factory=dict)
     cell_last_seen: dict[str, int] = field(default_factory=dict)
     prev_cargo: dict[str, int] = field(default_factory=dict)
-    # Cells harvested this tick are scheduled for memory re-admission at the
-    # chunk's next refill boundary (official replenishment runs every 4
-    # resolved ticks). Without this, a harvested cell is erased from memory
-    # forever and the matrix loses the near-Core mines while stale far-memory
-    # cells stay — the observed driver of long-haul worker preference.
-    # Maps cell key -> (position, ready_at_tick).
+    # Harvested cells are tombstones, not refill predictions: the official
+    # replenishment places replacements at random positions inside the chunk
+    # (rules/map-and-vision.md), so the old cell is almost never the one that
+    # refills. Entries expire at the chunk's refill boundary and are never
+    # re-admitted to ``cell_positions`` — rediscovery is the scout's job.
+    # Maps cell key -> (position, tombstone_until_tick).
     harvested_cells: dict[str, tuple[Coordinate, int]] = field(default_factory=dict)
     # Consecutive empty-harvest confirmations per cell key; two strikes remove
     # the cell from memory permanently (C2: the cell never refills, or was
@@ -274,21 +274,20 @@ def observe_exploration(
         state.chunk_anchor[chunk] = cell
         state.hungry_since = snapshot.tick
 
-    # Promote harvested cells whose refill boundary has passed back into the
-    # resource-cell memory. Official replenishment runs every 4 resolved ticks
-    # (``REFILL_RECHECK_TICKS``), so a harvested mine becomes collectable
-    # again shortly after; without re-admission the near-Core cells vanish
-    # from the assignment matrix while stale far-memory cells remain, biasing
-    # workers toward long hauls.
-    due_keys = [
-        key
-        for key, (_, ready_tick) in state.harvested_cells.items()
-        if ready_tick <= snapshot.tick
-    ]
-    for key in due_keys:
-        position, _ = state.harvested_cells.pop(key)
-        state.cell_positions[key] = position
-        state.cell_last_seen[key] = snapshot.tick
+    # R1a tombstones: harvested cells are NOT re-admitted at their old
+    # position. Official replenishment places replacements at
+    # deterministically random positions inside the chunk
+    # (rules/map-and-vision.md), so the old cell is almost always still
+    # empty at the refill boundary — re-admitting it sent workers on wasted
+    # round trips and, worse, kept the resource-cell set non-empty so the
+    # barren-migration latch kept resetting over a region that yields
+    # nothing (production t1: stale memory within 40 tiles blocked
+    # migration while the worker circled an empty Core area for hours).
+    # The tombstone simply expires at the boundary; rediscovery is the
+    # scout's job (chunk rechecks in ``build_exploration_targets``).
+    for key, (_, ready_tick) in tuple(state.harvested_cells.items()):
+        if ready_tick <= snapshot.tick:
+            state.harvested_cells.pop(key, None)
 
     # Cargo 0 -> >0 means this worker just harvested the natural resource it is
     # standing on (GO_RESOURCE that converted to HARVEST is not visible as a
@@ -359,11 +358,9 @@ def with_memory_resource_cells(
     single scout discovered, instead of only the workers whose vision currently
     covers that cell. Cells already visible keep their ``visible=True`` form.
 
-    Harvested cells whose refill boundary is within ``REFILL_RECHECK_TICKS``
-    also merge early: the worker arrives at (or right after) the boundary and
-    harvests the refilled point immediately, the cheap approximation of a
-    refill-rhythm rollout. The caller passes matching ``refill_predictions``
-    so these cells earn the refill bonus in the matrix.
+    Harvested cells (``harvested_cells``) are tombstones and stay out of the
+    matrix: official replenishment places replacements at random positions
+    inside the chunk, so the old cell position is almost never the refill.
     """
 
     if not isinstance(snapshot, PlanningSnapshot):
@@ -379,16 +376,6 @@ def with_memory_resource_cells(
             position=position,
             visible=False,
             last_seen_tick=state.cell_last_seen.get(key),
-        )
-    for key, (position, ready_at) in state.harvested_cells.items():
-        if key in merged:
-            continue
-        if ready_at - snapshot.tick > REFILL_RECHECK_TICKS:
-            continue
-        merged[key] = ResourceCellInfo(
-            position=position,
-            visible=False,
-            last_seen_tick=snapshot.tick,
         )
     return replace(snapshot, resource_cells=merged)
 

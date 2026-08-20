@@ -11,6 +11,7 @@ conversion of the composition. The composition itself is registered as
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -515,3 +516,54 @@ def test_route_aware_deposit_moves_when_core_cell_free() -> None:
         route_aware=True,
     )
     assert _action(plan, "full") is UnitActionType.MOVE
+
+
+def test_terrain_trap_requires_consecutive_core_occupancy() -> None:
+    """The trap self-destruct waits for TERRAIN_TRAP_CONFIRM_TICKS on-Core ticks.
+
+    A worker passing through the Core cell must not be destroyed the moment
+    the stuck-resources timer fires (production t2 burned resources across
+    six SPAWN_FAILED -> self-destruct -> spawn cycles).
+    """
+
+    def make_decider() -> ComposedDecider:
+        return ComposedDecider(
+            replace(
+                _all_off(),
+                stuck_resources_enabled=True,
+                stuck_resources_ticks=1,
+            )
+        )
+
+    def snapshot(tick: int, on_core: bool) -> PlanningSnapshot:
+        position = Coordinate(0, 0) if on_core else Coordinate(1, 0)
+        base = _worker_snapshot(
+            units=(_worker("w1", position.x, position.y),),
+            resources=5,
+            population=1,
+            core_position=Coordinate(0, 0),
+        )
+        return replace(base, tick=tick)
+
+    # Ticks 1-3: the worker stands on the Core cell. The stuck-resources
+    # timer fires from tick 1, but the confirmation needs 3 consecutive
+    # occupancy ticks (tracked from tick 1), so no self-destruct before
+    # tick 4.
+    decider = make_decider()
+    assert _action(decider.decide_snapshot(snapshot(1, True)), "w1") is UnitActionType.WAIT
+    assert _action(decider.decide_snapshot(snapshot(2, True)), "w1") is UnitActionType.WAIT
+    assert _action(decider.decide_snapshot(snapshot(3, True)), "w1") is UnitActionType.WAIT
+    assert (
+        _action(decider.decide_snapshot(snapshot(4, True)), "w1")
+        is UnitActionType.SELF_DESTRUCT
+    )
+
+    # A fresh decider: the worker leaves the Core cell after one tick; the
+    # suspect is cleared and never destroyed.
+    decider = make_decider()
+    assert _action(decider.decide_snapshot(snapshot(1, True)), "w1") is UnitActionType.WAIT
+    for tick in (2, 3, 4):
+        assert (
+            _action(decider.decide_snapshot(snapshot(tick, False)), "w1")
+            is UnitActionType.WAIT
+        )

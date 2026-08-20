@@ -359,11 +359,16 @@ class WorkerTaskPlannerConfig:
     congestion_penalty: float = DEFAULT_CONGESTION_PENALTY
     mission: MissionConfig = DEFAULT_MISSION_CONFIG
     claim_no_progress_ttl_ticks: int = DEFAULT_CLAIM_NO_PROGRESS_TTL_TICKS
+    # Cost a non-claimant pays to preempt a reserved cell. 0.0 reproduces the
+    # oracle's hard exclusion; the production composition injects 6.0 so a
+    # much nearer worker can take over a stale claim instead of WAITing.
+    claim_preempt_penalty: float = 0.0
 
     def __post_init__(self) -> None:
         for name, value in (
             ("sticky_bonus", self.sticky_bonus),
             ("congestion_penalty", self.congestion_penalty),
+            ("claim_preempt_penalty", self.claim_preempt_penalty),
         ):
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 raise TypeError(f"{name} must be a number")
@@ -580,7 +585,17 @@ def assign_worker_tasks(
                     continue
                 reserved_worker_id = reserved_for.get(key)
                 if reserved_worker_id is not None and worker.id.value != reserved_worker_id:
-                    matrix_row.append(forbidden_cost)
+                    # Claim softening: a non-claimant pays the preempt
+                    # penalty instead of being hard-excluded, so a much
+                    # nearer worker can take over a stale claim (the oracle's
+                    # hard exclusion survives as the default 0.0... the
+                    # penalty at 0.0 reproduces hard exclusion because the
+                    # claimant additionally holds CLAIM_BONUS).
+                    matrix_row.append(
+                        -(net - config.claim_preempt_penalty)
+                        if config.claim_preempt_penalty > 0.0
+                        else forbidden_cost
+                    )
                     continue
                 cell = snapshot.resource_cells[key]
                 if not is_collectable(

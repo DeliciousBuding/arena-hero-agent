@@ -222,12 +222,6 @@ ENEMY_FLEE_RADIUS: Final = 25
 # trekking 40+ tiles (production: workers pushed 96-156 tiles toward a single
 # remembered cell while the Core had already migrated).
 COLLECTION_MAX_DISTANCE: Final = 40.0
-# Soon-refilling harvested cells re-enter the assignment matrix within this
-# many ticks of their refill boundary and gain REFILL_BONUS_VALUE, so workers
-# wait near the Core for the next harvest instead of trekking (cheap
-# approximation of evolve's rollout harvest rhythm).
-REFILL_LOOKAHEAD_TICKS: Final = 4
-REFILL_BONUS_VALUE: Final = 2.0
 # Idle workers farther than this from the Core are recalled home (stranded
 # survivors of old migrations; production t3 workers idled 45-89 tiles away
 # harvesting nothing). Aligned with COLLECTION_MAX_DISTANCE.
@@ -241,6 +235,13 @@ RECALL_ROUTE_NODE_BUDGET: Final = 131072
 # Extra cost of switching a worker to a different target cell (production
 # hysteresis; the pure assignment layer defaults to 0.0).
 HYSTERESIS_SWITCH_THRESHOLD: Final = 0.5
+# Terrain-trap self-destruct confirmation: a worker must occupy the Core cell
+# for this many consecutive ticks before the trap hook destroys it.
+TERRAIN_TRAP_CONFIRM_TICKS: Final = 3
+# Claim softening: a non-claimant pays this to preempt a reserved cell
+# (injected into the production assignment matrix; the pure layer defaults to
+# 0.0 which reproduces the oracle's hard exclusion).
+CLAIM_PREEMPT_PENALTY: Final = 6.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -1032,6 +1033,11 @@ class ComposedDecider:
         self._previous_core_position: Coordinate | None = None
         self._previous_resources: int | None = None
         self._previous_population: int | None = None
+        # Terrain-trap self-destruct confirmation: unit id -> tick when it
+        # first stood on the Core cell with no cargo. Only workers that keep
+        # occupying the Core cell for TERRAIN_TRAP_CONFIRM_TICKS consecutive
+        # ticks are destroyed (a worker merely passing through must survive).
+        self._trap_suspects: dict[str, int] = {}
 
     @property
     def config(self) -> ComposedDeciderConfig:
@@ -1608,6 +1614,27 @@ class ComposedDecider:
             return plan
         if snapshot.core_state != "normal":
             return plan
+        core_pos = snapshot.core_position
+        # Track on-Core occupancy every tick (not only when the timer fires)
+        # so the confirmation counts real consecutive occupancy. A worker
+        # merely passing through the Core cell must not be destroyed when
+        # the stuck-resources timer happens to fire (production t2 burned 5
+        # resources per cycle across six SPAWN_FAILED -> self-destruct ->
+        # spawn rounds; the killed worker was often not the actual blocker).
+        if core_pos is not None:
+            trapped_now = [
+                unit
+                for unit in snapshot.units
+                if unit.position == core_pos
+                and unit.unit_role is UnitRole.WORKER
+                and unit.cargo == 0
+            ]
+            for unit_id, _since_tick in tuple(self._trap_suspects.items()):
+                if any(unit.id.value == unit_id for unit in trapped_now):
+                    continue
+                del self._trap_suspects[unit_id]
+            for unit in trapped_now:
+                self._trap_suspects.setdefault(unit.id.value, snapshot.tick)
         should_fire = self._stuck_resources.observe(
             resources=snapshot.resources,
             population=snapshot.population,
@@ -1616,7 +1643,6 @@ class ComposedDecider:
         )
         if not should_fire:
             return plan
-        core_pos = snapshot.core_position
         if core_pos is None:
             return plan
         # A cargo-carrying worker standing on the Core is mid-deposit, not
@@ -1629,6 +1655,8 @@ class ComposedDecider:
             if unit.position == core_pos
             and unit.unit_role is UnitRole.WORKER
             and unit.cargo == 0
+            and snapshot.tick - self._trap_suspects.get(unit.id.value, snapshot.tick)
+            >= TERRAIN_TRAP_CONFIRM_TICKS
         ]
         if not trapped_workers:
             return plan
@@ -1984,7 +2012,6 @@ class ComposedDecider:
             )
 
         exploration_targets: Mapping[str, Coordinate] | None = None
-        refill_predictions: Mapping[str, int] | None = None
         if self._config.exploration_v2_enabled:
             worker_config = replace(
                 worker_config,
@@ -1994,14 +2021,13 @@ class ComposedDecider:
                         worker_config.mission.survey_worker_cap, EXPLORATION_SURVEY_CAP
                     ),
                     max_collection_distance=COLLECTION_MAX_DISTANCE,
-                    refill_lookahead=REFILL_LOOKAHEAD_TICKS,
-                    refill_bonus=REFILL_BONUS_VALUE,
                     # Hysteresis: switching to a different cell costs an extra
                     # 0.5 net value, damping deposit-return / re-assignment
                     # churn (the pure layer default is 0.0; the production
                     # path injects this like the other research knobs).
                     switch_threshold=HYSTERESIS_SWITCH_THRESHOLD,
                 ),
+                claim_preempt_penalty=CLAIM_PREEMPT_PENALTY,
             )
             observe_exploration(snapshot, self._previous_assignments, self._exploration_state)
             snapshot = with_memory_resource_cells(snapshot, self._exploration_state)
@@ -2009,8 +2035,14 @@ class ComposedDecider:
             # collectable cells exist, shrink the pre-reserve cap to one so
             # the matrix keeps all but one worker harvesting (production:
             # with cap 3 and pop 2-4 only one harvester remained, so doubling
-            # workers did not double income).
-            if snapshot.resource_cells:
+            # workers did not double income). Migration and respawn recovery
+            # are exempt: a moving Core must scout wider, not harvest a dying
+            # region's stale memory (production: blind migrations of 300-800
+            # ticks with a single scout while other workers WAITed).
+            in_migration_or_recovery = (
+                self._barren_migration.migration_active or self._respawn_state.active
+            )
+            if snapshot.resource_cells and not in_migration_or_recovery:
                 worker_config = replace(
                     worker_config,
                     mission=replace(
@@ -2018,29 +2050,30 @@ class ComposedDecider:
                         survey_worker_cap=min(worker_config.mission.survey_worker_cap, 1),
                     ),
                 )
-            # Soon-refilling harvested cells re-enter the matrix as early
-            # candidates with a bonus, so workers arrive right at the refill
-            # boundary instead of trekking to far mines (evolve's rollout
-            # harvest rhythm, cheap approximation).
-            refill_predictions = {
-                key: ready_at - snapshot.tick
-                for key, (_, ready_at) in self._exploration_state.harvested_cells.items()
-                if ready_at - snapshot.tick <= REFILL_LOOKAHEAD_TICKS
-            }
-            # During respawn in a resource-barren area, expand the exploration
-            # rings immediately (hunger mode: 8/16/24/32/40 radii + 8-ring
-            # sweep) instead of waiting HUNGER_TICKS (200) for the hunger
-            # clock to trip. This reaches further out per tick so workers
-            # find resources faster after a barren respawn.
+            # During respawn in a resource-barren area OR active barren
+            # migration, expand the exploration rings immediately (hunger
+            # mode: 8/16/24/32/40 radii + 8-ring sweep) instead of waiting
+            # HUNGER_TICKS (200) for the hunger clock to trip. This reaches
+            # further out per tick so workers find resources faster (a
+            # migrating Core with normal 10/20/30 rings walked blind for
+            # 300-843 production ticks).
             respawn_barren = (
                 self._config.respawn_recovery_enabled
                 and self._respawn_state.active
                 and not snapshot.resource_cells
             )
+            migration_barren = (
+                self._config.barren_migration_enabled
+                and self._barren_migration.migration_active
+            )
             exploration_targets = build_exploration_targets(
                 snapshot,
                 self._exploration_state,
-                hungry=is_hungry(self._exploration_state, snapshot.tick) or respawn_barren,
+                hungry=(
+                    is_hungry(self._exploration_state, snapshot.tick)
+                    or respawn_barren
+                    or migration_barren
+                ),
                 barren=respawn_barren,
             )
 
@@ -2052,7 +2085,6 @@ class ComposedDecider:
             claims=self._claims,
             blocked_cells=blocked_cells,
             exploration_targets=exploration_targets,
-            refill_predictions=refill_predictions,
         )
         self._previous_assignments = result.plan.assignments
         self._claims = result.claims
@@ -2069,17 +2101,6 @@ class ComposedDecider:
         )
 
         if self._config.exploration_v2_enabled:
-            # A cell holds two entities and the Core occupies one slot, so an
-            # idle worker standing on the Core cell blocks deposits from other
-            # workers AND any SPAWN (CELL_UNIT_LIMIT). Vacate it every tick,
-            # not only when a spawn is decided (the state-seed replay harness
-            # reproduced a 500-tick deposit stall exactly this way: a cargo
-            # worker waited adjacent while a WAIT unit held the Core cell).
-            plan = Plan(
-                tick=plan.tick,
-                unit_actions=_vacate_core_cell_actions(snapshot, plan.unit_actions),
-                core_action=plan.core_action,
-            )
             # Stranded idle workers far from the Core are recalled home
             # (survivors of old migrations: production t3 workers idled 45-89
             # tiles away harvesting nothing while the Core sat elsewhere).
@@ -2093,6 +2114,21 @@ class ComposedDecider:
                     unit_actions=plan.unit_actions,
                     core_action=movement_core_action,
                 )
+
+        if self._config.exploration_v2_enabled:
+            # A cell holds two entities and the Core occupies one slot, so an
+            # idle worker standing on the Core cell blocks deposits from other
+            # workers AND any SPAWN (CELL_UNIT_LIMIT). Vacate it every tick as
+            # the final word on unit actions — running it after the movement
+            # guard matters because a loop-pause can re-WAIT a worker the
+            # vacate just moved, and then the tenant burns 5 resources per
+            # failed spawn (production t2: six SPAWN_FAILED CELL_UNIT_LIMIT ->
+            # self-destruct -> spawn cycles).
+            plan = Plan(
+                tick=plan.tick,
+                unit_actions=_vacate_core_cell_actions(snapshot, plan.unit_actions),
+                core_action=plan.core_action,
+            )
 
         if self._config.economy_budget_enabled:
             plan = self._economy_budget_hook(snapshot, plan)

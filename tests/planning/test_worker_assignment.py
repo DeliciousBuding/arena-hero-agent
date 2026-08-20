@@ -404,3 +404,87 @@ def test_survey_burst_keeps_one_harvester_when_resources_wait() -> None:
     result = assign_worker_tasks(snapshot, (), config=config, survey_burst_active=True)
     task_types = {assignment.task.type for assignment in result.plan.assignments}
     assert TaskType.GO_RESOURCE in task_types
+
+
+def test_claim_preempt_penalty_lets_nearer_worker_take_over() -> None:
+    """A much nearer non-claimant preempts a reserved cell (claim softening).
+
+    The pure layer default (0.0) reproduces the oracle's hard exclusion; a
+    positive penalty only lets a worker win when its travel advantage beats
+    CLAIM_BONUS (20) plus the penalty.
+    """
+
+    record = {
+        "tick": 2,
+        "resources": 0,
+        "resourceCapacity": 100,
+        "resourceSpace": 100,
+        "population": 2,
+        "units": [
+            {"id": "w1", "unitType": "WORKER", "position": [0, 0], "hp": 2, "cargo": 0},
+            {"id": "w2", "unitType": "WORKER", "position": [30, 0], "hp": 2, "cargo": 0},
+        ],
+        "resourceCells": {
+            "20,0": {"position": [20, 0], "visible": True, "lastSeenTick": 2, "seeded": False},
+        },
+        "obstacleCells": [],
+        "enemyCells": [],
+        "enemyUnits": [],
+        "corePosition": [0, 0],
+        "coreHp": 5,
+        "coreState": "NORMAL",
+        "beacon": {"position": [0, 0], "status": None, "carrierId": None},
+        "threatMap": {},
+    }
+    snapshot = _snapshot(record)
+    claims = frozenset(
+        {
+            WorkerClaim(
+                unit_id="w2",
+                cell_key="20,0",
+                claim_tick=1,
+                last_progress_tick=1,
+                progress_distance=10,
+                last_position=_coordinate([30, 0]),
+            )
+        }
+    )
+    # Default penalty 0.0: the reserved cell stays hard-excluded for w1.
+    hard = assign_worker_tasks(snapshot, (), config=WorkerTaskPlannerConfig(), claims=claims)
+    hard_tasks = {
+        assignment.unit_id: assignment.task.type for assignment in hard.plan.assignments
+    }
+    assert hard_tasks.get("w1") is TaskType.WAIT
+
+    # With the production penalty the nearer worker (w1, 20 tiles) still
+    # cannot beat w2's claim: 20 (CLAIM_BONUS) + 6 (penalty) > the 10-tile
+    # travel edge. Preemption only fires for overwhelming advantages.
+    soft = assign_worker_tasks(
+        snapshot,
+        (),
+        config=WorkerTaskPlannerConfig(claim_preempt_penalty=6.0),
+        claims=claims,
+    )
+    soft_tasks = {
+        assignment.unit_id: assignment.task.type for assignment in soft.plan.assignments
+    }
+    assert soft_tasks.get("w1") is TaskType.WAIT
+
+    # A truly nearer claimant alternative: w1 at distance 0 from the cell.
+    near_record = dict(record)
+    near_record["units"] = [
+        {"id": "w1", "unitType": "WORKER", "position": [19, 0], "hp": 2, "cargo": 0},
+        {"id": "w2", "unitType": "WORKER", "position": [30, 0], "hp": 2, "cargo": 0},
+    ]
+    near_snapshot = _snapshot(near_record)
+    taken = assign_worker_tasks(
+        near_snapshot,
+        (),
+        config=WorkerTaskPlannerConfig(claim_preempt_penalty=6.0),
+        claims=claims,
+    )
+    taken_tasks = {
+        assignment.unit_id: assignment.task for assignment in taken.plan.assignments
+    }
+    assert taken_tasks["w1"].type is TaskType.GO_RESOURCE
+    assert taken_tasks["w1"].target_cell_key == "20,0"
