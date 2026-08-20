@@ -24,7 +24,7 @@ from arena_hero_agent.planning import (
     ring_radii,
     with_memory_resource_cells,
 )
-from arena_hero_agent.planning.exploration import HUNGER_TICKS
+from arena_hero_agent.planning.exploration import HUNGER_TICKS, _chunk_recheck_ladder, chunk_center
 
 RULES = CURRENT_RULES_VERSION
 _ORIGIN = Coordinate(0, 0)
@@ -367,3 +367,112 @@ def test_reset_location_state_clears_harvested_cells() -> None:
     state.reset_location_state()
     assert state.harvested_cells == {}
     assert state.cell_positions == {}
+
+
+def test_chunk_recheck_ladder_anchor_center_then_corners() -> None:
+    chunk = (1, 2)
+    anchor = Coordinate(40, 80)
+    ladder = _chunk_recheck_ladder(chunk, anchor)
+    assert ladder[0] == anchor
+    assert ladder[1] == chunk_center(chunk)
+    assert set(ladder[2:]) == {
+        Coordinate(32, 64),
+        Coordinate(32, 95),
+        Coordinate(63, 64),
+        Coordinate(63, 95),
+    }
+
+
+def test_chunk_recheck_ladder_without_anchor_starts_at_center() -> None:
+    ladder = _chunk_recheck_ladder((0, 0), None)
+    assert ladder[0] == chunk_center((0, 0))
+    assert len(ladder) == 5
+
+
+def test_chunk_recheck_ladder_dedups_center_anchor() -> None:
+    center = chunk_center((0, 0))
+    ladder = _chunk_recheck_ladder((0, 0), center)
+    assert ladder.count(center) == 1
+
+
+def test_build_targets_spread_workers_across_due_chunk_ladder() -> None:
+    unit_ids = ("w1", "w2", "w3")
+    state = ExplorationState()
+    anchor = Coordinate(100, 0)
+    chunk = chunk_of(anchor)
+    state.chunk_next_refill_tick[chunk] = 100
+    state.chunk_anchor[chunk] = anchor
+    snapshot = _snapshot(tick=100, units=tuple(_worker(unit_id, 0, 0) for unit_id in unit_ids))
+    targets = build_exploration_targets(snapshot, state)
+    ladder = _chunk_recheck_ladder(chunk, anchor)
+    assert targets["w1"] == anchor
+    assert targets["w2"] == chunk_center(chunk)
+    assert targets["w3"] in set(ladder[2:])
+    assert len(set(targets.values())) == len(unit_ids)
+
+
+def test_observe_exploration_refutes_probed_empty_due_chunk() -> None:
+    state = ExplorationState()
+    chunk = (3, 0)
+    state.chunk_next_refill_tick[chunk] = 8
+    state.chunk_last_probe_tick[chunk] = 10
+    observe_exploration(_snapshot(tick=10, units=()), (), state)
+    assert state.chunk_refuted_tick[chunk] == 10
+
+
+def test_observe_exploration_does_not_refute_before_probe() -> None:
+    state = ExplorationState()
+    chunk = (3, 0)
+    state.chunk_next_refill_tick[chunk] = 8
+    observe_exploration(_snapshot(tick=10, units=()), (), state)
+    assert chunk not in state.chunk_refuted_tick
+
+
+def test_observe_exploration_refutation_needs_probe_after_boundary() -> None:
+    state = ExplorationState()
+    chunk = (3, 0)
+    state.chunk_next_refill_tick[chunk] = 8
+    state.chunk_last_probe_tick[chunk] = 6
+    observe_exploration(_snapshot(tick=10, units=()), (), state)
+    assert chunk not in state.chunk_refuted_tick
+
+
+def test_observe_exploration_clears_refutation_on_visible_resource() -> None:
+    state = ExplorationState()
+    chunk = (0, 0)
+    state.chunk_refuted_tick[chunk] = 5
+    cell = ResourceCellInfo(position=Coordinate(8, 8), visible=True, last_seen_tick=10)
+    observe_exploration(_snapshot(tick=10, resource_cells={cell.position.cell_key: cell}), (), state)
+    assert chunk not in state.chunk_refuted_tick
+
+
+def test_refuted_chunk_memory_cells_stay_out_of_matrix() -> None:
+    state = ExplorationState()
+    remembered = Coordinate(30, 0)
+    state.cell_positions[remembered.cell_key] = remembered
+    state.cell_last_seen[remembered.cell_key] = 5
+    state.chunk_refuted_tick[(0, 0)] = 10
+    merged = with_memory_resource_cells(_snapshot(tick=10, units=()), state)
+    assert remembered.cell_key not in merged.resource_cells
+
+
+def test_reset_location_state_clears_refutation() -> None:
+    state = ExplorationState()
+    state.chunk_refuted_tick[(0, 0)] = 5
+    state.reset_location_state()
+    assert state.chunk_refuted_tick == {}
+
+
+def test_build_targets_prefer_near_core_due_chunk() -> None:
+    unit_id = "w1"
+    state = ExplorationState()
+    far_anchor = Coordinate(300, 0)
+    near_anchor = Coordinate(100, 0)
+    state.chunk_next_refill_tick[chunk_of(far_anchor)] = 100
+    state.chunk_next_refill_tick[chunk_of(near_anchor)] = 100
+    state.chunk_anchor[chunk_of(far_anchor)] = far_anchor
+    state.chunk_anchor[chunk_of(near_anchor)] = near_anchor
+    snapshot = _snapshot(tick=100, units=(_worker(unit_id, 0, 0),))
+    targets = build_exploration_targets(snapshot, state)
+    assert targets[unit_id] == near_anchor
+

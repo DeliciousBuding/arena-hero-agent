@@ -124,6 +124,13 @@ class ExplorationState:
     # the cell from memory permanently (C2: the cell never refills, or was
     # consumed by a rival).
     empty_harvest_count: dict[str, int] = field(default_factory=dict)
+    # R1b refutation ledger: chunk -> tick when a post-refill recheck probe
+    # confirmed the chunk yields nothing. Refuted chunks' memory cells stop
+    # re-entering the assignment matrix (production t1: stale near-Core memory
+    # kept resetting the barren-migration latch). Cleared on rediscovery or a
+    # new harvest in the chunk; the scout still re-probes it at later refill
+    # boundaries.
+    chunk_refuted_tick: dict[tuple[int, int], int] = field(default_factory=dict)
     known_obstacles: set[str] = field(default_factory=set)
 
     def reset_location_state(self) -> None:
@@ -149,6 +156,7 @@ class ExplorationState:
         self.prev_cargo.clear()
         self.harvested_cells.clear()
         self.empty_harvest_count.clear()
+        self.chunk_refuted_tick.clear()
 
 
 def explorer_slot(unit_id: str) -> int:
@@ -179,6 +187,49 @@ def chunk_center(chunk: tuple[int, int]) -> Coordinate:
     if not isinstance(cx, int) or not isinstance(cy, int):
         raise TypeError("chunk coordinates must be integers")
     return Coordinate(cx * CHUNK_SIZE + CHUNK_SIZE // 2, cy * CHUNK_SIZE + CHUNK_SIZE // 2)
+
+
+def _chunk_recheck_ladder(
+    chunk: tuple[int, int],
+    anchor: Coordinate | None,
+) -> tuple[Coordinate, ...]:
+    """Recheck ladder for a depleted chunk: anchor -> chunk_center -> corners.
+
+    Official replenishment places replacements at deterministically random
+    positions inside the chunk, so a single probe point is not enough. The
+    scout first re-visits the recorded anchor (the last confirmed cell), then
+    the chunk center, then the four diagonal corners to cover the chunk
+    extents. Ladder order is recheck priority; duplicate positions are
+    dropped (an anchor that is the center/corner does not repeat).
+    """
+
+    if not isinstance(chunk, tuple) or len(chunk) != 2:
+        raise TypeError("chunk must be a (cx, cy) tuple")
+    if anchor is not None and not isinstance(anchor, Coordinate):
+        raise TypeError("anchor must be a Coordinate or None")
+
+    ladder: list[Coordinate] = []
+    seen: set[str] = set()
+
+    def _push(candidate: Coordinate) -> None:
+        key = candidate.cell_key
+        if key not in seen:
+            seen.add(key)
+            ladder.append(candidate)
+
+    center = chunk_center(chunk)
+    if anchor is not None:
+        _push(anchor)
+    _push(center)
+    min_x = chunk[0] * CHUNK_SIZE
+    max_x = min_x + CHUNK_SIZE - 1
+    min_y = chunk[1] * CHUNK_SIZE
+    max_y = min_y + CHUNK_SIZE - 1
+    for delta_x, delta_y in _DELTAS:
+        if delta_x == 0 or delta_y == 0:
+            continue
+        _push(Coordinate(min_x if delta_x < 0 else max_x, min_y if delta_y < 0 else max_y))
+    return tuple(ladder)
 
 
 def _axis(value: int) -> int:
@@ -255,6 +306,7 @@ def observe_exploration(
             state.chunk_anchor[chunk] = cell.position
             state.cell_positions[cell.position.cell_key] = cell.position
             state.cell_last_seen[cell.position.cell_key] = snapshot.tick
+            state.chunk_refuted_tick.pop(chunk, None)
     state.known_obstacles |= snapshot.obstacle_cells
 
     # A worker that was told to harvest and now carries cargo confirms a
@@ -272,6 +324,7 @@ def observe_exploration(
         state.chunk_next_refill_tick[chunk] = refill_tick_at_or_after(snapshot.tick)
         state.chunk_harvest_count[chunk] = state.chunk_harvest_count.get(chunk, 0) + 1
         state.chunk_anchor[chunk] = cell
+        state.chunk_refuted_tick.pop(chunk, None)
         state.hungry_since = snapshot.tick
 
     # R1a tombstones: harvested cells are NOT re-admitted at their old
@@ -309,6 +362,7 @@ def observe_exploration(
             state.harvested_cells[unit.position.cell_key] = (unit.position, refill_tick)
             state.chunk_harvest_count[chunk] = state.chunk_harvest_count.get(chunk, 0) + 1
             state.chunk_anchor[chunk] = unit.position
+            state.chunk_refuted_tick.pop(chunk, None)
             state.hungry_since = snapshot.tick
         state.prev_cargo[key] = unit.cargo
 
@@ -346,6 +400,31 @@ def observe_exploration(
             refill_tick_at_or_after(snapshot.tick) + REFILL_RECHECK_TICKS,
         )
 
+    # R1b refutation ledger: a due chunk whose recheck probe (recorded by
+    # ``mark_reached``) has run since the refill boundary and confirmed no
+    # resource cell is refuted. Refuted chunks' memory cells stop re-entering
+    # the assignment matrix — production t1's stale near-Core memory within
+    # 40 tiles kept resetting the barren-migration latch over a region that
+    # yields nothing. The scout still re-probes the chunk at later refill
+    # boundaries (``_refill_due`` ignores the ledger), and any rediscovery or
+    # new harvest clears the entry.
+    for chunk, refill_tick in tuple(state.chunk_next_refill_tick.items()):
+        if refill_tick > snapshot.tick:
+            continue
+        if chunk in state.chunk_refuted_tick:
+            continue
+        last_probe = state.chunk_last_probe_tick.get(chunk)
+        if last_probe is None or last_probe < refill_tick:
+            continue
+        if snapshot.tick - last_probe > REFILL_RECHECK_TICKS:
+            continue
+        chunk_has_visible_resource = any(
+            cell.visible and chunk_of(cell.position) == chunk
+            for cell in snapshot.resource_cells.values()
+        )
+        if not chunk_has_visible_resource:
+            state.chunk_refuted_tick[chunk] = snapshot.tick
+
 
 def with_memory_resource_cells(
     snapshot: PlanningSnapshot,
@@ -361,6 +440,10 @@ def with_memory_resource_cells(
     Harvested cells (``harvested_cells``) are tombstones and stay out of the
     matrix: official replenishment places replacements at random positions
     inside the chunk, so the old cell position is almost never the refill.
+
+    R1b: cells of refuted chunks (``chunk_refuted_tick``) also stay out — a
+    post-refill recheck probe confirmed the chunk yields nothing, so its stale
+    memory must not keep the matrix (and the barren-migration latch) alive.
     """
 
     if not isinstance(snapshot, PlanningSnapshot):
@@ -371,6 +454,8 @@ def with_memory_resource_cells(
     merged = dict(snapshot.resource_cells)
     for key, position in state.cell_positions.items():
         if key in merged:
+            continue
+        if chunk_of(position) in state.chunk_refuted_tick:
             continue
         merged[key] = ResourceCellInfo(
             position=position,
@@ -538,14 +623,35 @@ def build_exploration_targets(
     targets: dict[str, Coordinate] = {}
 
     # Depleted chunks whose refill boundary has passed (revisit first).
+    # R1b: due chunks are rechecked nearest-Core first — a near chunk that
+    # refills is reachable in fewer ticks and feeds the economy sooner than a
+    # far one, so the scout's limited recheck capacity is spent on the most
+    # valuable (closest) candidates.
     due_chunks = tuple(
-        chunk for chunk in state.chunk_next_refill_tick if _refill_due(chunk, state, tick)
+        sorted(
+            (
+                chunk
+                for chunk in state.chunk_next_refill_tick
+                if _refill_due(chunk, state, tick)
+            ),
+            key=lambda chunk: manhattan(core, chunk_center(chunk)),
+        )
     )
 
-    # Refill-revisit anchors are the highest-priority scout targets, then a
+    # Refill-revisit positions are the highest-priority scout targets, then a
     # deterministic all-direction ring band (8 directions x every radius) so a
     # scout sweeps the whole compass instead of a single fixed direction.
-    due_anchors = [state.chunk_anchor.get(chunk) or chunk_center(chunk) for chunk in due_chunks]
+    # R1b: each due chunk is rechecked through a ladder — anchor ->
+    # chunk_center -> diagonal corners — because official replenishment places
+    # replacements at deterministically random positions inside the chunk and
+    # one probe point is not enough. Multiple workers probing the same chunk
+    # spread across the ladder; the next chunk starts once its positions are
+    # claimed.
+    due_ladder = [
+        position
+        for chunk in due_chunks
+        for position in _chunk_recheck_ladder(chunk, state.chunk_anchor.get(chunk))
+    ]
     radii = sweep_radii(hungry)
 
     for unit in workers:
@@ -565,7 +671,7 @@ def build_exploration_targets(
                 node_budget=frontier_budget,
             )
         best: Coordinate | None = None
-        for candidate in (*due_anchors, *_ring_band_candidates(core, radii)):
+        for candidate in (*due_ladder, *_ring_band_candidates(core, radii)):
             cell = candidate.cell_key
             if (
                 cell in obstacles

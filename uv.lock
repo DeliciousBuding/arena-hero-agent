@@ -36,7 +36,7 @@ dependencies = [
 
 [[package]]
 name = "arena-hero-agent"
-version = "0.1.43"
+version = "0.1.44"
 source = { editable = "." }
 dependencies = [
     { name = "arena-hero" },
