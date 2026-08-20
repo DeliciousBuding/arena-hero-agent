@@ -1027,12 +1027,18 @@ class ComposedDecider:
                     effective.beacon_contest_min_resources,
                     BEACON_CONTEST_MIN_RESOURCES,
                 ),
+                # Military S4 (candidate B combat tier): Ranger predictive
+                # fire leads moving enemies when no direct shot is available
+                # and the imminent-threat Vanguard (candidate C, inside the
+                # safety baseline) fields a defender against converging
+                # enemies at low pop. Both are combat-triggered and measured
+                # economy-neutral. massarmy_stages stays OFF: the 4-seed
+                # preset measured -2.5 dep (-6.3%) from the pop>=8 Vanguard
+                # + Ranger pair with zero combat gain in every available
+                # instrument; enable it only after a discriminating combat
+                # bench (more hunter seeds / longer ticks) shows a gain.
+                ranger_predictive_fire=True,
             )
-            # Military S4 (ranger_predictive_fire / massarmy_stages) stays
-            # OFF in the production composition for now: the economy bench is
-            # flat (no combat in the 4-seed preset, dmg 0.0) and the combat
-            # benefit is unmeasured. Landed as opt-in config; the next wave
-            # benches them under ``bench_ffa.py --hunter`` before enabling.
         self._safety = SafetyPlanner(effective)
         self._previous_assignments: tuple[Assignment, ...] = ()
         self._claims: frozenset[WorkerClaim] = frozenset()

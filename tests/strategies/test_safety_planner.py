@@ -563,10 +563,11 @@ def test_core_skips_beacon_shield_repair_when_not_held() -> None:
 def test_threat_vanguard_waits_for_worker_floor() -> None:
     enemy = EnemyUnit(
         id=EntityId("enemy-1"),
-        position=Coordinate(1, 0),
+        position=Coordinate(0, 4),
         unit_role=UnitRole.VANGUARD,
     )
-    # Two workers: the economy comes first even under threat.
+    # Two workers with an enemy at distance 4 (beyond the imminent tier):
+    # the economy comes first under elevated-but-not-imminent threat.
     snapshot = _snapshot(
         units=(_worker(0, 1), _worker(0, -1)),
         resources=15,
@@ -714,3 +715,91 @@ def test_massarmy_stage_composition_switches_spawn_roles() -> None:
     # complete at 8, so the next spawn is a Vanguard.
     assert flat.plan.core_action.unit_role is UnitRole.WORKER
     assert staged.plan.core_action.unit_role is UnitRole.VANGUARD
+
+
+def _converge_snapshots(
+    *,
+    workers_count: int = 2,
+    resources: int = 10,
+    population: int = 2,
+    first_distance: int = 4,
+    second_distance: int = 3,
+) -> tuple:
+    """Two consecutive ticks with an enemy moving closer to the Core."""
+
+    workers = tuple(_worker(i, 0) for i in range(1, workers_count + 1))
+
+    def snapshot_for(tick: int, distance: int) -> PlanningSnapshot:
+        return _snapshot(
+            tick=tick,
+            units=workers,
+            resources=resources,
+            population=population,
+            resource_capacity=100,
+            core_state="normal",
+            core_position=Coordinate(0, 0),
+            core_shield=5,
+            enemy_units=(
+                EnemyUnit(
+                    id=EntityId("enemy-1"),
+                    position=Coordinate(0, distance),
+                    unit_role=UnitRole.VANGUARD,
+                ),
+            ),
+        )
+
+    return snapshot_for(1, first_distance), snapshot_for(2, second_distance)
+
+
+def test_imminent_threat_spawns_vanguard_below_tier1_floors() -> None:
+    """Candidate C: a CONVERGING enemy inside the imminent distance with 2
+    workers and the exact Vanguard price fields a defender even though the
+    tier-1 floors (4 workers / 16 resources) are not met."""
+
+    planner = SafetyPlanner()
+    first, second = _converge_snapshots()
+    planner.decide(first)
+    decision = planner.decide(second)
+    assert decision.plan.core_action is not None
+    assert decision.plan.core_action.type is CoreActionType.SPAWN
+    assert decision.plan.core_action.unit_role is UnitRole.VANGUARD
+
+
+def test_imminent_threat_ignores_non_converging_enemy() -> None:
+    """A wanderer holding distance 3 (no movement toward the Core) must not
+    drain the economy."""
+
+    planner = SafetyPlanner()
+    first, second = _converge_snapshots(first_distance=3, second_distance=3)
+    planner.decide(first)
+    decision = planner.decide(second)
+    action = decision.plan.core_action
+    assert action is None or action.unit_role is not UnitRole.VANGUARD
+
+
+def test_imminent_threat_needs_affordable_vanguard() -> None:
+    planner = SafetyPlanner()
+    first, second = _converge_snapshots(resources=9)
+    planner.decide(first)
+    decision = planner.decide(second)
+    action = decision.plan.core_action
+    # 9 < Vanguard price (10): no imminent defender, no regular spawn either.
+    assert action is None or action.unit_role is not UnitRole.VANGUARD
+
+
+def test_imminent_threat_requires_two_workers() -> None:
+    planner = SafetyPlanner()
+    first, second = _converge_snapshots(workers_count=1, resources=20, population=1)
+    planner.decide(first)
+    decision = planner.decide(second)
+    action = decision.plan.core_action
+    assert action is None or action.unit_role is not UnitRole.VANGUARD
+
+
+def test_imminent_threat_requires_close_enemy() -> None:
+    planner = SafetyPlanner()
+    first, second = _converge_snapshots(first_distance=6, second_distance=5, resources=20)
+    planner.decide(first)
+    decision = planner.decide(second)
+    action = decision.plan.core_action
+    assert action is None or action.unit_role is not UnitRole.VANGUARD

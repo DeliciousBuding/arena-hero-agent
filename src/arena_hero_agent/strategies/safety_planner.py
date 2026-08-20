@@ -69,6 +69,15 @@ SHIELD_REPAIR_MIN_RESOURCES: Final = 6
 # stuck at two workers forever because every 13 resources bought a Vanguard).
 THREAT_VANGUARD_MIN_WORKERS: Final = 4
 THREAT_VANGUARD_MIN_RESOURCES: Final = 16
+# Candidate C (imminent threat tier): when an enemy is inside
+# ``IMMINENT_THREAT_DISTANCE`` of the Core the survival math changes — the
+# tier-1 floors above starve a small tenant under attack (--hunter bench:
+# our tenants dealt 0 damage and got destroyed because 16 resources never
+# accumulate while an enemy converges). Two workers plus the exact Vanguard
+# price is enough to field a defender; a pop-1 fresh respawn still relies
+# on flee. Beyond this distance the economy-first tier-1 policy applies.
+IMMINENT_THREAT_MIN_WORKERS: Final = 2
+IMMINENT_THREAT_DISTANCE: Final = 3
 # Official Champion Beacon shield cap (rules/champion-beacon.md): the
 # carrier's Core shield limit rises 5 -> 10 and clamps back on loss.
 BEACON_SHIELD_CAP: Final = 10
@@ -175,6 +184,14 @@ class SafetyPlanner:
         # Persistent across ticks; refreshed from the snapshot at the top of
         # every ``decide`` call.
         self._predictive_fire_records: dict[str, _PredictiveFireRecord] = {}
+        # Candidate C threat learning: last observed position per enemy id,
+        # refreshed at the top of every ``decide`` call. The imminent-threat
+        # Vanguard only fires for enemies that actually moved closer to the
+        # Core since the previous tick — a wanderer passing by at distance 3
+        # must not drain the economy (4-seed preset: eager spawning cost
+        # -2.5 dep with zero damage dealt).
+        self._previous_enemy_positions: dict[str, Coordinate] = {}
+        self._converging_enemy_ids: set[str] = set()
 
     @property
     def config(self) -> SafetyPlannerConfig:
@@ -200,6 +217,21 @@ class SafetyPlanner:
         self._beacon_contest_claimed = False
         # Military S4: settle last tick's predictive shots before deciding.
         self._refresh_predictive_fire_state(snapshot)
+        # Candidate C threat learning: record which visible enemies moved
+        # closer to the Core since the previous tick, then remember the
+        # current positions for the next tick.
+        core_position = snapshot.core_position
+        self._converging_enemy_ids = {
+            enemy.id.value
+            for enemy in snapshot.enemy_units
+            if enemy.id.value in self._previous_enemy_positions
+            and core_position is not None
+            and manhattan(self._previous_enemy_positions[enemy.id.value], core_position)
+            > manhattan(enemy.position, core_position)
+        }
+        self._previous_enemy_positions = {
+            enemy.id.value: enemy.position for enemy in snapshot.enemy_units
+        }
 
         core_action = self._decide_core(snapshot)
         unit_actions: list[UnitAction] = []
@@ -264,6 +296,38 @@ class SafetyPlanner:
                 and snapshot.resources >= THREAT_VANGUARD_MIN_RESOURCES
             ):
                 return CoreAction(type=CoreActionType.SPAWN, unit_role=UnitRole.VANGUARD)
+
+        # Candidate C imminent-threat tier: the enemy is already inside
+        # IMMINENT_THREAT_DISTANCE and actively CONVERGING on the Core (it
+        # moved closer since the previous tick), but the economy is too small
+        # for the tier-1 floors. Survival wins over the reserve: two workers
+        # plus the exact Vanguard price fields a defender instead of eating a
+        # siege at zero military. A wanderer merely passing by does not
+        # trigger the spend (4-seed preset: eager spawning without the
+        # convergence check cost -2.5 dep with zero damage dealt).
+        if (
+            workers >= IMMINENT_THREAT_MIN_WORKERS
+            and snapshot.core_position is not None
+            and snapshot.enemy_units
+        ):
+            converging_enemies = [
+                enemy
+                for enemy in snapshot.enemy_units
+                if enemy.id.value in self._converging_enemy_ids
+            ]
+            if converging_enemies:
+                nearest_enemy_distance = min(
+                    manhattan(snapshot.core_position, enemy.position)
+                    for enemy in converging_enemies
+                )
+                vanguard_cost = unit_price(
+                    UnitRole.VANGUARD, snapshot.population, CURRENT_RULES_VERSION
+                )
+                if (
+                    nearest_enemy_distance <= IMMINENT_THREAT_DISTANCE
+                    and snapshot.resources >= vanguard_cost
+                ):
+                    return CoreAction(type=CoreActionType.SPAWN, unit_role=UnitRole.VANGUARD)
 
         role = (
             next_spawn_massarmy(workers, vanguards, rangers, snapshot.population)
