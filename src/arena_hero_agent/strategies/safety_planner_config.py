@@ -109,6 +109,20 @@ class SafetyPlannerConfig:
     beacon_contest_min_resources: int = 0
     # A unit carrying our Beacon parks within this radius of the Core.
     beacon_carrier_hold_radius: int = 1
+    # Military S4: Ranger predictive fire - when no direct shot is available,
+    # a Ranger may lead a moving enemy by firing at its predicted next cell,
+    # capped at ``ranger_predictive_miss_cap`` consecutive failed predictions
+    # followed by a ``ranger_predictive_cooldown_ticks`` cooldown. Pure-layer
+    # default off (reproduces the oracle); the production composition enables
+    # it. A "miss" is inferred from the enemy not having moved the next tick.
+    ranger_predictive_fire: bool = False
+    ranger_predictive_miss_cap: int = 3
+    ranger_predictive_cooldown_ticks: int = 12
+    # Military S4: massarmy four-stage spawn composition
+    # (workers, vanguards, rangers) = (8,1,1) up to pop 10, (12,3,4) up to
+    # pop 20, (18,6,8) up to pop 32, then (18,14,16). Off by default; the
+    # production composition enables it instead of the flat worker_target.
+    massarmy_stages: bool = False
     aggression: AggressionLevel = AggressionLevel.DEFENSIVE
     vanguard_ratio: float | None = None
 
@@ -129,11 +143,17 @@ class SafetyPlannerConfig:
             ("beacon_carrier_hold_radius", self.beacon_carrier_hold_radius),
             ("beacon_contest_min_population", self.beacon_contest_min_population),
             ("beacon_contest_min_resources", self.beacon_contest_min_resources),
+            ("ranger_predictive_miss_cap", self.ranger_predictive_miss_cap),
+            ("ranger_predictive_cooldown_ticks", self.ranger_predictive_cooldown_ticks),
         ):
             if isinstance(value, bool) or not isinstance(value, int):
                 raise TypeError(f"{name} must be an integer")
             if value < 0:
                 raise ValueError(f"{name} cannot be negative")
+        if not isinstance(self.ranger_predictive_fire, bool):
+            raise TypeError("ranger_predictive_fire must be a boolean")
+        if not isinstance(self.massarmy_stages, bool):
+            raise TypeError("massarmy_stages must be a boolean")
         if not isinstance(self.aggression, AggressionLevel):
             raise TypeError("aggression must be an AggressionLevel")
         if self.vanguard_ratio is not None:

@@ -20,9 +20,11 @@ from arena_hero_agent.strategies import (
     home_cell,
     is_core_shelter,
     kite_cell,
+    massarmy_stage_targets,
     nearest_enemy,
     next_military,
     next_spawn,
+    next_spawn_massarmy,
     occupancy_counts,
     predicted_enemy_cell,
     retreat_direction,
@@ -343,3 +345,38 @@ def test_helpers_are_deterministic() -> None:
     assert can_shoot(Coordinate(0, 0), Coordinate(1, 0), frozenset()) == can_shoot(
         Coordinate(0, 0), Coordinate(1, 0), frozenset()
     )
+
+
+def test_massarmy_stage_targets_follow_four_stage_table() -> None:
+    assert massarmy_stage_targets(0) == (8, 1, 1)
+    assert massarmy_stage_targets(10) == (8, 1, 1)
+    assert massarmy_stage_targets(11) == (12, 3, 4)
+    assert massarmy_stage_targets(20) == (12, 3, 4)
+    assert massarmy_stage_targets(21) == (18, 6, 8)
+    assert massarmy_stage_targets(32) == (18, 6, 8)
+    assert massarmy_stage_targets(33) == (18, 14, 16)
+    assert massarmy_stage_targets(500) == (18, 14, 16)
+
+
+def test_next_spawn_massarmy_fills_workers_then_military() -> None:
+    # Stage 1 (pop <= 10): 8 workers, 1 vanguard, 1 ranger.
+    assert next_spawn_massarmy(0, 0, 0, 1) is UnitRole.WORKER
+    assert next_spawn_massarmy(7, 0, 0, 9) is UnitRole.WORKER
+    assert next_spawn_massarmy(8, 0, 0, 9) is UnitRole.VANGUARD
+    assert next_spawn_massarmy(8, 1, 0, 10) is UnitRole.RANGER
+    # A completed stage overflows into Workers.
+    assert next_spawn_massarmy(8, 1, 1, 10) is UnitRole.WORKER
+    # Stage 2 (pop <= 20): 12 workers, 3 vanguards, 4 rangers.
+    assert next_spawn_massarmy(12, 0, 0, 12) is UnitRole.VANGUARD
+    assert next_spawn_massarmy(12, 3, 3, 18) is UnitRole.RANGER
+
+
+def test_massarmy_helpers_reject_invalid_inputs() -> None:
+    with pytest.raises(TypeError):
+        massarmy_stage_targets(cast(int, "ten"))
+    with pytest.raises(ValueError):
+        massarmy_stage_targets(-1)
+    with pytest.raises(ValueError):
+        next_spawn_massarmy(-1, 0, 0, 0)
+    with pytest.raises(TypeError):
+        next_spawn_massarmy(1, 1, 1, cast(int, None))

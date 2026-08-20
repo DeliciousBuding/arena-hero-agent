@@ -594,3 +594,123 @@ def test_threat_vanguard_waits_for_worker_floor() -> None:
     assert decision.plan.core_action is not None
     assert decision.plan.core_action.type is CoreActionType.SPAWN
     assert decision.plan.core_action.unit_role is UnitRole.VANGUARD
+
+
+def test_ranger_predictive_fire_leads_out_of_range_enemy() -> None:
+    ranger = _ranger(0, 0)
+    enemy = EnemyUnit(
+        id=EntityId("enemy-1"),
+        position=Coordinate(4, 0),
+        unit_role=UnitRole.VANGUARD,
+    )
+    snapshot = _snapshot(
+        tick=1,
+        units=(ranger,),
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        enemy_units=(enemy,),
+    )
+    planner = SafetyPlanner(config=SafetyPlannerConfig(ranger_predictive_fire=True))
+    decision = planner.decide(snapshot)
+    action = decision.plan.action_for(ranger.id.value)
+    assert action is not None
+    assert action.type is UnitActionType.SHOOT
+    # Direct shot is out of range (distance 4 > 3); the shot leads the enemy
+    # at its predicted next cell (4,0) -> (3,0).
+    assert action.expected_cell == Coordinate(3, 0)
+
+
+def test_ranger_direct_shot_beats_predictive() -> None:
+    ranger = _ranger(0, 0)
+    enemy = EnemyUnit(
+        id=EntityId("enemy-1"),
+        position=Coordinate(3, 0),
+        unit_role=UnitRole.VANGUARD,
+    )
+    snapshot = _snapshot(
+        tick=1,
+        units=(ranger,),
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        enemy_units=(enemy,),
+    )
+    planner = SafetyPlanner(config=SafetyPlannerConfig(ranger_predictive_fire=True))
+    decision = planner.decide(snapshot)
+    action = decision.plan.action_for(ranger.id.value)
+    assert action is not None
+    assert action.type is UnitActionType.SHOOT
+    assert action.expected_cell == Coordinate(3, 0)
+
+
+def test_ranger_predictive_fire_disabled_by_default() -> None:
+    ranger = _ranger(0, 0)
+    enemy = EnemyUnit(
+        id=EntityId("enemy-1"),
+        position=Coordinate(4, 0),
+        unit_role=UnitRole.VANGUARD,
+    )
+    snapshot = _snapshot(
+        tick=1,
+        units=(ranger,),
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        enemy_units=(enemy,),
+    )
+    decision = SafetyPlanner().decide(snapshot)
+    action = decision.plan.action_for(ranger.id.value)
+    assert action is not None
+    assert action.type is not UnitActionType.SHOOT
+
+
+def test_ranger_predictive_miss_cap_triggers_cooldown() -> None:
+    ranger = _ranger(0, 0)
+    planner = SafetyPlanner(
+        config=SafetyPlannerConfig(
+            ranger_predictive_fire=True,
+            ranger_predictive_miss_cap=3,
+            ranger_predictive_cooldown_ticks=12,
+        )
+    )
+    for tick in range(1, 5):
+        enemy = EnemyUnit(
+            id=EntityId("enemy-1"),
+            position=Coordinate(4, 0),
+            unit_role=UnitRole.VANGUARD,
+        )
+        snapshot = _snapshot(
+            tick=tick,
+            units=(ranger,),
+            core_state="normal",
+            core_position=Coordinate(0, 0),
+            enemy_units=(enemy,),
+        )
+        decision = planner.decide(snapshot)
+        action = decision.plan.action_for(ranger.id.value)
+        assert action is not None
+        if tick <= 3:
+            assert action.type is UnitActionType.SHOOT, f"tick {tick}"
+        else:
+            # Three consecutive misses (enemy never moved) -> cooldown.
+            assert action.type is not UnitActionType.SHOOT, f"tick {tick}"
+
+
+def test_massarmy_stage_composition_switches_spawn_roles() -> None:
+    workers = tuple(_worker(x, 0) for x in range(8))
+    snapshot = _snapshot(
+        tick=1,
+        units=workers,
+        resources=100,
+        population=8,
+        resource_capacity=100,
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        core_shield=5,
+    )
+    flat = SafetyPlanner(config=SafetyPlannerConfig(worker_target=12)).decide(snapshot)
+    staged = SafetyPlanner(config=SafetyPlannerConfig(massarmy_stages=True)).decide(snapshot)
+    assert flat.plan.core_action is not None
+    assert staged.plan.core_action is not None
+    # Flat target 12: still building Workers. Stage 1 (8,1,1) is worker-
+    # complete at 8, so the next spawn is a Vanguard.
+    assert flat.plan.core_action.unit_role is UnitRole.WORKER
+    assert staged.plan.core_action.unit_role is UnitRole.VANGUARD

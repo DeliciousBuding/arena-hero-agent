@@ -47,6 +47,8 @@ from .safety_helpers import (
     defensive_shot_priority,
     home_cell,
     next_spawn,
+    next_spawn_massarmy,
+    predicted_enemy_cell,
 )
 from .safety_planner_config import DEFAULT_SAFETY_CONFIG, SafetyPlannerConfig
 
@@ -148,6 +150,16 @@ class SafetyDecision:
             raise TypeError("budget_exhausted must be a boolean")
 
 
+@dataclass(slots=True)
+class _PredictiveFireRecord:
+    """Bookkeeping for one Ranger's predictive shots (military S4)."""
+
+    enemy_id: str
+    enemy_position: Coordinate
+    misses: int = 0
+    cooldown_until: int = 0
+
+
 class SafetyPlanner:
     """Deterministic, budget-bounded safety planner for one observed tick."""
 
@@ -159,6 +171,10 @@ class SafetyPlanner:
         # the top of every ``decide`` call so one planner instance can serve
         # the whole live process without leaking state across ticks.
         self._beacon_contest_claimed = False
+        # Military S4 predictive fire bookkeeping, keyed by unit id.
+        # Persistent across ticks; refreshed from the snapshot at the top of
+        # every ``decide`` call.
+        self._predictive_fire_records: dict[str, _PredictiveFireRecord] = {}
 
     @property
     def config(self) -> SafetyPlannerConfig:
@@ -182,6 +198,8 @@ class SafetyPlanner:
 
         # S5 dedup: exactly one Beacon contestant per tick.
         self._beacon_contest_claimed = False
+        # Military S4: settle last tick's predictive shots before deciding.
+        self._refresh_predictive_fire_state(snapshot)
 
         core_action = self._decide_core(snapshot)
         unit_actions: list[UnitAction] = []
@@ -247,7 +265,11 @@ class SafetyPlanner:
             ):
                 return CoreAction(type=CoreActionType.SPAWN, unit_role=UnitRole.VANGUARD)
 
-        role = next_spawn(workers, vanguards, rangers, self._config.worker_target, self._config)
+        role = (
+            next_spawn_massarmy(workers, vanguards, rangers, snapshot.population)
+            if self._config.massarmy_stages
+            else next_spawn(workers, vanguards, rangers, self._config.worker_target, self._config)
+        )
         cost = unit_price(role, snapshot.population, CURRENT_RULES_VERSION)
         if snapshot.resources >= cost:
             return CoreAction(type=CoreActionType.SPAWN, unit_role=role)
@@ -354,10 +376,78 @@ class SafetyPlanner:
                     target_id=EntityId(enemy.id),
                     expected_cell=enemy.position,
                 )
+        predictive = self._decide_predictive_shot(snapshot, unit, ordered)
+        if predictive is not None:
+            return predictive
         contest = self._decide_beacon_contest(snapshot, unit)
         if contest is not None:
             return contest
         return _guard_action(snapshot, unit, enemies, UnitRole.RANGER)
+
+    def _refresh_predictive_fire_state(self, snapshot: PlanningSnapshot) -> None:
+        """Settle the previous tick's predictive shots (military S4).
+
+        A predictive shot is scored against the enemy it led: an enemy that is
+        gone counts as a kill (record dropped), one that stayed on the same
+        cell counts as a miss, and one that moved resets the streak. Reaching
+        ``ranger_predictive_miss_cap`` consecutive misses puts the Ranger on
+        ``ranger_predictive_cooldown_ticks`` cooldown.
+        """
+
+        for unit_id, record in list(self._predictive_fire_records.items()):
+            enemy = next(
+                (
+                    candidate
+                    for candidate in snapshot.enemy_units
+                    if candidate.id.value == record.enemy_id
+                ),
+                None,
+            )
+            if enemy is None:
+                del self._predictive_fire_records[unit_id]
+                continue
+            if enemy.position == record.enemy_position:
+                record.misses += 1
+                if record.misses >= self._config.ranger_predictive_miss_cap:
+                    record.cooldown_until = (
+                        snapshot.tick + self._config.ranger_predictive_cooldown_ticks
+                    )
+            else:
+                record.misses = 0
+
+    def _decide_predictive_shot(
+        self,
+        snapshot: PlanningSnapshot,
+        unit: PlanningUnit,
+        ordered: list[VisibleEnemy],
+    ) -> UnitAction | None:
+        """Lead a moving enemy when no direct shot is available (military S4)."""
+
+        if not self._config.ranger_predictive_fire or not ordered:
+            return None
+        record = self._predictive_fire_records.get(unit.id.value)
+        if record is not None and record.cooldown_until > snapshot.tick:
+            return None
+        if record is not None and record.misses >= self._config.ranger_predictive_miss_cap:
+            return None
+        enemy = ordered[0]
+        predicted = predicted_enemy_cell(unit.position, enemy.position)
+        if predicted is None:
+            return None
+        if not can_shoot(unit.position, predicted, snapshot.obstacle_cells):
+            return None
+        self._predictive_fire_records[unit.id.value] = _PredictiveFireRecord(
+            enemy_id=enemy.id,
+            enemy_position=enemy.position,
+            misses=record.misses if record is not None else 0,
+            cooldown_until=record.cooldown_until if record is not None else 0,
+        )
+        return UnitAction(
+            unit_id=unit.id,
+            type=UnitActionType.SHOOT,
+            target_id=EntityId(enemy.id),
+            expected_cell=predicted,
+        )
 
     def _decide_beacon_contest(
         self, snapshot: PlanningSnapshot, unit: PlanningUnit

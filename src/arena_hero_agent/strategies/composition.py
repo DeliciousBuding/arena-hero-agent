@@ -1027,6 +1027,11 @@ class ComposedDecider:
                     BEACON_CONTEST_MIN_RESOURCES,
                 ),
             )
+            # Military S4 (ranger_predictive_fire / massarmy_stages) stays
+            # OFF in the production composition for now: the economy bench is
+            # flat (no combat in the 4-seed preset, dmg 0.0) and the combat
+            # benefit is unmeasured. Landed as opt-in config; the next wave
+            # benches them under ``bench_ffa.py --hunter`` before enabling.
         self._safety = SafetyPlanner(effective)
         self._previous_assignments: tuple[Assignment, ...] = ()
         self._claims: frozenset[WorkerClaim] = frozenset()

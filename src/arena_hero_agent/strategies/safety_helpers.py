@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Final
 
 from arena_hero_agent.domain import (
     Coordinate,
@@ -116,6 +117,63 @@ def next_military(
     military = vanguards + rangers
     target_vanguards = math.ceil((military + 1) * ratio)
     return UnitRole.VANGUARD if vanguards < target_vanguards else UnitRole.RANGER
+
+
+# Military S4: massarmy four-stage composition (workers, vanguards, rangers)
+# per population ceiling: (8,1,1) to pop 10, (12,3,4) to pop 20, (18,6,8) to
+# pop 32, then (18,14,16). Stage entry order is ascending population.
+MASSARMY_STAGES: Final[tuple[tuple[int | None, int, int, int], ...]] = (
+    (10, 8, 1, 1),
+    (20, 12, 3, 4),
+    (32, 18, 6, 8),
+    (None, 18, 14, 16),
+)
+
+
+def massarmy_stage_targets(population: int) -> tuple[int, int, int]:
+    """Return the (workers, vanguards, rangers) targets for a population."""
+
+    if isinstance(population, bool) or not isinstance(population, int):
+        raise TypeError("population must be an integer")
+    if population < 0:
+        raise ValueError("population cannot be negative")
+    for ceiling, workers, vanguards, rangers in MASSARMY_STAGES:
+        if ceiling is None or population <= ceiling:
+            return (workers, vanguards, rangers)
+    raise AssertionError("massarmy stage table must end with an unbounded row")
+
+
+def next_spawn_massarmy(
+    workers: int,
+    vanguards: int,
+    rangers: int,
+    population: int,
+) -> UnitRole:
+    """Choose the next spawn from the massarmy four-stage composition.
+
+    Fill Workers first, then Vanguards, then Rangers per the current stage.
+    A completed stage overflows into Workers (economy-first) rather than
+    waiting for the next population ceiling.
+    """
+
+    if isinstance(workers, bool) or not isinstance(workers, int):
+        raise TypeError("workers must be an integer")
+    if isinstance(vanguards, bool) or not isinstance(vanguards, int):
+        raise TypeError("vanguards must be an integer")
+    if isinstance(rangers, bool) or not isinstance(rangers, int):
+        raise TypeError("rangers must be an integer")
+    if isinstance(population, bool) or not isinstance(population, int):
+        raise TypeError("population must be an integer")
+    if workers < 0 or vanguards < 0 or rangers < 0 or population < 0:
+        raise ValueError("unit counts and population cannot be negative")
+    worker_target, vanguard_target, ranger_target = massarmy_stage_targets(population)
+    if workers < worker_target:
+        return UnitRole.WORKER
+    if vanguards < vanguard_target:
+        return UnitRole.VANGUARD
+    if rangers < ranger_target:
+        return UnitRole.RANGER
+    return UnitRole.WORKER
 
 
 def _axis_of_delta(dx: int, dy: int) -> str:
