@@ -317,6 +317,130 @@ def test_ranger_picks_up_ground_beacon_on_its_cell() -> None:
     assert action.type is UnitActionType.PICKUP_BEACON
 
 
+def test_beacon_contest_gate_blocks_below_population_threshold() -> None:
+    vanguard = _vanguard(3, 3)
+    beacon = BeaconInfo(position=Coordinate(10, 10), status="ground", carrier_id=None)
+    snapshot = _snapshot(
+        units=(vanguard,),
+        resources=50,
+        population=3,
+        resource_capacity=100,
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        beacon=beacon,
+    )
+    planner = SafetyPlanner(
+        SafetyPlannerConfig(
+            beacon_contest_min_population=6,
+            beacon_contest_min_resources=10,
+        )
+    )
+    decision = planner.decide(snapshot)
+    action = decision.plan.action_for(vanguard.id.value)
+    assert action is not None
+    # Gated out: the unit guards instead of walking toward the Beacon.
+    assert action.type is not UnitActionType.PICKUP_BEACON
+    if action.type is UnitActionType.MOVE:
+        assert action.direction != step_toward(vanguard.position, beacon.position)
+
+
+def test_beacon_contest_gate_blocks_below_resource_threshold() -> None:
+    vanguard = _vanguard(3, 3)
+    beacon = BeaconInfo(position=Coordinate(10, 10), status="ground", carrier_id=None)
+    snapshot = _snapshot(
+        units=(vanguard,),
+        resources=4,
+        population=8,
+        resource_capacity=100,
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        beacon=beacon,
+    )
+    planner = SafetyPlanner(
+        SafetyPlannerConfig(
+            beacon_contest_min_population=6,
+            beacon_contest_min_resources=10,
+        )
+    )
+    decision = planner.decide(snapshot)
+    action = decision.plan.action_for(vanguard.id.value)
+    assert action is not None
+    assert action.type is not UnitActionType.PICKUP_BEACON
+    if action.type is UnitActionType.MOVE:
+        assert action.direction != step_toward(vanguard.position, beacon.position)
+
+
+def test_beacon_contest_gate_passes_when_economy_ready() -> None:
+    vanguard = _vanguard(3, 3)
+    beacon = BeaconInfo(position=Coordinate(10, 10), status="ground", carrier_id=None)
+    snapshot = _snapshot(
+        units=(vanguard,),
+        resources=12,
+        population=7,
+        resource_capacity=100,
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        beacon=beacon,
+    )
+    planner = SafetyPlanner(
+        SafetyPlannerConfig(
+            beacon_contest_min_population=6,
+            beacon_contest_min_resources=10,
+        )
+    )
+    decision = planner.decide(snapshot)
+    action = decision.plan.action_for(vanguard.id.value)
+    assert action is not None
+    assert action.type is UnitActionType.MOVE
+    assert action.direction == step_toward(Coordinate(3, 3), Coordinate(10, 10))
+
+
+def test_beacon_contest_only_one_contestant_per_tick() -> None:
+    first = _vanguard(3, 3)
+    second = _ranger(4, 4)
+    beacon = BeaconInfo(position=Coordinate(10, 10), status="ground", carrier_id=None)
+    snapshot = _snapshot(
+        units=(first, second),
+        resources=12,
+        population=7,
+        resource_capacity=100,
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        beacon=beacon,
+    )
+    decision = SafetyPlanner().decide(snapshot)
+    first_action = decision.plan.action_for(first.id.value)
+    second_action = decision.plan.action_for(second.id.value)
+    assert first_action is not None
+    assert second_action is not None
+    # The first unit claims the contest; the second keeps guarding instead of
+    # also walking toward the Beacon.
+    assert first_action.type is UnitActionType.MOVE
+    assert first_action.direction == step_toward(first.position, beacon.position)
+    if second_action.type is UnitActionType.MOVE:
+        assert second_action.direction != step_toward(second.position, beacon.position)
+
+
+def test_beacon_contest_claim_resets_between_ticks() -> None:
+    vanguard = _vanguard(3, 3)
+    beacon = BeaconInfo(position=Coordinate(10, 10), status="ground", carrier_id=None)
+    snapshot = _snapshot(
+        units=(vanguard,),
+        core_state="normal",
+        core_position=Coordinate(0, 0),
+        beacon=beacon,
+    )
+    planner = SafetyPlanner()
+    first = planner.decide(snapshot)
+    second = planner.decide(snapshot)
+    first_action = first.plan.action_for(vanguard.id.value)
+    second_action = second.plan.action_for(vanguard.id.value)
+    assert first_action is not None and second_action is not None
+    # A fresh tick must allow the same unit to keep contesting.
+    assert first_action.type is UnitActionType.MOVE
+    assert second_action.type is UnitActionType.MOVE
+
+
 def test_beacon_contest_yields_to_visible_enemy() -> None:
     vanguard = _vanguard(3, 3)
     beacon = BeaconInfo(position=Coordinate(10, 10), status="ground", carrier_id=None)

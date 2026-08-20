@@ -155,6 +155,10 @@ class SafetyPlanner:
         if not isinstance(config, SafetyPlannerConfig):
             raise TypeError("config must be a SafetyPlannerConfig")
         self._config = config
+        # S5 dedup: at most one unit contests the Beacon per tick. Reset at
+        # the top of every ``decide`` call so one planner instance can serve
+        # the whole live process without leaking state across ticks.
+        self._beacon_contest_claimed = False
 
     @property
     def config(self) -> SafetyPlannerConfig:
@@ -175,6 +179,9 @@ class SafetyPlanner:
             raise TypeError("budget must be an integer or None")
         if budget is not None and budget < 0:
             raise ValueError("budget cannot be negative")
+
+        # S5 dedup: exactly one Beacon contestant per tick.
+        self._beacon_contest_claimed = False
 
         core_action = self._decide_core(snapshot)
         unit_actions: list[UnitAction] = []
@@ -361,6 +368,12 @@ class SafetyPlanner:
         the Core guard ring (home-guard units never leave), and only when the
         Beacon actually sits on the ground. The carrier then parks at the Core
         via ``_decide_beacon_carrier``.
+
+        S4 gate: a small or resource-tight economy keeps its military coverage
+        instead of contesting (``beacon_contest_min_population`` /
+        ``beacon_contest_min_resources``). S5 dedup: only one unit contests per
+        tick — the first eligible unit claims the trip and every other unit
+        keeps guarding/patrolling instead of dog-piling the Beacon.
         """
 
         beacon = snapshot.beacon
@@ -368,12 +381,20 @@ class SafetyPlanner:
             return None
         if snapshot.enemy_units:
             return None
+        if (
+            snapshot.population < self._config.beacon_contest_min_population
+            or snapshot.resources < self._config.beacon_contest_min_resources
+        ):
+            return None
+        if self._beacon_contest_claimed:
+            return None
         core = snapshot.core_position
         if core is not None and manhattan(unit.position, core) <= 1:
             return None
         distance = manhattan(unit.position, beacon.position)
         if distance > self._config.beacon_contest_range:
             return None
+        self._beacon_contest_claimed = True
         if unit.position == beacon.position:
             return UnitAction(unit_id=unit.id, type=UnitActionType.PICKUP_BEACON)
         return UnitAction(

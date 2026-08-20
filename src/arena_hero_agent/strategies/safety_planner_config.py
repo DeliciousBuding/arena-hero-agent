@@ -100,6 +100,13 @@ class SafetyPlannerConfig:
     # champion gene value is ~15). The carrier then parks next to the Core,
     # gaining the shield cap 10 and double harvest for every worker.
     beacon_contest_range: int = 15
+    # S4 worker/economy contest gate: the active contest stays home while the
+    # economy is small or tight — below this population or resource count the
+    # beacon is not worth stripping military coverage (pure-layer default 0
+    # disables the gate and reproduces the oracle; the production composition
+    # injects real thresholds).
+    beacon_contest_min_population: int = 0
+    beacon_contest_min_resources: int = 0
     # A unit carrying our Beacon parks within this radius of the Core.
     beacon_carrier_hold_radius: int = 1
     aggression: AggressionLevel = AggressionLevel.DEFENSIVE
@@ -120,6 +127,8 @@ class SafetyPlannerConfig:
             ("max_focus_distance", self.max_focus_distance),
             ("beacon_contest_range", self.beacon_contest_range),
             ("beacon_carrier_hold_radius", self.beacon_carrier_hold_radius),
+            ("beacon_contest_min_population", self.beacon_contest_min_population),
+            ("beacon_contest_min_resources", self.beacon_contest_min_resources),
         ):
             if isinstance(value, bool) or not isinstance(value, int):
                 raise TypeError(f"{name} must be an integer")

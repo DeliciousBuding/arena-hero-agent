@@ -242,6 +242,11 @@ TERRAIN_TRAP_CONFIRM_TICKS: Final = 3
 # (injected into the production assignment matrix; the pure layer defaults to
 # 0.0 which reproduces the oracle's hard exclusion).
 CLAIM_PREEMPT_PENALTY: Final = 6.0
+# Beacon S4 contest gate (production composition): below these economy
+# thresholds the military keeps guarding instead of walking to a ground
+# Beacon. The pure safety layer defaults to 0 (no gate).
+BEACON_CONTEST_MIN_POPULATION: Final = 6
+BEACON_CONTEST_MIN_RESOURCES: Final = 10
 
 
 @dataclass(frozen=True, slots=True)
@@ -1007,6 +1012,21 @@ class ComposedDecider:
         if not isinstance(self._config, ComposedDeciderConfig):
             raise TypeError("config must be a ComposedDeciderConfig")
         effective = apply_variant_overrides(self._config.safety_config, self._config.variants)
+        if self._config.exploration_v2_enabled:
+            # Beacon S4 gate (production composition): below these economy
+            # thresholds military units keep guarding instead of walking to a
+            # ground Beacon. Pure-layer default 0.0 reproduces the oracle.
+            effective = replace(
+                effective,
+                beacon_contest_min_population=max(
+                    effective.beacon_contest_min_population,
+                    BEACON_CONTEST_MIN_POPULATION,
+                ),
+                beacon_contest_min_resources=max(
+                    effective.beacon_contest_min_resources,
+                    BEACON_CONTEST_MIN_RESOURCES,
+                ),
+            )
         self._safety = SafetyPlanner(effective)
         self._previous_assignments: tuple[Assignment, ...] = ()
         self._claims: frozenset[WorkerClaim] = frozenset()
