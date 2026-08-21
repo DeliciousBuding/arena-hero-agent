@@ -1187,6 +1187,11 @@ class ComposedDecider:
                 "failCount": barren.migration_fail_count,
             },
             "noWorkerDeadlockTicks": self._no_worker_deadlock_ticks,
+            "lowYieldStall": {
+                "stallTicks": self._low_yield_stall_ticks,
+                "threshold": LOW_YIELD_STALL_TICKS,
+                "dead": self._low_yield_stall_ticks >= LOW_YIELD_STALL_TICKS,
+            },
             "stuckResources": {
                 "lastPopulation": stuck.last_population,
                 "stuckSinceTick": stuck.stuck_since_tick,

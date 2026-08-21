@@ -620,6 +620,7 @@ def test_decider_state_summary_exposes_hook_state() -> None:
     assert set(summary) >= {
         "barrenMigration",
         "noWorkerDeadlockTicks",
+        "lowYieldStall",
         "stuckResources",
         "respawnRecovery",
         "raid",
@@ -628,6 +629,8 @@ def test_decider_state_summary_exposes_hook_state() -> None:
     }
     assert summary["barrenMigration"]["active"] is False
     assert summary["noWorkerDeadlockTicks"] == 0
+    assert summary["lowYieldStall"]["stallTicks"] == 0
+    assert summary["lowYieldStall"]["dead"] is False
     # The digest is read-only: calling it must not mutate decision state.
     again = decider.state_summary()
     assert again == summary
