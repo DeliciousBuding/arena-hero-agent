@@ -774,3 +774,38 @@ def test_low_yield_stall_ignores_military_tenants() -> None:
             assert plan.core_action.type is not CoreActionType.START_MOVE, (
                 f"military tenant migrated at tick {tick}"
             )
+
+
+def test_worker_sanctuary_personal_flee_during_approach() -> None:
+    """Candidate D2: an enemy still approaching the Core (outside the
+    sanctuary radius) makes only the worker it is next to reroute home —
+    the rest of the economy keeps working (production t2: workers were
+    picked off one by one during the approach phase)."""
+
+    enemy = EnemyUnit(id=EntityId("e1"), position=Coordinate(10, 4), unit_role=UnitRole.VANGUARD)
+    snapshot = _snapshot_for_sanctuary(
+        enemies=(enemy,),
+        workers=(("near", 12, 5, 0), ("far", 6, 0, 0)),
+    )
+    plan = ComposedDecider().decide_snapshot(snapshot)
+    near_action = _worker_action(plan, "near")
+    assert near_action.type is UnitActionType.MOVE
+    # Rerouted home: never a step toward the enemy's side (east).
+    assert near_action.direction in (Direction.WEST, Direction.SOUTH, Direction.NORTH)
+    far_action = _worker_action(plan, "far")
+    # The far worker is outside the personal flee radius and the sanctuary
+    # is inactive, so its action is the unmodified assignment.
+    assert far_action is not None
+
+
+def test_worker_sanctuary_personal_flee_skips_cargo_worker() -> None:
+    """D2: a cargo worker next to the enemy keeps walking (home to deposit)."""
+
+    enemy = EnemyUnit(id=EntityId("e1"), position=Coordinate(10, 4), unit_role=UnitRole.VANGUARD)
+    snapshot = _snapshot_for_sanctuary(
+        enemies=(enemy,),
+        workers=(("carrier", 12, 5, 1),),
+    )
+    plan = ComposedDecider().decide_snapshot(snapshot)
+    action = _worker_action(plan, "carrier")
+    assert action.type is UnitActionType.MOVE

@@ -591,10 +591,23 @@ def _routing_obstacles(snapshot: PlanningSnapshot) -> frozenset[str]:
 # attacker's path one by one (production t2 wiped 2026-08-21: workers picked
 # off over ~160 ticks while the economy kept sending them out).
 WORKER_SANCTUARY_RADIUS: Final = 5
+# Candidate D2: a worker this close to ANY visible enemy is personally
+# threatened even while the enemy is still approaching the Core from
+# outside (the siege's pickoff phase happens before the enemy reaches the
+# door). The threatened worker reroutes home; the rest keep working.
+WORKER_FLEE_RADIUS: Final = 6
 
 
 def _worker_threat_sanctuary(snapshot: PlanningSnapshot, plan: Plan) -> Plan:
-    """Redirect cargo-less worker MOVEs home while an enemy is at the door."""
+    """Redirect cargo-less worker MOVEs home while an enemy is at the door.
+
+    Two tiers: the sanctuary (enemy within ``WORKER_SANCTUARY_RADIUS`` of
+    the Core) reroutes every cargo-less worker home; the personal flee
+    (enemy within ``WORKER_FLEE_RADIUS`` of one worker) reroutes just that
+    worker. The personal tier covers the siege's approach phase — the
+    production t2 wipe picked workers off one by one while the attacker was
+    still outside the Core's immediate ring.
+    """
 
     core = snapshot.core_position
     if core is None or not snapshot.enemy_units:
@@ -602,9 +615,18 @@ def _worker_threat_sanctuary(snapshot: PlanningSnapshot, plan: Plan) -> Plan:
     nearest_enemy_distance = min(
         manhattan(core, enemy.position) for enemy in snapshot.enemy_units
     )
-    if nearest_enemy_distance > WORKER_SANCTUARY_RADIUS:
-        return plan
+    sanctuary_active = nearest_enemy_distance <= WORKER_SANCTUARY_RADIUS
     units_by_id = {unit.id: unit for unit in snapshot.units}
+    if not sanctuary_active and not any(
+        unit.unit_role is UnitRole.WORKER
+        and unit.cargo == 0
+        and any(
+            manhattan(unit.position, enemy.position) <= WORKER_FLEE_RADIUS
+            for enemy in snapshot.enemy_units
+        )
+        for unit in snapshot.units
+    ):
+        return plan
     parking_cells = [core.step(direction) for direction in Direction]
     open_parking = [
         cell for cell in parking_cells if cell_key(cell) not in snapshot.obstacle_cells
@@ -619,6 +641,11 @@ def _worker_threat_sanctuary(snapshot: PlanningSnapshot, plan: Plan) -> Plan:
         if unit is None or unit.unit_role is not UnitRole.WORKER or unit.cargo != 0:
             continue
         if manhattan(unit.position, core) <= 1:
+            continue
+        if not sanctuary_active and not any(
+            manhattan(unit.position, enemy.position) <= WORKER_FLEE_RADIUS
+            for enemy in snapshot.enemy_units
+        ):
             continue
         parking = min(open_parking, key=lambda cell: manhattan(unit.position, cell))
         direction = astar_next_step(
