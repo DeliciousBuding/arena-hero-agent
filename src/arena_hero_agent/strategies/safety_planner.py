@@ -78,6 +78,11 @@ THREAT_VANGUARD_MIN_RESOURCES: Final = 16
 # on flee. Beyond this distance the economy-first tier-1 policy applies.
 IMMINENT_THREAT_MIN_WORKERS: Final = 2
 IMMINENT_THREAT_DISTANCE: Final = 3
+# After an imminent-threat Vanguard spawn, wait this many ticks before the
+# next emergency spawn. A siege that kills the defender fast must not
+# trigger a fresh 10-resource spawn every tick (vanguard spam feeding the
+# attacker instead of defending).
+IMMINENT_SPAWN_COOLDOWN_TICKS: Final = 15
 # Official Champion Beacon shield cap (rules/champion-beacon.md): the
 # carrier's Core shield limit rises 5 -> 10 and clamps back on loss.
 BEACON_SHIELD_CAP: Final = 10
@@ -192,6 +197,11 @@ class SafetyPlanner:
         # -2.5 dep with zero damage dealt).
         self._previous_enemy_positions: dict[str, Coordinate] = {}
         self._converging_enemy_ids: set[str] = set()
+        # Candidate C spawn budget: after an imminent-threat Vanguard spawn,
+        # the next one waits until this tick. A siege that kills the
+        # defender fast must not trigger a fresh 10-resource spawn every
+        # tick (vanguard spam feeding the attacker).
+        self._imminent_spawn_cooldown_until: int | None = None
 
     @property
     def config(self) -> SafetyPlannerConfig:
@@ -326,7 +336,14 @@ class SafetyPlanner:
                 if (
                     nearest_enemy_distance <= IMMINENT_THREAT_DISTANCE
                     and snapshot.resources >= vanguard_cost
+                    and (
+                        self._imminent_spawn_cooldown_until is None
+                        or snapshot.tick >= self._imminent_spawn_cooldown_until
+                    )
                 ):
+                    self._imminent_spawn_cooldown_until = (
+                        snapshot.tick + IMMINENT_SPAWN_COOLDOWN_TICKS
+                    )
                     return CoreAction(type=CoreActionType.SPAWN, unit_role=UnitRole.VANGUARD)
 
         role = (

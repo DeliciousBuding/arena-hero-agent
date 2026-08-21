@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import cast
 
 import pytest
@@ -18,6 +19,7 @@ from arena_hero_agent.planning import (
 from arena_hero_agent.strategies import (
     AGGRESSIVE_SAFETY_CONFIG,
     DEFAULT_SAFETY_CONFIG,
+    IMMINENT_SPAWN_COOLDOWN_TICKS,
     SafetyPlanner,
     SafetyPlannerConfig,
     step_toward,
@@ -803,3 +805,40 @@ def test_imminent_threat_requires_close_enemy() -> None:
     decision = planner.decide(second)
     action = decision.plan.core_action
     assert action is None or action.unit_role is not UnitRole.VANGUARD
+
+
+def test_imminent_threat_cooldown_prevents_spawn_spam() -> None:
+    """Candidate C refinement: after an imminent Vanguard spawn the next one
+    waits for the cooldown, so a siege that kills the defender fast cannot
+    drain 10 resources every tick."""
+
+    planner = SafetyPlanner()
+    first, second = _converge_snapshots()
+    planner.decide(first)
+    decision = planner.decide(second)
+    assert decision.plan.core_action is not None
+    assert decision.plan.core_action.unit_role is UnitRole.VANGUARD
+
+    # The siege continues (enemy still converging) one tick later: the
+    # cooldown blocks a second emergency spawn even though the converge +
+    # distance + resource conditions all still hold.
+    repeat = _converge_snapshots(second_distance=2)[1]
+    repeat = replace(repeat, tick=3)
+    decision = planner.decide(repeat)
+    action = decision.plan.core_action
+    assert action is None or action.unit_role is not UnitRole.VANGUARD
+
+
+def test_imminent_threat_cooldown_expires() -> None:
+    """After the cooldown window the emergency spawn is available again."""
+
+    planner = SafetyPlanner()
+    first, second = _converge_snapshots()
+    planner.decide(first)
+    planner.decide(second)
+
+    later = _converge_snapshots(second_distance=2)[1]
+    later = replace(later, tick=2 + IMMINENT_SPAWN_COOLDOWN_TICKS)
+    decision = planner.decide(later)
+    action = decision.plan.core_action
+    assert action is not None and action.unit_role is UnitRole.VANGUARD

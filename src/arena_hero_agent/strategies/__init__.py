@@ -40,6 +40,7 @@ from .safety_helpers import (
 )
 from .safety_planner import (
     EXPLORE_DIRECTION_COUNT,
+    IMMINENT_SPAWN_COOLDOWN_TICKS,
     SafetyDecision,
     SafetyPlanner,
     step_toward,
@@ -86,6 +87,7 @@ __all__ = [
     "DEFAULT_SAFETY_CONFIG",
     "EMPTY_SQUAD_MEMBERSHIP",
     "EXPLORE_DIRECTION_COUNT",
+    "IMMINENT_SPAWN_COOLDOWN_TICKS",
     "RALLY_MEMBER_RING_COUNT",
     "RALLY_MEMBER_SLOT_COUNT",
     "RALLY_SLOT_COUNT",

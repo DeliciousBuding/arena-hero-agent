@@ -567,3 +567,100 @@ def test_terrain_trap_requires_consecutive_core_occupancy() -> None:
             _action(decider.decide_snapshot(snapshot(tick, False)), "w1")
             is UnitActionType.WAIT
         )
+
+
+def _snapshot_for_sanctuary(
+    *,
+    enemies: tuple[EnemyUnit, ...],
+    workers: tuple[tuple[str, int, int, int], ...],
+    core: Coordinate | None = None,
+) -> PlanningSnapshot:
+    """Minimal snapshot for the worker-threat-sanctuary hook (candidate D)."""
+
+    core = Coordinate(0, 0) if core is None else core
+
+    return PlanningSnapshot(
+        tick=1,
+        rules_version=RULES,
+        resources=0,
+        resource_capacity=100,
+        resource_space=100,
+        population=len(workers),
+        units=tuple(
+            PlanningUnit(
+                id=EntityId(unit_id),
+                unit_role=UnitRole.WORKER,
+                position=Coordinate(x, y),
+                health=2,
+                cargo=cargo,
+            )
+            for unit_id, x, y, cargo in workers
+        ),
+        resource_cells={},
+        obstacle_cells=frozenset(),
+        enemy_cells=frozenset(),
+        enemy_units=enemies,
+        core_id="core",
+        core_position=core,
+        core_health=5,
+        core_shield=5,
+        core_state="normal",
+        beacon=BeaconInfo(position=Coordinate(0, 0), status=None),
+        threat_map={},
+    )
+
+
+def _worker_action(plan: Plan, unit_id: str):
+    for action in plan.unit_actions:
+        if action.unit_id == EntityId(unit_id):
+            return action
+    raise AssertionError(f"missing action for {unit_id}")
+
+
+def test_worker_sanctuary_redirects_cargoless_moves_home() -> None:
+    """Candidate D: an enemy at the door pulls cargo-less workers home."""
+
+    enemy = EnemyUnit(id=EntityId("e1"), position=Coordinate(0, 4), unit_role=UnitRole.VANGUARD)
+    snapshot = _snapshot_for_sanctuary(
+        enemies=(enemy,),
+        workers=(("far", 6, 0, 0),),
+    )
+    plan = ComposedDecider().decide_snapshot(snapshot)
+    action = _worker_action(plan, "far")
+    # The worker's outward MOVE (assigned by the matrix baseline) is replaced
+    # by a step toward the Core's ring (never a step away on the x axis).
+    assert action.type is UnitActionType.MOVE
+    assert action.direction in (Direction.WEST, Direction.SOUTH, Direction.NORTH)
+
+
+def test_worker_sanctuary_keeps_cargo_workers() -> None:
+    enemy = EnemyUnit(id=EntityId("e1"), position=Coordinate(0, 4), unit_role=UnitRole.VANGUARD)
+    snapshot = _snapshot_for_sanctuary(
+        enemies=(enemy,),
+        workers=(("carrier", 6, 0, 1),),
+    )
+    plan = ComposedDecider().decide_snapshot(snapshot)
+    action = _worker_action(plan, "carrier")
+    # Cargo workers keep their original move (heading home to deposit).
+    assert action.type is UnitActionType.MOVE
+
+
+def test_worker_sanctuary_inactive_without_enemy() -> None:
+    snapshot = _snapshot_for_sanctuary(
+        enemies=(),
+        workers=(("far", 6, 0, 0),),
+    )
+    plan = ComposedDecider().decide_snapshot(snapshot)
+    # No enemy: the hook leaves the plan untouched (a WAIT or assignment move
+    # depending on the matrix, but never a forced re-route crash).
+    assert plan.unit_actions
+
+
+def test_worker_sanctuary_inactive_with_far_enemy() -> None:
+    enemy = EnemyUnit(id=EntityId("e1"), position=Coordinate(0, 20), unit_role=UnitRole.VANGUARD)
+    snapshot = _snapshot_for_sanctuary(
+        enemies=(enemy,),
+        workers=(("far", 6, 0, 0),),
+    )
+    plan = ComposedDecider().decide_snapshot(snapshot)
+    assert plan.unit_actions

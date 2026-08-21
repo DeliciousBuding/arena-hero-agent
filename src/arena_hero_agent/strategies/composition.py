@@ -575,6 +575,62 @@ def _routing_obstacles(snapshot: PlanningSnapshot) -> frozenset[str]:
     return obstacles | {core.cell_key}
 
 
+# Candidate D: when an enemy is this close to the Core, cargo-less workers
+# stop trekking outward and hold near home instead of walking into the
+# attacker's path one by one (production t2 wiped 2026-08-21: workers picked
+# off over ~160 ticks while the economy kept sending them out).
+WORKER_SANCTUARY_RADIUS: Final = 5
+
+
+def _worker_threat_sanctuary(snapshot: PlanningSnapshot, plan: Plan) -> Plan:
+    """Redirect cargo-less worker MOVEs home while an enemy is at the door."""
+
+    core = snapshot.core_position
+    if core is None or not snapshot.enemy_units:
+        return plan
+    nearest_enemy_distance = min(
+        manhattan(core, enemy.position) for enemy in snapshot.enemy_units
+    )
+    if nearest_enemy_distance > WORKER_SANCTUARY_RADIUS:
+        return plan
+    units_by_id = {unit.id: unit for unit in snapshot.units}
+    parking_cells = [core.step(direction) for direction in Direction]
+    open_parking = [
+        cell for cell in parking_cells if cell_key(cell) not in snapshot.obstacle_cells
+    ]
+    if not open_parking:
+        return plan
+    new_actions = list(plan.unit_actions)
+    for index, action in enumerate(new_actions):
+        if action.type is not UnitActionType.MOVE:
+            continue
+        unit = units_by_id.get(action.unit_id)
+        if unit is None or unit.unit_role is not UnitRole.WORKER or unit.cargo != 0:
+            continue
+        if manhattan(unit.position, core) <= 1:
+            continue
+        parking = min(open_parking, key=lambda cell: manhattan(unit.position, cell))
+        direction = astar_next_step(
+            unit.position,
+            parking,
+            _routing_obstacles(snapshot),
+            search_radius=RECALL_ROUTE_RADIUS,
+            node_budget=RECALL_ROUTE_NODE_BUDGET,
+        )
+        if direction is None:
+            direction = step_toward(unit.position, parking)
+        new_actions[index] = PlanningUnitAction(
+            unit_id=action.unit_id,
+            type=UnitActionType.MOVE,
+            direction=direction,
+        )
+    return Plan(
+        tick=plan.tick,
+        unit_actions=tuple(new_actions),
+        core_action=plan.core_action,
+    )
+
+
 def _vacate_core_cell_actions(
     snapshot: PlanningSnapshot,
     unit_actions: tuple[PlanningUnitAction, ...],
@@ -2160,6 +2216,12 @@ class ComposedDecider:
                     unit_actions=plan.unit_actions,
                     core_action=movement_core_action,
                 )
+
+        if self._config.exploration_v2_enabled:
+            # Candidate D: hold cargo-less workers near home while an enemy is
+            # at the door, so the economy stops feeding workers into the
+            # attacker one by one (production t2 wipe: ~160-tick pickoff).
+            plan = _worker_threat_sanctuary(snapshot, plan)
 
         if self._config.exploration_v2_enabled:
             # A cell holds two entities and the Core occupies one slot, so an
