@@ -41,6 +41,7 @@ from .safety_helpers import (
 from .safety_planner import (
     EXPLORE_DIRECTION_COUNT,
     IMMINENT_SPAWN_COOLDOWN_TICKS,
+    THREAT_RESERVE_DISTANCE,
     SafetyDecision,
     SafetyPlanner,
     step_toward,
@@ -88,6 +89,7 @@ __all__ = [
     "EMPTY_SQUAD_MEMBERSHIP",
     "EXPLORE_DIRECTION_COUNT",
     "IMMINENT_SPAWN_COOLDOWN_TICKS",
+    "THREAT_RESERVE_DISTANCE",
     "RALLY_MEMBER_RING_COUNT",
     "RALLY_MEMBER_SLOT_COUNT",
     "RALLY_SLOT_COUNT",

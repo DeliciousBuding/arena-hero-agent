@@ -83,6 +83,14 @@ IMMINENT_THREAT_DISTANCE: Final = 3
 # trigger a fresh 10-resource spawn every tick (vanguard spam feeding the
 # attacker instead of defending).
 IMMINENT_SPAWN_COOLDOWN_TICKS: Final = 15
+# Candidate G (approach reserve): a CONVERGING enemy inside this distance
+# means a siege is forming. Production t2/t3 were destroyed with res 0-2
+# because the economy kept buying workers up to target while the attacker
+# approached — the 10-resource Vanguard price never accumulated, so no
+# defense tier could ever fire. Inside this distance the Core banks the
+# Vanguard price (no worker spending) and fields the defender as soon as
+# it is affordable. Convergence gating keeps passing wanderers neutral.
+THREAT_RESERVE_DISTANCE: Final = 12
 # Official Champion Beacon shield cap (rules/champion-beacon.md): the
 # carrier's Core shield limit rises 5 -> 10 and clamps back on loss.
 BEACON_SHIELD_CAP: Final = 10
@@ -345,6 +353,52 @@ class SafetyPlanner:
                         snapshot.tick + IMMINENT_SPAWN_COOLDOWN_TICKS
                     )
                     return CoreAction(type=CoreActionType.SPAWN, unit_role=UnitRole.VANGUARD)
+
+        # Candidate G approach reserve (production t2/t3 wipe forensics):
+        # a CONVERGING enemy inside THREAT_RESERVE_DISTANCE means a siege
+        # is forming. The wiped tenants died with res 0-2 because the
+        # economy kept buying workers while the attacker approached, so
+        # the Vanguard price never accumulated and no defense tier could
+        # fire. Inside the reserve distance the Core banks the Vanguard
+        # price (blocks worker spending) and fields the defender as soon
+        # as it is affordable. Convergence gating keeps passing wanderers
+        # neutral, and the emergency cooldown is shared with candidate C.
+        if (
+            workers >= IMMINENT_THREAT_MIN_WORKERS
+            and snapshot.core_position is not None
+            and snapshot.enemy_units
+        ):
+            approaching_enemies = [
+                enemy
+                for enemy in snapshot.enemy_units
+                if enemy.id.value in self._converging_enemy_ids
+            ]
+            if approaching_enemies:
+                nearest_enemy_distance = min(
+                    manhattan(snapshot.core_position, enemy.position)
+                    for enemy in approaching_enemies
+                )
+                if nearest_enemy_distance <= THREAT_RESERVE_DISTANCE:
+                    vanguard_cost = unit_price(
+                        UnitRole.VANGUARD, snapshot.population, CURRENT_RULES_VERSION
+                    )
+                    if (
+                        snapshot.resources >= vanguard_cost
+                        and (
+                            self._imminent_spawn_cooldown_until is None
+                            or snapshot.tick >= self._imminent_spawn_cooldown_until
+                        )
+                    ):
+                        self._imminent_spawn_cooldown_until = (
+                            snapshot.tick + IMMINENT_SPAWN_COOLDOWN_TICKS
+                        )
+                        return CoreAction(
+                            type=CoreActionType.SPAWN, unit_role=UnitRole.VANGUARD
+                        )
+                    if snapshot.resources < vanguard_cost:
+                        # Bank the defender price: no worker/heal/shield
+                        # spending while the siege forms.
+                        return None
 
         role = (
             next_spawn_massarmy(workers, vanguards, rangers, snapshot.population)

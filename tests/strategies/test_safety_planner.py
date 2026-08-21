@@ -799,8 +799,11 @@ def test_imminent_threat_requires_two_workers() -> None:
 
 
 def test_imminent_threat_requires_close_enemy() -> None:
+    """Beyond the approach-reserve distance even a converging enemy leaves
+    the economy alone (candidate G radius is the outer bound)."""
+
     planner = SafetyPlanner()
-    first, second = _converge_snapshots(first_distance=6, second_distance=5, resources=20)
+    first, second = _converge_snapshots(first_distance=14, second_distance=13, resources=20)
     planner.decide(first)
     decision = planner.decide(second)
     action = decision.plan.core_action
@@ -842,3 +845,50 @@ def test_imminent_threat_cooldown_expires() -> None:
     decision = planner.decide(later)
     action = decision.plan.core_action
     assert action is not None and action.unit_role is UnitRole.VANGUARD
+
+
+def test_approach_reserve_banks_vanguard_price() -> None:
+    """Candidate G: a converging enemy inside the reserve distance blocks
+    worker spending while the Vanguard price banks (production t2/t3 were
+    destroyed with res 0-2 because the economy kept buying workers)."""
+
+    planner = SafetyPlanner()
+    first, second = _converge_snapshots(
+        first_distance=8, second_distance=7, resources=6, workers_count=2
+    )
+    planner.decide(first)
+    decision = planner.decide(second)
+    action = decision.plan.core_action
+    # 6 resources can afford a Worker (5) but the approach reserve holds
+    # the spend: no worker spawn while the siege forms.
+    assert action is None or action.type is not CoreActionType.SPAWN
+
+
+def test_approach_reserve_spawns_vanguard_when_affordable() -> None:
+    """Candidate G: once the banked reserve reaches the Vanguard price the
+    defender spawns immediately."""
+
+    planner = SafetyPlanner()
+    first, second = _converge_snapshots(
+        first_distance=8, second_distance=7, resources=10, workers_count=2
+    )
+    planner.decide(first)
+    decision = planner.decide(second)
+    action = decision.plan.core_action
+    assert action is not None
+    assert action.type is CoreActionType.SPAWN
+    assert action.unit_role is UnitRole.VANGUARD
+
+
+def test_approach_reserve_ignores_non_converging_enemy() -> None:
+    """Candidate G: a wanderer holding distance inside the reserve radius
+    does not trigger the reserve (convergence learning required)."""
+
+    planner = SafetyPlanner()
+    first, second = _converge_snapshots(
+        first_distance=7, second_distance=7, resources=6, workers_count=2
+    )
+    planner.decide(first)
+    decision = planner.decide(second)
+    action = decision.plan.core_action
+    assert action is None or action.unit_role is not UnitRole.VANGUARD
