@@ -46,6 +46,7 @@ from arena_hero_agent.application import (
 )
 from arena_hero_agent.application.tick_loop import DeadlineBudget, Decider
 from arena_hero_agent.domain import (
+    CURRENT_RULES_VERSION,
     Coordinate,
     Direction,
     EconomyState,
@@ -248,6 +249,16 @@ CLAIM_PREEMPT_PENALTY: Final = 6.0
 # Beacon. The pure safety layer defaults to 0 (no gate).
 BEACON_CONTEST_MIN_POPULATION: Final = 6
 BEACON_CONTEST_MIN_RESOURCES: Final = 10
+# Candidate E (low-yield trap): deep sparse rings hold quota-2 crumb cells
+# that are reachable and occasionally deposited, so the cell-based barren
+# trigger never fires — yet the yield can never reach the 5-resource Worker
+# price, and the tenant idles at pop 2 forever (production t2 ring 44 and
+# t3 ring 54: ~1-3k ticks at res 0-2 with zero spawns). When resources
+# fail to reach the next Worker cost for this many consecutive ticks while
+# population is low and no military exists, the region is treated as
+# barren and the Core migrates toward origin.
+LOW_YIELD_STALL_TICKS: Final = 60
+LOW_YIELD_MAX_POPULATION: Final = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -1121,6 +1132,9 @@ class ComposedDecider:
         self._previous_core_position: Coordinate | None = None
         self._previous_resources: int | None = None
         self._previous_population: int | None = None
+        # Candidate E stall tracking: consecutive ticks where the tenant
+        # could not afford the next Worker (see LOW_YIELD_STALL_TICKS).
+        self._low_yield_stall_ticks = 0
         # Terrain-trap self-destruct confirmation: unit id -> tick when it
         # first stood on the Core cell with no cargo. Only workers that keep
         # occupying the Core cell for TERRAIN_TRAP_CONFIRM_TICKS consecutive
@@ -1576,6 +1590,30 @@ class ComposedDecider:
         previous_population = self._previous_population
         self._previous_resources = snapshot.resources
         self._previous_population = snapshot.population
+        # Candidate E stall tracking: the region proves it can sustain the
+        # economy only when resources reach the next Worker price (or the
+        # population grows). Crumb deposits that never afford a spawn do not
+        # count; after LOW_YIELD_STALL_TICKS such ticks the region is
+        # declared dead and the Core migrates toward origin even though
+        # crumb cells are visible (production t2/t3 low-yield trap).
+        next_worker_cost = unit_price(
+            UnitRole.WORKER, snapshot.population, CURRENT_RULES_VERSION
+        )
+        has_military = any(unit.unit_role is not UnitRole.WORKER for unit in snapshot.units)
+        population_grew = (
+            previous_population is not None
+            and snapshot.population > previous_population
+        )
+        if (
+            snapshot.population <= LOW_YIELD_MAX_POPULATION
+            and not has_military
+            and not population_grew
+            and snapshot.resources < next_worker_cost
+        ):
+            self._low_yield_stall_ticks += 1
+        else:
+            self._low_yield_stall_ticks = 0
+        low_yield_dead = self._low_yield_stall_ticks >= LOW_YIELD_STALL_TICKS
         economic_activity = (
             previous_resources is not None
             and (
@@ -1588,6 +1626,7 @@ class ComposedDecider:
                 core,
                 self._config.barren_resource_distance,
             )
+            and not low_yield_dead
         )
 
         # A cargo-carrying worker near the Core is about to deposit; the engine
@@ -1652,7 +1691,7 @@ class ComposedDecider:
             and nearest_resource_distance <= self._config.barren_resource_distance
         )
         should_migrate = self._barren_migration.observe(
-            has_resource_cells=has_reachable_resources,
+            has_resource_cells=has_reachable_resources and not low_yield_dead,
             tick=snapshot.tick,
             core_migrating=core_migrating,
             barren_threshold=self._config.barren_migration_ticks,

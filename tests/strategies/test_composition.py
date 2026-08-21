@@ -32,6 +32,7 @@ from arena_hero_agent.domain import (
 from arena_hero_agent.planning import (
     Assignment,
     BeaconInfo,
+    CoreActionType,
     EnemyUnit,
     MissionConfig,
     Plan,
@@ -664,3 +665,112 @@ def test_worker_sanctuary_inactive_with_far_enemy() -> None:
     )
     plan = ComposedDecider().decide_snapshot(snapshot)
     assert plan.unit_actions
+
+
+def _low_yield_snapshot(
+    *,
+    tick: int,
+    resources: int,
+    population: int = 2,
+) -> PlanningSnapshot:
+    """Deep-ring tenant: reachable crumb cell, resources far below spawn cost."""
+
+    core = Coordinate(30, 0)
+    return PlanningSnapshot(
+        tick=tick,
+        rules_version=RULES,
+        resources=resources,
+        resource_capacity=100,
+        resource_space=100 - resources,
+        population=population,
+        units=(
+            _worker("w1", 28, 0),
+            _worker("w2", 29, 1),
+        ),
+        resource_cells={
+            "crumb": ResourceCellInfo(
+                position=Coordinate(33, 0),
+                visible=True,
+                last_seen_tick=tick,
+                seeded=False,
+            )
+        },
+        obstacle_cells=frozenset(),
+        enemy_cells=frozenset(),
+        enemy_units=(),
+        core_id="core",
+        core_position=core,
+        core_health=5,
+        core_shield=5,
+        core_state="normal",
+        beacon=BeaconInfo(position=Coordinate(0, 0), status=None),
+        threat_map={},
+    )
+
+
+def test_low_yield_trap_migrates_toward_origin() -> None:
+    """Candidate E: crumb cells keep the barren latch reset forever, but the
+    yield can never afford a Worker — after LOW_YIELD_STALL_TICKS the Core
+    migrates toward origin (production t2/t3 deep-ring trap)."""
+
+    decider = ComposedDecider()
+    # Seed one local harvest so crumb deposits count as economic activity:
+    # the phantom-resource and plain-barren paths stay reset forever, and
+    # only the low-yield stall can start a migration.
+    decider._exploration_state.harvested_cells["31,0"] = (Coordinate(31, 0), 10**9)
+    saw_start_move = None
+    for tick in range(1, 131):
+        resources = (0, 1, 2, 0, 1)[tick % 5]
+        plan = decider.decide_snapshot(_low_yield_snapshot(tick=tick, resources=resources))
+        if plan.core_action is not None and plan.core_action.type is CoreActionType.START_MOVE:
+            saw_start_move = plan.core_action
+            break
+    assert saw_start_move is not None, "expected low-yield migration to start"
+    # Core at (30, 0): the first migration step must head toward the origin.
+    assert saw_start_move.direction is Direction.WEST
+
+
+def test_low_yield_stall_resets_on_spawn_affordability() -> None:
+    """Candidate E: reaching the Worker price proves the region sustains the
+    economy — the stall counter resets and no migration starts."""
+
+    decider = ComposedDecider()
+    decider._exploration_state.harvested_cells["31,0"] = (Coordinate(31, 0), 10**9)
+    for tick in range(1, 131):
+        # Every 50 ticks the tenant briefly affords a spawn.
+        resources = 5 if tick % 50 == 30 else (0, 1, 2, 0, 1)[tick % 5]
+        plan = decider.decide_snapshot(_low_yield_snapshot(tick=tick, resources=resources))
+        if plan.core_action is not None:
+            assert plan.core_action.type is not CoreActionType.START_MOVE, (
+                f"migration fired at tick {tick} despite affordable spawns"
+            )
+
+
+def test_low_yield_stall_ignores_military_tenants() -> None:
+    """Candidate E: tenants with military are under a different economy —
+    they must not migrate while fielding defenders."""
+
+    decider = ComposedDecider()
+    decider._exploration_state.harvested_cells["31,0"] = (Coordinate(31, 0), 10**9)
+    for tick in range(1, 131):
+        resources = (0, 1, 2, 0, 1)[tick % 5]
+        snapshot = _low_yield_snapshot(tick=tick, resources=resources)
+        snapshot = replace(
+            snapshot,
+            population=5,
+            units=snapshot.units
+            + (
+                PlanningUnit(
+                    id=EntityId("v1"),
+                    unit_role=UnitRole.VANGUARD,
+                    position=Coordinate(26, 0),
+                    health=4,
+                    cargo=0,
+                ),
+            ),
+        )
+        plan = decider.decide_snapshot(snapshot)
+        if plan.core_action is not None:
+            assert plan.core_action.type is not CoreActionType.START_MOVE, (
+                f"military tenant migrated at tick {tick}"
+            )
