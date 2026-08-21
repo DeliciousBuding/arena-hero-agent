@@ -5,9 +5,10 @@ multiple tenants, and exposing an operator-facing control plane. The repository 
 engine independent from transport, storage, and deployment details so it can be tested offline and
 integrated through replaceable adapters.
 
-> **Status:** v0.1.7, offline turn-to-decision adapter chain stable. Deployed to all four
-> production tenants on release-008, with the research layers (economy/raid/exploration/
-> respawn/movement/stuck) enabled by default.
+> **Status:** the Python live-writer line serves all four production tenants; the research
+> layers (economy/raid/exploration/respawn/movement/stuck) are enabled by default. The current
+> package version is the `version` field in `pyproject.toml`; release tracking lives in the
+> private production repository.
 
 ## Current capabilities
 
