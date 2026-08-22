@@ -28,6 +28,7 @@ from arena_hero_agent.domain import (
     EntityId,
     UnitRole,
     WorldProjection,
+    manhattan,
 )
 from arena_hero_agent.planning import (
     Assignment,
@@ -44,6 +45,9 @@ from arena_hero_agent.planning import (
     UnitActionType,
     WorkerTaskPlannerConfig,
 )
+from arena_hero_agent.planning import (
+    UnitAction as PlanningUnitAction,
+)
 from arena_hero_agent.strategies import (
     ComposedDecider,
     ComposedDeciderConfig,
@@ -52,6 +56,7 @@ from arena_hero_agent.strategies import (
     plan_to_decision,
     snapshot_from_turn,
 )
+from arena_hero_agent.strategies import composition as composition_module
 from tests.strategies.fixture_loader import load_oracle_fixture
 
 RULES = CURRENT_RULES_VERSION
@@ -809,3 +814,115 @@ def test_worker_sanctuary_personal_flee_skips_cargo_worker() -> None:
     plan = ComposedDecider().decide_snapshot(snapshot)
     action = _worker_action(plan, "carrier")
     assert action.type is UnitActionType.MOVE
+
+
+def _wait_plan_for(units: tuple[PlanningUnit, ...]) -> Plan:
+    return Plan(
+        tick=1,
+        unit_actions=tuple(
+            PlanningUnitAction(unit_id=unit.id, type=UnitActionType.WAIT, direction=None)
+            for unit in units
+        ),
+        core_action=None,
+    )
+
+
+def _stranded_recall_fixture() -> tuple[Coordinate, tuple[PlanningUnit, ...]]:
+    """Core at the origin with four idle workers stranded beyond the recall
+    distance (40), at 60/90/120/150 tiles — the t4 pop-11 cliff shape."""
+
+    core = Coordinate(0, 0)
+    workers = (
+        _worker("w60", 60, 0),
+        _worker("w90", -90, 0),
+        _worker("w120", 0, 120),
+        _worker("w150", 150, 0),
+    )
+    return core, workers
+
+
+def test_recall_moves_every_stranded_worker_home() -> None:
+    """No silent freeze: every stranded WAIT worker becomes a MOVE that
+    reduces its distance to the Core, even when more workers are stranded
+    than the per-tick budgeted-route cap."""
+
+    core, workers = _stranded_recall_fixture()
+    snapshot = _worker_snapshot(units=workers, population=len(workers), core_position=core)
+    plan = composition_module._recall_stranded_workers(snapshot, _wait_plan_for(workers))
+    for unit in workers:
+        action = _worker_action(plan, str(unit.id))
+        assert action.type is UnitActionType.MOVE
+        assert action.direction is not None
+        stepped = unit.position.step(action.direction)
+        assert manhattan(stepped, core) < manhattan(unit.position, core)
+
+
+def test_recall_caps_budgeted_routes_and_prioritizes_farthest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """t4 pop-11 cliff fix: at most RECALL_MAX_BUDGET_ROUTES_PER_TICK A*
+    searches run per tick, and the farthest workers receive them first;
+    the rest fall back to the greedy step instead of queueing more A*."""
+
+    core, workers = _stranded_recall_fixture()
+    snapshot = _worker_snapshot(units=workers, population=len(workers), core_position=core)
+    routed_starts: list[Coordinate] = []
+    real_astar = composition_module.astar_next_step
+
+    def counting_astar(start, target, obstacles, **kwargs):
+        routed_starts.append(start)
+        return real_astar(start, target, obstacles, **kwargs)
+
+    monkeypatch.setattr(composition_module, "astar_next_step", counting_astar)
+    plan = composition_module._recall_stranded_workers(snapshot, _wait_plan_for(workers))
+
+    assert len(routed_starts) == composition_module.RECALL_MAX_BUDGET_ROUTES_PER_TICK
+    assert set(routed_starts) == {Coordinate(150, 0), Coordinate(0, 120)}
+    for unit in workers:
+        assert _worker_action(plan, str(unit.id)).type is UnitActionType.MOVE
+
+
+def test_recall_is_deterministic() -> None:
+    core, workers = _stranded_recall_fixture()
+    snapshot = _worker_snapshot(units=workers, population=len(workers), core_position=core)
+    first = composition_module._recall_stranded_workers(snapshot, _wait_plan_for(workers))
+    second = composition_module._recall_stranded_workers(snapshot, _wait_plan_for(workers))
+    assert first == second
+
+
+def test_worker_sanctuary_caps_budgeted_routes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A siege reroutes every cargo-less mover at once; the sanctuary applies
+    the same per-tick routing budget as the stranded recall so decide() stays
+    inside the tick budget with a full worker complement."""
+
+    enemy = EnemyUnit(id=EntityId("e1"), position=Coordinate(0, 4), unit_role=UnitRole.VANGUARD)
+    snapshot = _snapshot_for_sanctuary(
+        enemies=(enemy,),
+        workers=(("a", 6, 0, 0), ("b", 8, 0, 0), ("c", 10, 0, 0), ("d", 12, 0, 0)),
+    )
+    move_plan = Plan(
+        tick=1,
+        unit_actions=tuple(
+            PlanningUnitAction(
+                unit_id=EntityId(unit_id), type=UnitActionType.MOVE, direction=Direction.EAST
+            )
+            for unit_id in ("a", "b", "c", "d")
+        ),
+        core_action=None,
+    )
+    routed_starts: list[Coordinate] = []
+    real_astar = composition_module.astar_next_step
+
+    def counting_astar(start, target, obstacles, **kwargs):
+        routed_starts.append(start)
+        return real_astar(start, target, obstacles, **kwargs)
+
+    monkeypatch.setattr(composition_module, "astar_next_step", counting_astar)
+    plan = composition_module._worker_threat_sanctuary(snapshot, move_plan)
+
+    assert len(routed_starts) == composition_module.RECALL_MAX_BUDGET_ROUTES_PER_TICK
+    for unit_id in ("a", "b", "c", "d"):
+        action = _worker_action(plan, unit_id)
+        assert action.type is UnitActionType.MOVE
+        # Rerouted home: never a step farther east away from the Core.
+        assert action.direction in (Direction.WEST, Direction.NORTH, Direction.SOUTH)

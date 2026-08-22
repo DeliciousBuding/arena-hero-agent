@@ -233,7 +233,19 @@ STRANDED_RECALL_DISTANCE: Final = 40
 # farther away (production t3: 111 tiles, hundreds of ticks, replay-verified).
 # A* with a 192-tile radius covers any production-world recall distance.
 RECALL_ROUTE_RADIUS: Final = 192
-RECALL_ROUTE_NODE_BUDGET: Final = 131072
+# Per-call node budget stays at the pathfinder default: a route needing more
+# expansions than this is effectively unreachable inside the radius, and the
+# greedy fallback answers it at a fraction of the cost. The previous 131072
+# budget burned ~1s per exhausted search in blocked terrain; several stranded
+# workers multiplied that past the 5s production tick budget (t4 pop-11
+# latency cliff, tick 145759 onward: ~7.5s decide() and 1600+ consecutive
+# selection_timeout ticks until the fallback plan froze the tenant).
+RECALL_ROUTE_NODE_BUDGET: Final = 32768
+# Per-tick cap on budgeted A* reroutes in each home-routing hook (stranded
+# recall and threat sanctuary). The most urgent workers get the routed path
+# first; the rest take the greedy axis step this tick and retry next tick, so
+# worst-case routing cost stays bounded while no recall ever silently no-ops.
+RECALL_MAX_BUDGET_ROUTES_PER_TICK: Final = 2
 # Extra cost of switching a worker to a different target cell (production
 # hysteresis; the pure assignment layer defaults to 0.0).
 HYSTERESIS_SWITCH_THRESHOLD: Final = 0.5
@@ -634,6 +646,11 @@ def _worker_threat_sanctuary(snapshot: PlanningSnapshot, plan: Plan) -> Plan:
     if not open_parking:
         return plan
     new_actions = list(plan.unit_actions)
+    # Same per-tick routing budget as the stranded recall: a siege reroutes
+    # every cargo-less mover at once, so unbounded A* here would repeat the
+    # t4 latency cliff with a full worker complement. Workers beyond the cap
+    # take the greedy step home this tick and retry the routed path next tick.
+    budget_routes_remaining = RECALL_MAX_BUDGET_ROUTES_PER_TICK
     for index, action in enumerate(new_actions):
         if action.type is not UnitActionType.MOVE:
             continue
@@ -648,13 +665,16 @@ def _worker_threat_sanctuary(snapshot: PlanningSnapshot, plan: Plan) -> Plan:
         ):
             continue
         parking = min(open_parking, key=lambda cell: manhattan(unit.position, cell))
-        direction = astar_next_step(
-            unit.position,
-            parking,
-            _routing_obstacles(snapshot),
-            search_radius=RECALL_ROUTE_RADIUS,
-            node_budget=RECALL_ROUTE_NODE_BUDGET,
-        )
+        direction: Direction | None = None
+        if budget_routes_remaining > 0:
+            budget_routes_remaining -= 1
+            direction = astar_next_step(
+                unit.position,
+                parking,
+                _routing_obstacles(snapshot),
+                search_radius=RECALL_ROUTE_RADIUS,
+                node_budget=RECALL_ROUTE_NODE_BUDGET,
+            )
         if direction is None:
             direction = step_toward(unit.position, parking)
         new_actions[index] = PlanningUnitAction(
@@ -752,6 +772,13 @@ def _recall_stranded_workers(snapshot: PlanningSnapshot, plan: Plan) -> Plan:
     sat WAIT forever (production: t3 workers idled 45-89 tiles away). Idle
     workers beyond ``STRANDED_RECALL_DISTANCE`` step toward the nearest
     Core-adjacent parking cell instead of waiting in place.
+
+    Routing cost is bounded per tick: only the farthest
+    ``RECALL_MAX_BUDGET_ROUTES_PER_TICK`` workers run the budgeted A* search;
+    the rest take the greedy axis step this tick and retry next tick. Every
+    stranded worker still receives a MOVE — the recall never silently no-ops
+    (production t4 pop-11 cliff: unbounded per-worker A* at the old 131072
+    node budget pushed decide() past the 5s tick budget for 1600+ ticks).
     """
 
     core = snapshot.core_position
@@ -764,8 +791,8 @@ def _recall_stranded_workers(snapshot: PlanningSnapshot, plan: Plan) -> Plan:
     ]
     if not open_parking:
         return plan
-    new_actions = list(plan.unit_actions)
-    for index, action in enumerate(new_actions):
+    stranded: list[tuple[int, PlanningUnit]] = []
+    for index, action in enumerate(plan.unit_actions):
         if action.type is not UnitActionType.WAIT:
             continue
         unit = units_by_id.get(action.unit_id)
@@ -773,6 +800,15 @@ def _recall_stranded_workers(snapshot: PlanningSnapshot, plan: Plan) -> Plan:
             continue
         if manhattan(unit.position, core) <= STRANDED_RECALL_DISTANCE:
             continue
+        stranded.append((index, unit))
+    if not stranded:
+        return plan
+    # Farthest workers are the most urgent recall and receive the budgeted
+    # routes first; the id tie-break keeps the order deterministic.
+    stranded.sort(key=lambda pair: (-manhattan(pair[1].position, core), str(pair[1].id)))
+    new_actions = list(plan.unit_actions)
+    budget_routes_remaining = RECALL_MAX_BUDGET_ROUTES_PER_TICK
+    for index, unit in stranded:
         parking = min(open_parking, key=lambda cell: manhattan(unit.position, cell))
         # Wide search: the plain BFS (64-radius / 16k-node budget) tops out at
         # ~64 Chebyshev tiles, so workers stranded 65+ tiles away were
@@ -780,17 +816,20 @@ def _recall_stranded_workers(snapshot: PlanningSnapshot, plan: Plan) -> Plan:
         # tiles from the Core for hundreds of ticks; replay-verified).
         # A* covers 192 tiles; if even that fails, fall back to the greedy
         # axis step so the recall never silently no-ops.
-        direction = astar_next_step(
-            unit.position,
-            parking,
-            _routing_obstacles(snapshot),
-            search_radius=RECALL_ROUTE_RADIUS,
-            node_budget=RECALL_ROUTE_NODE_BUDGET,
-        )
+        direction: Direction | None = None
+        if budget_routes_remaining > 0:
+            budget_routes_remaining -= 1
+            direction = astar_next_step(
+                unit.position,
+                parking,
+                _routing_obstacles(snapshot),
+                search_radius=RECALL_ROUTE_RADIUS,
+                node_budget=RECALL_ROUTE_NODE_BUDGET,
+            )
         if direction is None:
             direction = step_toward(unit.position, parking)
         new_actions[index] = PlanningUnitAction(
-            unit_id=action.unit_id,
+            unit_id=unit.id,
             type=UnitActionType.MOVE,
             direction=direction,
         )
