@@ -811,3 +811,108 @@ def test_snapshot_from_turn_extracts_move_failures() -> None:
     assert snapshot.move_failures == (
         MoveFailureEvent(unit_id="w1", reason="MOVE_BLOCKED_TERRAIN"),
     )
+
+
+def test_no_worker_deadlock_fires_through_migration_churn() -> None:
+    """Regression for production t3 (2026-08): the pop-0 deadlock lasted
+    1000+ ticks because the counter only advanced on 'normal' ticks while the
+    barren-migration latch kept the Core 'moving' ~71% of the time, and the
+    barren hook (running later) overwrote every fired SELF_DESTRUCT with
+    START_MOVE. With both hooks enabled and the Core alternating states, the
+    self-heal must still fire and the barren hook must never migrate while
+    there are zero workers."""
+    config = replace(
+        _all_off(),
+        economy_expansion_enabled=True,
+        barren_migration_enabled=True,
+        barren_migration_ticks=2,
+    )
+    decider = ComposedDecider(config)
+    core_actions: list[CoreActionType | None] = []
+    for tick in range(1, 40):
+        plan = decider.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=(),
+                resources=1,
+                core_position=Coordinate(0, 900),
+                core_state="moving" if tick % 2 == 0 else "normal",
+            )
+        )
+        core_actions.append(
+            plan.core_action.type if plan.core_action is not None else None
+        )
+    assert CoreActionType.SELF_DESTRUCT in core_actions
+    assert CoreActionType.START_MOVE not in core_actions
+    # The grace window is counted on every deadlocked tick, moving or not.
+    assert core_actions.index(CoreActionType.SELF_DESTRUCT) < 16
+
+
+def test_barren_migration_holds_with_zero_workers() -> None:
+    """Migration cannot restore income without workers, so the barren hook
+    must hold its latch at pop 0 and leave the recovery to the no-worker
+    deadlock self-heal instead of walking the Core forever."""
+    config = replace(
+        _all_off(), barren_migration_enabled=True, barren_migration_ticks=2
+    )
+    decider = ComposedDecider(config)
+    for tick in range(1, 12):
+        plan = decider.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=(),
+                resources=0,
+                core_position=Coordinate(50, 50),
+            )
+        )
+        assert (
+            plan.core_action is None
+            or plan.core_action.type is not CoreActionType.START_MOVE
+        )
+
+
+def test_no_worker_deadlock_survives_respawn_recovery_overwrite() -> None:
+    """Production t3 (2026-08): the respawn-recovery latch stayed active
+    from an earlier Core respawn and its forced-WAIT tail squashed every
+    SELF_DESTRUCT the deadlock hook fired. The self-heal must outrank
+    recovery spawn-forcing at pop 0."""
+    config = replace(
+        _all_off(),
+        economy_expansion_enabled=True,
+        respawn_recovery_enabled=True,
+    )
+    decider = ComposedDecider(config)
+    # Tick 1 anchors the Core; tick 2 teleports it 100 tiles so respawn
+    # detection trips and the recovery latch goes active.
+    decider.decide_snapshot(
+        _snapshot(
+            tick=1,
+            units=(_worker("w1", 0, 0),),
+            resources=10,
+            population=1,
+            core_position=Coordinate(0, 0),
+        )
+    )
+    decider.decide_snapshot(
+        _snapshot(
+            tick=2,
+            units=(_worker("w1", 100, 0),),
+            resources=10,
+            population=1,
+            core_position=Coordinate(100, 0),
+        )
+    )
+    core_actions: list[CoreActionType | None] = []
+    for tick in range(3, 30):
+        plan = decider.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=(),
+                resources=1,
+                core_position=Coordinate(100, 0),
+            )
+        )
+        core_actions.append(
+            plan.core_action.type if plan.core_action is not None else None
+        )
+    assert CoreActionType.SELF_DESTRUCT in core_actions

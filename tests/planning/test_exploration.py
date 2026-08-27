@@ -442,7 +442,11 @@ def test_observe_exploration_clears_refutation_on_visible_resource() -> None:
     chunk = (0, 0)
     state.chunk_refuted_tick[chunk] = 5
     cell = ResourceCellInfo(position=Coordinate(8, 8), visible=True, last_seen_tick=10)
-    observe_exploration(_snapshot(tick=10, resource_cells={cell.position.cell_key: cell}), (), state)
+    observe_exploration(
+        _snapshot(tick=10, resource_cells={cell.position.cell_key: cell}),
+        (),
+        state,
+    )
     assert chunk not in state.chunk_refuted_tick
 
 

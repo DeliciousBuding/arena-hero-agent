@@ -1564,6 +1564,16 @@ class ComposedDecider:
             return plan
         if not self._respawn_state.active:
             return plan
+        # The no-worker deadlock self-heal outranks recovery spawn-forcing:
+        # with zero workers and no income, forced WAIT/SPAWN cannot break the
+        # deadlock; only the respawn forced by SELF_DESTRUCT can (production
+        # t3 2026-08: recovery stayed active since an earlier respawn and
+        # squashed every fired SELF_DESTRUCT back to WAIT for 1000+ ticks).
+        if (
+            plan.core_action is not None
+            and plan.core_action.type is CoreActionType.SELF_DESTRUCT
+        ):
+            return plan
         if snapshot.core_state != "normal":
             # A moving (migrating) Core is handled by migration; do not fight it.
             return plan
@@ -1639,6 +1649,14 @@ class ComposedDecider:
             return plan
         core = snapshot.core_position
         if core is None:
+            return plan
+        if not any(unit.unit_role is UnitRole.WORKER for unit in snapshot.units):
+            # Migration cannot restore income without workers: nobody can
+            # harvest whatever region the Core walks toward. Hold the latch
+            # here so the no-worker deadlock self-heal in the economy hook
+            # owns the recovery (a respawn resets all barren state anyway).
+            # Migrating anyway kept production t3's Core 'moving' most ticks
+            # for 1000+ ticks and overwrote every fired SELF_DESTRUCT.
             return plan
         core_migrating = snapshot.core_state == "moving"
 
@@ -1936,11 +1954,32 @@ class ComposedDecider:
         spawn as soon as the Core can pay for them.
         """
 
+        workers = sum(1 for unit in snapshot.units if unit.unit_role is UnitRole.WORKER)
+        # No-worker deadlock self-heal: with zero workers income can never
+        # resume, so waiting or migrating cannot recover the game — only a
+        # Core respawn (fresh starting resources plus a worker) can. The
+        # counter advances on every deadlocked tick regardless of core_state:
+        # production t3 (2026-08) stayed dead for 1000+ ticks because the
+        # counter only advanced on 'normal' ticks while the barren-migration
+        # latch kept the Core 'moving' ~71% of the time, and every fired
+        # SELF_DESTRUCT was overwritten by that same hook's START_MOVE.
+        if workers == 0:
+            self._no_worker_deadlock_ticks += 1
+        else:
+            self._no_worker_deadlock_ticks = 0
         if snapshot.core_state != "normal":
+            if self._no_worker_deadlock_ticks >= DEFAULT_NO_WORKER_DEADLOCK_TICKS:
+                self._no_worker_deadlock_ticks = 0
+                return Plan(
+                    tick=plan.tick,
+                    unit_actions=plan.unit_actions,
+                    core_action=PlanningCoreAction(type=CoreActionType.SELF_DESTRUCT),
+                )
             return plan
         # Survival actions from the safety baseline (critical HEAL, shield
         # repair) and threat-response military spawns always win over
-        # aggressive worker expansion.
+        # aggressive worker expansion. The deadlock counter keeps counting
+        # above, so the self-heal fires as soon as survival actions stop.
         baseline_core = plan.core_action
         if baseline_core is not None and (
             baseline_core.type in (CoreActionType.HEAL, CoreActionType.REPAIR_SHIELD)
@@ -1950,9 +1989,6 @@ class ComposedDecider:
             )
         ):
             return plan
-        workers = sum(1 for unit in snapshot.units if unit.unit_role is UnitRole.WORKER)
-        if workers > 0:
-            self._no_worker_deadlock_ticks = 0
         if workers >= self._safety.config.worker_target:
             return plan
         deposit_cargo = 0
@@ -1992,19 +2028,18 @@ class ComposedDecider:
                     unit_role=UnitRole.WORKER,
                 ),
             )
-        if workers == 0:
+        if workers == 0 and self._no_worker_deadlock_ticks >= DEFAULT_NO_WORKER_DEADLOCK_TICKS:
             # Deadlock: no worker is alive and the Core cannot afford another,
-            # so income can never resume. Count the stuck ticks and, after the
-            # grace window, self-destruct to force a respawn (fresh Core with
-            # starting resources and a worker) instead of waiting forever.
-            self._no_worker_deadlock_ticks += 1
-            if self._no_worker_deadlock_ticks >= DEFAULT_NO_WORKER_DEADLOCK_TICKS:
-                self._no_worker_deadlock_ticks = 0
-                return Plan(
-                    tick=plan.tick,
-                    unit_actions=plan.unit_actions,
-                    core_action=PlanningCoreAction(type=CoreActionType.SELF_DESTRUCT),
-                )
+            # so income can never resume. The stuck ticks are counted at the
+            # top of the hook (every core_state); after the grace window
+            # self-destruct to force a respawn (fresh Core with starting
+            # resources and a worker) instead of waiting forever.
+            self._no_worker_deadlock_ticks = 0
+            return Plan(
+                tick=plan.tick,
+                unit_actions=plan.unit_actions,
+                core_action=PlanningCoreAction(type=CoreActionType.SELF_DESTRUCT),
+            )
         return Plan(
             tick=plan.tick,
             unit_actions=plan.unit_actions,
