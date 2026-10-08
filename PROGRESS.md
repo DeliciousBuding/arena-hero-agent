@@ -16,6 +16,8 @@
   recovery、movement guard、stuck guard、survey burst。
 - 移动健壮性：已知障碍回避（任何角色的 MOVE 都不会踩进已记录的地形障碍；
   军事单位同样学习 `MOVE_BLOCKED_TERRAIN` 目标格，沿墙滑行而非反复撞墙）；
+  移动守卫（退避/环路检测/强制脱困）覆盖全部单位角色，非工人单位的脱困目标
+  取 Core；
   零存量殖民地同样计入饥饿重生窗口。
 - 状态回收：按单位 id 的决策器状态（trail/backoff/escape/deposit/trap）在单位
   消失后即时剪除，长期运行不再累积死单位条目。

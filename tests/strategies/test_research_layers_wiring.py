@@ -803,6 +803,41 @@ def test_decider_prunes_state_of_gone_units() -> None:
     assert summary["moveBackoff"] == 1
 
 
+def test_movement_guard_tracks_military_units() -> None:
+    """Rangers and vanguards must be tracked by the movement guard.
+
+    Their moves come from the terrain-blind safety baseline, so a guard needs
+    the same trail/backoff/loop escape a worker gets; before this the role
+    filter skipped them and the loop branch could never arm (non-worker units
+    carry no task target). Production t1/t3 guards re-issued one rejected step
+    per tick for thousands of ticks.
+    """
+    config = replace(_all_off(), movement_guard_enabled=True)
+    decider = ComposedDecider(config)
+    obstacles = frozenset(f"{x},3" for x in range(-6, 7))
+    # A two-cell oscillation beside a wall: the same geometry the live guards
+    # fell into after the Core migrated away from them.
+    for tick, (x, y) in enumerate(
+        [(0, 5), (0, 4), (1, 4), (0, 4), (1, 4), (0, 4), (1, 4)],
+        start=1,
+    ):
+        snapshot = replace(
+            _snapshot(
+                tick=tick,
+                units=(_ranger("r1", x, y),),
+                population=1,
+                core_position=Coordinate(0, 0),
+            ),
+            obstacle_cells=obstacles,
+        )
+        decider.decide_snapshot(snapshot)
+    summary = decider.state_summary()
+    assert summary["loopTrails"] == 1
+    assert summary["moveBackoff"] == 1
+    # The loop guard armed for the ranger and flipped its repath side.
+    assert decider._loop_trails["r1"].repath_side == 1
+
+
 def test_terrain_trap_hook_spares_cargo_carrying_worker() -> None:
     """FFA regression: a cargo-carrying worker standing on the Core is
     mid-deposit, not trapped.  Killing it dropped the cargo and delayed the

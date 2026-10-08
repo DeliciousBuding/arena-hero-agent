@@ -1494,7 +1494,18 @@ class ComposedDecider:
         snapshot: PlanningSnapshot,
         blocked_cells: frozenset[str],
     ) -> tuple[frozenset[str], dict[str, Direction], frozenset[str], PlanningCoreAction | None]:
-        """Fold one tick of movement observations into escape/pause overrides."""
+        """Fold one tick of movement observations into escape/pause overrides.
+
+        Every unit role is tracked, not just workers.  The military guard moves
+        come from the safety baseline, which has no backoff, no loop detection
+        and no trail memory, so a guard pinned against terrain could only ever
+        re-issue the rejected step: production t1/t3 rangers and vanguards sat
+        on one cell for thousands of ticks (one vanguard: 1 695 rejections in
+        3 628 ticks, one per tick).  Extending the guard lets them wall-follow:
+        the loop guard's trail marks the cell just visited as a soft obstacle,
+        which breaks the two-cell oscillation a greedy step toward the post
+        falls into at a straight wall.
+        """
 
         escape_steps: dict[str, Direction] = {}
         pause_ids: set[str] = set()
@@ -1505,8 +1516,6 @@ class ComposedDecider:
             parse_cell_key(key) for key in snapshot.obstacle_cells
         )
         for unit in snapshot.units:
-            if unit.unit_role is not UnitRole.WORKER:
-                continue
             unit_id = unit.id.value
             previous_trail = self._loop_trails.get(unit_id, LoopTrail())
 
@@ -1537,6 +1546,12 @@ class ComposedDecider:
             )
             assignment = self._previous_assignment_for(unit_id)
             target = self._movement_target_for(assignment)
+            if target is None and unit.unit_role is not UnitRole.WORKER:
+                # Military guard moves home to a post beside the Core, but the
+                # safety baseline carries no assignment, so the loop escape and
+                # its progress check never armed. Without a target a guard that
+                # falls into a two-cell oscillation at a wall keeps it forever.
+                target = core
             if blocked:
                 self._escape_sticky.pop(unit_id, None)
             sticky_entry = self._escape_sticky.get(unit_id)
