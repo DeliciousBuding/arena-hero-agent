@@ -42,7 +42,11 @@ from arena_hero_agent.planning import (
     UnitAction as PlanningUnitAction,
 )
 from arena_hero_agent.strategies import ComposedDecider, ComposedDeciderConfig
-from arena_hero_agent.strategies.composition import _apply_raid_strike, snapshot_from_turn
+from arena_hero_agent.strategies.composition import (
+    STARVATION_RESPAWN_TICKS,
+    _apply_raid_strike,
+    snapshot_from_turn,
+)
 from arena_hero_agent.strategies.movement_guard import forced_escape_step
 from arena_hero_agent.strategies.raid_quota import StrikeGroup
 
@@ -712,6 +716,80 @@ def test_terrain_trap_hook_fires_only_when_replacement_affordable() -> None:
         rich_actions.append(_action(rich_plan, "w1"))
     assert UnitActionType.SELF_DESTRUCT not in poor_actions
     assert UnitActionType.SELF_DESTRUCT in rich_actions
+
+
+def test_starvation_respawn_self_destructs_core() -> None:
+    """No-income deadlock: a colony that cannot afford a Worker and whose
+    population never moves must self-destruct the Core to force a respawn.
+
+    Production regression (2026-10): t1/t3/t4 held a frozen population with
+    zero deposits for 10 000+ ticks, 60-97% of ordered moves rejected, and
+    stock below the Worker price, so the trapped-worker escape could never
+    fire.  The stuck-resources sensor was already firing every tick; only the
+    Core-level action was missing.
+    """
+    config = replace(_all_off(), stuck_resources_enabled=True, barren_migration_enabled=False)
+    decider = ComposedDecider(config)
+    core_actions: list[CoreActionType | None] = []
+    for tick in range(1, STARVATION_RESPAWN_TICKS + 40):
+        plan = decider.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                # The worker stands off the Core cell, so there is no
+                # trapped-worker candidate to sacrifice instead.
+                units=(_worker("w1", 3, 0),),
+                resources=4,
+                population=1,
+                core_position=Coordinate(0, 0),
+            )
+        )
+        core_actions.append(None if plan.core_action is None else plan.core_action.type)
+    assert CoreActionType.SELF_DESTRUCT in core_actions
+    first = core_actions.index(CoreActionType.SELF_DESTRUCT)
+    # Grace window: never on the very first starved tick, and not before both
+    # windows (unaffordable + stagnant population) have actually elapsed.
+    assert first >= STARVATION_RESPAWN_TICKS - 1
+
+
+def test_starvation_respawn_spares_affordable_colony() -> None:
+    """A colony that can pay for a Worker is not starved, however still its
+    population looks (a healthy tenant at its ceiling never grows either)."""
+    config = replace(_all_off(), stuck_resources_enabled=True, barren_migration_enabled=False)
+    decider = ComposedDecider(config)
+    core_actions: list[CoreActionType | None] = []
+    for tick in range(1, STARVATION_RESPAWN_TICKS + 40):
+        plan = decider.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=(_worker("w1", 3, 0),),
+                resources=9,
+                population=1,
+                core_position=Coordinate(0, 0),
+            )
+        )
+        core_actions.append(None if plan.core_action is None else plan.core_action.type)
+    assert CoreActionType.SELF_DESTRUCT not in core_actions
+
+
+def test_starvation_respawn_window_resets_when_the_core_can_pay() -> None:
+    """One affordable tick restarts the starvation window, so a colony that
+    briefly banks the Worker price is not punished for the earlier gap."""
+    config = replace(_all_off(), stuck_resources_enabled=True, barren_migration_enabled=False)
+    decider = ComposedDecider(config)
+    actions: list[CoreActionType | None] = []
+    for tick in range(1, 2 * STARVATION_RESPAWN_TICKS - 20):
+        resources = 9 if tick == STARVATION_RESPAWN_TICKS else 4
+        plan = decider.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=(_worker("w1", 3, 0),),
+                resources=resources,
+                population=1,
+                core_position=Coordinate(0, 0),
+            )
+        )
+        actions.append(None if plan.core_action is None else plan.core_action.type)
+    assert CoreActionType.SELF_DESTRUCT not in actions
 
 
 def test_movement_guard_survives_nonempty_obstacles() -> None:

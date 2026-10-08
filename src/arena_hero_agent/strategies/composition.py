@@ -252,6 +252,16 @@ HYSTERESIS_SWITCH_THRESHOLD: Final = 0.5
 # Terrain-trap self-destruct confirmation: a worker must occupy the Core cell
 # for this many consecutive ticks before the trap hook destroys it.
 TERRAIN_TRAP_CONFIRM_TICKS: Final = 3
+# Starvation respawn: the stuck-resources sensor already fires once the Core
+# holds resources but the population stops growing.  When that has held for
+# this many consecutive ticks *and* the Core could never afford a replacement
+# Worker for the whole window, the colony is in a no-income deadlock rather
+# than a terrain trap: the Workers cannot reach resources, cannot deposit, and
+# cannot be re-bought.  The Core then self-destructs so the engine respawns it
+# at a fresh passable location with 5 resources and a free Worker (production
+# 2026-10: t1/t3/t4 sat like this for 10 000+ ticks with zero deposits while
+# the account's public score stopped moving).
+STARVATION_RESPAWN_TICKS: Final = 600
 # Claim softening: a non-claimant pays this to preempt a reserved cell
 # (injected into the production assignment matrix; the pure layer defaults to
 # 0.0 which reproduces the oracle's hard exclusion).
@@ -1206,6 +1216,10 @@ class ComposedDecider:
         # occupying the Core cell for TERRAIN_TRAP_CONFIRM_TICKS consecutive
         # ticks are destroyed (a worker merely passing through must survive).
         self._trap_suspects: dict[str, int] = {}
+        # No-income deadlock tracking: the first tick at which the Core could
+        # not afford a replacement Worker. Cleared as soon as it can, so the
+        # counter only spans a genuinely unaffordable window.
+        self._starvation_since_tick: int | None = None
 
     @property
     def config(self) -> ComposedDeciderConfig:
@@ -1261,6 +1275,8 @@ class ComposedDecider:
             "stuckResources": {
                 "lastPopulation": stuck.last_population,
                 "stuckSinceTick": stuck.stuck_since_tick,
+                "starvingSinceTick": self._starvation_since_tick,
+                "starvationRespawnTicks": STARVATION_RESPAWN_TICKS,
             },
             "respawnRecovery": {
                 "active": self._respawn_state.active,
@@ -1888,26 +1904,60 @@ class ComposedDecider:
             and snapshot.tick - self._trap_suspects.get(unit.id.value, snapshot.tick)
             >= TERRAIN_TRAP_CONFIRM_TICKS
         ]
-        if not trapped_workers:
-            return plan
-        # Self-destructing only helps when the Core can immediately afford a
-        # replacement; otherwise it just shrinks the fleet for nothing.
+        # Self-destructing a trapped worker only helps when the Core can
+        # immediately afford a replacement; otherwise it just shrinks the
+        # fleet for nothing.  The affordability window doubles as the no-income
+        # sensor: a colony that cannot buy a Worker for
+        # STARVATION_RESPAWN_TICKS while its population stands still is not
+        # trapped, it is starved.
         replacement_cost = unit_price(
             UnitRole.WORKER, snapshot.population, snapshot.rules_version
         )
-        if snapshot.resources < replacement_cost:
-            return plan
-        trapped_id = trapped_workers[0].id
-        new_unit_actions = tuple(
-            PlanningUnitAction(
-                unit_id=trapped_id,
-                type=UnitActionType.SELF_DESTRUCT,
+        if snapshot.resources >= replacement_cost:
+            self._starvation_since_tick = None
+        elif self._starvation_since_tick is None:
+            self._starvation_since_tick = snapshot.tick
+        if trapped_workers and snapshot.resources >= replacement_cost:
+            trapped_id = trapped_workers[0].id
+            new_unit_actions = tuple(
+                PlanningUnitAction(
+                    unit_id=trapped_id,
+                    type=UnitActionType.SELF_DESTRUCT,
+                )
+                if action.unit_id == trapped_id
+                else action
+                for action in plan.unit_actions
             )
-            if action.unit_id == trapped_id
-            else action
-            for action in plan.unit_actions
+            return replace(plan, unit_actions=new_unit_actions)
+        if not self._starvation_respawn_due(snapshot):
+            return plan
+        # Starved colony: destroying the Core is the only remaining lever. The
+        # engine respawns it the same tick at a fresh passable location with
+        # starting resources 5 and one free Worker, which restarts the economy
+        # somewhere that can actually be worked.
+        return Plan(
+            tick=plan.tick,
+            unit_actions=plan.unit_actions,
+            core_action=PlanningCoreAction(type=CoreActionType.SELF_DESTRUCT),
         )
-        return replace(plan, unit_actions=new_unit_actions)
+
+    def _starvation_respawn_due(self, snapshot: PlanningSnapshot) -> bool:
+        """Return whether a starved colony should self-destruct to respawn.
+
+        Both windows must span ``STARVATION_RESPAWN_TICKS``: the Core has been
+        unable to afford a replacement Worker, and the population has not moved
+        (the ``_stuck_resources`` latch). A healthy colony banks the Worker
+        price long before both windows close, so it never reaches this branch.
+        """
+
+        since = self._starvation_since_tick
+        stuck_since = self._stuck_resources.stuck_since_tick
+        if since is None or stuck_since is None:
+            return False
+        return (
+            snapshot.tick - since >= STARVATION_RESPAWN_TICKS
+            and snapshot.tick - stuck_since >= STARVATION_RESPAWN_TICKS
+        )
 
     def _economy_budget_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
         """Skip Core SPAWN when same-tick deposits minus heal reserve cannot pay."""
