@@ -1,6 +1,6 @@
 # P4-11/P4-12/P4-13 SafetyPlanner/tactical + worker assignment + variants/human override — Behavior-Difference Registry
 
-最后更新：2026-08-12
+最后更新：2026-10-08 18:50
 
 This file is the authoritative behavior-difference registry for the P4-11
 deterministic safety/tactical layer (`src/arena_hero_agent/planning/` and
@@ -79,6 +79,8 @@ P4-13 sections:
 | `worker_assignment_claim_preempt_penalty` | A non-claimant may take a reserved cell by paying `claim_preempt_penalty` net value (pure layer default `0.0` reproduces the oracle's hard exclusion; the production composition injects `6.0`). | Reserved cells are hard-excluded for non-claimants. | A much nearer worker should be able to take over a stale claim instead of WAITing; all 33 oracle fixtures were re-verified bit-identical under the default (softening changes nothing for covered inputs). |
 | `human_override.stale_override_ignored` | The Python result exposes an explicit `stale=True` audit flag when the store expired. | The oracle result has no stale field; expiry is inferred from `active=false` with a non-empty store. | All oracle-expressible fields are equal; the explicit flag makes the expiry auditable in the apply/reject loop. |
 | `action_from_wire_surface_strict` | Wire actions parse strictly against the target surface (core vs unit); a cross-surface type is rejected as `invalid_action`. | The oracle parses any shape and defers some cross-surface cases to plan validation. | Fail-closed parse: a unit can never silently receive a core-only action shape or vice versa. |
+| `military_obstacle_slide` | Every MOVE action whose destination is a cell already known to be blocked terrain is redirected (perpendicular slide along the obstacle, sticky side, WAIT when fully walled in). `MOVE_BLOCKED_TERRAIN` destinations are learned from **all** unit roles, not only workers. | The oracle plans guard moves with a terrain-blind `stepToward` on the post and has no cross-tick terrain memory, so it re-issues a blocked step every tick. | The oracle behavior is an infinite rejection loop: production t1/t3 rangers and vanguards stayed frozen on one cell for thousands of ticks (1 000-1 700 `MOVE_BLOCKED_TERRAIN` results each) because the movement guard only covered workers. The override is applied last in the composition, so the safety baseline stays fixture-comparable. |
+| `starvation_escape_without_stock` | The Core-level starvation escape (`STARVATION_RESPAWN_TICKS`) is armed from an empty stock too: the stuck-resources latch keeps its population-stall window when `resources == 0` and the affordability window is tracked every tick. | Not expressible: the oracle has neither the latch nor the escape. | A Core that can never pay for a Worker has no income by definition (production t2 sat at resources 0 for days); the previous code cleared the window whenever the stock was empty, so no escape could ever arm. A Core that is already migrating is still spared — migration is the senior recovery lever. |
 
 ## EXPECTED_UNKNOWN (not migrated, never MATCH)
 

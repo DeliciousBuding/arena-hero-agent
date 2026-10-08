@@ -1038,6 +1038,94 @@ def _apply_movement_overrides(
     )
 
 
+_OBSTACLE_SLIDE_LOOKAHEAD: Final = 8
+
+
+def _slide_around_known_obstacles(
+    plan: Plan,
+    snapshot: PlanningSnapshot,
+    obstacles: frozenset[Coordinate],
+    previous_positions: Mapping[str, Coordinate],
+    slide_side: Mapping[str, int],
+) -> tuple[Plan, dict[str, int]]:
+    """Redirect any MOVE whose destination is a known obstacle.
+
+    Worker steps are routed by the worker-task planner (A* over the accumulated
+    terrain map), but every other role takes its direction straight from the
+    terrain-blind safety baseline.  A ranger ordered east into a wall therefore
+    re-issued the identical rejected move every single tick, forever: production
+    t1/t3 had rangers and vanguards frozen on one cell for thousands of ticks
+    while issuing 1 000-1 700 ``MOVE_BLOCKED_TERRAIN`` results each.
+
+    This is the last word on unit MOVE directions, so a plan can never order a
+    step into a cell the decider already knows is blocked.  The unit slides
+    along the obstacle instead of hammering it: the escape primitive keeps the
+    requested heading as its axis and prefers a perpendicular step, so a walled
+    corridor turns into wall-following.  Walled in on every side (or the
+    lookahead is the current cell) it WAITs rather than burning a rejected move.
+    """
+
+    if not plan.unit_actions:
+        return plan, {}
+    core = snapshot.core_position
+    unit_by_id = {unit.id.value: unit for unit in snapshot.units}
+    side_updates: dict[str, int] = {}
+    actions: list[PlanningUnitAction] = []
+    changed = False
+    for action in plan.unit_actions:
+        unit = unit_by_id.get(action.unit_id.value)
+        direction = action.direction
+        if (
+            action.type is not UnitActionType.MOVE
+            or unit is None
+            or direction is None
+            # A worker standing on the Core cell is handled by the vacate
+            # override, which owns every step off that cell.
+            or (core is not None and unit.position == core)
+        ):
+            actions.append(action)
+            continue
+        if unit.position.step(direction) not in obstacles:
+            actions.append(action)
+            continue
+        unit_id = action.unit_id.value
+        # A slide that did not actually move the unit last tick means the
+        # chosen side was wrong too: mirror it so the next attempt turns the
+        # other way instead of re-picking the same blocked wall.
+        side = slide_side.get(unit_id, 0)
+        if previous_positions.get(unit_id) == unit.position:
+            side = 1 - side
+        delta_x, delta_y = direction.delta
+        heading = Coordinate(
+            unit.position.x + delta_x * _OBSTACLE_SLIDE_LOOKAHEAD,
+            unit.position.y + delta_y * _OBSTACLE_SLIDE_LOOKAHEAD,
+        )
+        step = forced_escape_step(
+            unit.position,
+            heading,
+            obstacles,
+            repath_side=side,
+        )
+        changed = True
+        side_updates[unit_id] = side
+        if step is None:
+            actions.append(PlanningUnitAction(unit_id=action.unit_id, type=UnitActionType.WAIT))
+            continue
+        actions.append(
+            PlanningUnitAction(
+                unit_id=action.unit_id,
+                type=UnitActionType.MOVE,
+                direction=step,
+            )
+        )
+    if not changed:
+        return plan, {}
+    return (
+        Plan(tick=plan.tick, unit_actions=tuple(actions), core_action=plan.core_action),
+        side_updates,
+    )
+
+
 def _apply_raid_strike(
     plan: Plan,
     snapshot: PlanningSnapshot,
@@ -1220,6 +1308,11 @@ class ComposedDecider:
         # not afford a replacement Worker. Cleared as soon as it can, so the
         # counter only spans a genuinely unaffordable window.
         self._starvation_since_tick: int | None = None
+        # Per-unit turn side for steps redirected off known blocked terrain
+        # (see _slide_around_known_obstacles); and the previous tick's own-unit
+        # positions, which tell a failed slide from a successful one.
+        self._obstacle_slide_side: dict[str, int] = {}
+        self._previous_unit_positions: dict[str, Coordinate] = {}
 
     @property
     def config(self) -> ComposedDeciderConfig:
@@ -1295,6 +1388,7 @@ class ComposedDecider:
             },
             "loopTrails": len(self._loop_trails),
             "moveBackoff": len(self._move_backoff),
+            "obstacleSlides": len(self._obstacle_slide_side),
         }
 
     @property
@@ -1847,13 +1941,16 @@ class ComposedDecider:
     def _terrain_trap_hook(self, snapshot: PlanningSnapshot, plan: Plan) -> Plan:
         """Break terrain-trap deadlock by self-destructing the trapped worker.
 
-        When the Core has resources (> 0) but the population hasn't grown for
-        ``stuck_resources_ticks`` consecutive ticks, the most likely cause is
-        a terrain trap: the worker is stuck on the Core's cell
-        (MOVE_BLOCKED_TERRAIN) and the Core can't spawn (CELL_UNIT_LIMIT).
-        Self-destructing the trapped worker frees the Core's cell so the Core
+        When the population hasn't grown for ``stuck_resources_ticks``
+        consecutive ticks, the most likely cause is a terrain trap: the worker
+        is stuck on the Core's cell (MOVE_BLOCKED_TERRAIN) and the Core can't
+        spawn (CELL_UNIT_LIMIT).  With the replacement Worker affordable,
+        self-destructing the trapped worker frees the Core's cell so the Core
         can spawn a replacement — much less disruptive than self-destructing
-        the Core itself (which respawns at a random location that may be worse).
+        the Core itself (which respawns at a random location that may be
+        worse).  When the Core cannot afford a Worker at all the colony has no
+        income by definition, so the same hook escalates to the Core-level
+        starvation escape (``STARVATION_RESPAWN_TICKS``).
         """
 
         if not self._config.stuck_resources_enabled:
@@ -1887,8 +1984,18 @@ class ComposedDecider:
             tick=snapshot.tick,
             threshold=self._config.stuck_resources_ticks,
         )
-        if not should_fire:
-            return plan
+        # The affordability window is tracked every tick, not only once the
+        # trapped-worker latch fires: a Core that cannot pay for a Worker at all
+        # never reaches that latch (the state machine reports False while the
+        # stock is empty), yet an empty-stock colony is exactly what the
+        # Core-level escape exists for (production t2: resources 0 for days).
+        replacement_cost = unit_price(
+            UnitRole.WORKER, snapshot.population, snapshot.rules_version
+        )
+        if snapshot.resources >= replacement_cost:
+            self._starvation_since_tick = None
+        elif self._starvation_since_tick is None:
+            self._starvation_since_tick = snapshot.tick
         if core_pos is None:
             return plan
         # A cargo-carrying worker standing on the Core is mid-deposit, not
@@ -1910,14 +2017,7 @@ class ComposedDecider:
         # sensor: a colony that cannot buy a Worker for
         # STARVATION_RESPAWN_TICKS while its population stands still is not
         # trapped, it is starved.
-        replacement_cost = unit_price(
-            UnitRole.WORKER, snapshot.population, snapshot.rules_version
-        )
-        if snapshot.resources >= replacement_cost:
-            self._starvation_since_tick = None
-        elif self._starvation_since_tick is None:
-            self._starvation_since_tick = snapshot.tick
-        if trapped_workers and snapshot.resources >= replacement_cost:
+        if should_fire and trapped_workers and snapshot.resources >= replacement_cost:
             trapped_id = trapped_workers[0].id
             new_unit_actions = tuple(
                 PlanningUnitAction(
@@ -2240,13 +2340,16 @@ class ComposedDecider:
     def _infer_blocked_cells(self, snapshot: PlanningSnapshot) -> frozenset[str]:
         """Infer permanent obstacles from the previous tick's move failures.
 
-        When a worker planned a MOVE and the engine rejected it with
+        When any unit planned a MOVE and the engine rejected it with
         ``MOVE_BLOCKED_TERRAIN``, the destination cell is terrain that was
         outside vision (or behind a route the pathfinder trusted). Pairing
         the failure with the previously planned direction yields the blocked
         cell; only the terrain reason is learned — unit-occupancy reasons
         (``MOVE_DESTINATION_OCCUPIED`` / ``CELL_UNIT_LIMIT``) are transient
-        and must not become permanent terrain knowledge.
+        and must not become permanent terrain knowledge. Military units are
+        learned too: their guard moves come from the terrain-blind safety
+        baseline, so they are the ones that hit this failure in production
+        (t1/t3 rangers and vanguards hammered one walled direction per tick).
         """
 
         if not snapshot.move_failures:
@@ -2260,8 +2363,6 @@ class ComposedDecider:
             return frozenset()
         inferred: set[str] = set()
         for unit in snapshot.units:
-            if unit.unit_role is not UnitRole.WORKER:
-                continue
             unit_id = unit.id.value
             if unit_id not in terrain_blocked_units:
                 continue
@@ -2452,6 +2553,18 @@ class ComposedDecider:
             plan = self._raid_quota_hook(snapshot, plan)
 
         if self._config.movement_guard_enabled:
+            # Final word on unit MOVE directions: no plan may order a step into
+            # a cell the decider already knows is blocked terrain. The safety
+            # baseline plans military moves terrain-blind, so without this the
+            # same rejected step is re-issued every tick (production t1/t3).
+            plan, slide_updates = _slide_around_known_obstacles(
+                plan,
+                snapshot,
+                frozenset(parse_cell_key(key) for key in snapshot.obstacle_cells),
+                self._previous_unit_positions,
+                self._obstacle_slide_side,
+            )
+            self._obstacle_slide_side.update(slide_updates)
             self._previous_move_actions = {
                 action.unit_id.value: action.type is UnitActionType.MOVE
                 for action in plan.unit_actions
@@ -2462,7 +2575,34 @@ class ComposedDecider:
                 if action.type is UnitActionType.MOVE and action.direction is not None
             }
 
+        self._previous_unit_positions = {unit.id.value: unit.position for unit in snapshot.units}
+        self._prune_gone_unit_state(snapshot)
+
         return plan
+
+    def _prune_gone_unit_state(self, snapshot: PlanningSnapshot) -> None:
+        """Drop per-unit state for units that no longer exist.
+
+        Every one of these maps is keyed by unit id and only ever read back by
+        the same id, so dead units leaked an entry each: production showed 74 /
+        166 / 49 / 180 trail entries against 12 / 6 / 9 / 10 living workers
+        after 35 days without a restart.  Own units never leave vision, so an id
+        missing from the snapshot is gone for good.
+        """
+
+        live_ids = {unit.id.value for unit in snapshot.units}
+        for store in (
+            self._loop_trails,
+            self._move_backoff,
+            self._escape_sticky,
+            self._deposit_progress,
+            self._trap_suspects,
+            self._obstacle_slide_side,
+            self._previous_move_actions,
+        ):
+            for unit_id in tuple(store):
+                if unit_id not in live_ids:
+                    del store[unit_id]
 
 
 def compose_decider(config: ComposedDeciderConfig | None = None) -> Decider:

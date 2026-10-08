@@ -212,13 +212,15 @@ class BarrenMigrationState:
 
 @dataclass(slots=True)
 class StuckWithResourcesState:
-    """Track terrain-trap deadlock: Core has resources but population won't grow.
+    """Track terrain-trap deadlock: population won't grow, stock stays thin.
 
-    When the Core has resources (> 0) but the population hasn't increased for
-    ``threshold`` consecutive ticks, the most likely cause is a terrain trap:
-    the worker is stuck on the Core's cell (MOVE_BLOCKED_TERRAIN) and the Core
-    can't spawn (CELL_UNIT_LIMIT).  Issuing SELF_DESTRUCT breaks this deadlock
-    by respawning the Core at a new terrain-passable location.
+    When the population hasn't changed for ``threshold`` consecutive ticks the
+    most likely cause is a terrain trap: the worker is stuck on the Core's cell
+    (MOVE_BLOCKED_TERRAIN) and the Core can't spawn (CELL_UNIT_LIMIT).  With
+    resources in hand the trapped-worker sacrifice breaks that deadlock; a
+    stock-less Core still carries the stalled-population signal (production t2
+    sat at resources 0 for days), so the latch keeps running either way and only
+    the caller's affordability check decides which escape is available.
     """
 
     last_population: int | None = None
@@ -232,21 +234,19 @@ class StuckWithResourcesState:
         tick: int,
         threshold: int = DEFAULT_STUCK_RESOURCES_TICKS,
     ) -> bool:
-        """Return True when SELF_DESTRUCT should fire to escape the trap."""
+        """Return True when the trapped-worker sacrifice should fire."""
+
+        if self.last_population is None or population != self.last_population:
+            self.last_population = population
+            self.stuck_since_tick = tick
+            return False
 
         if resources <= 0:
-            self.last_population = population
-            self.stuck_since_tick = None
-            return False
-
-        if self.last_population is None or population > self.last_population:
-            self.last_population = population
-            self.stuck_since_tick = tick
-            return False
-
-        if population < self.last_population:
-            self.last_population = population
-            self.stuck_since_tick = tick
+            # Nothing to pay the sacrifice with, but the stagnant population is
+            # still a no-income signal: keep the window running so the Core-level
+            # starvation escape can use it.
+            if self.stuck_since_tick is None:
+                self.stuck_since_tick = tick
             return False
 
         if self.stuck_since_tick is None:

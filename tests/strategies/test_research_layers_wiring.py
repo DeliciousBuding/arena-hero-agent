@@ -662,6 +662,147 @@ def test_no_worker_deadlock_self_destructs_core() -> None:
     assert core_actions[0] is not CoreActionType.SELF_DESTRUCT
 
 
+def test_military_move_never_steps_into_known_obstacle() -> None:
+    """Production t1/t3: rangers and vanguards re-issued the identical rejected
+    step every tick for 1 000+ ticks each.
+
+    The safety baseline routes military moves terrain-blind (``step_toward`` on
+    the guard post) and the movement guard only tracks workers, so a guard
+    ordered into a wall could never learn or slide.  The final override must
+    never order a step into a cell the decider already knows is blocked.
+    """
+    config = replace(_all_off(), movement_guard_enabled=True, stuck_guard_enabled=True)
+    decider = ComposedDecider(config)
+    # home_cell picks the first non-obstacle Core neighbour (north first), so a
+    # ranger parked south of the Core walks north; wall off that step only.
+    snapshot = replace(
+        _snapshot(
+            tick=1,
+            units=(_ranger("r1", 0, 3),),
+            population=1,
+            core_position=Coordinate(0, 0),
+        ),
+        obstacle_cells=frozenset({"0,2"}),
+    )
+    plan = decider.decide_snapshot(snapshot)
+    assert _action(plan, "r1") is UnitActionType.MOVE
+    direction = _direction(plan, "r1")
+    assert direction is not None
+    # Slides around the wall instead of hammering it (side 0 turns east).
+    assert direction is Direction.EAST
+    assert Coordinate(1, 3).cell_key not in snapshot.obstacle_cells
+
+
+def test_military_blocked_move_is_learned_and_not_repeated() -> None:
+    """A rejected military step must feed the terrain map like a worker's does.
+
+    ``_infer_blocked_cells`` used to skip every non-worker, so the ranger's
+    blocked cell was never learned and the same rejected direction was planned
+    again on the next tick.
+    """
+    config = replace(_all_off(), movement_guard_enabled=True)
+    decider = ComposedDecider(config)
+    first = decider.decide_snapshot(
+        _snapshot(
+            tick=1,
+            units=(_ranger("r1", 0, 3),),
+            population=1,
+            core_position=Coordinate(0, 0),
+        )
+    )
+    assert _direction(first, "r1") is Direction.NORTH
+    second = decider.decide_snapshot(
+        _snapshot(
+            tick=2,
+            units=(_ranger("r1", 0, 3),),
+            population=1,
+            core_position=Coordinate(0, 0),
+            move_failures=(MoveFailureEvent(unit_id="r1", reason="MOVE_BLOCKED_TERRAIN"),),
+        )
+    )
+    assert _direction(second, "r1") is not Direction.NORTH
+
+
+def test_starvation_respawn_fires_with_empty_stock() -> None:
+    """A stock-less colony must still arm the starvation escape.
+
+    Production t2 sat at resources 0 for days: the stuck-resources latch
+    cleared itself whenever the stock was empty, so neither the trapped-worker
+    sacrifice nor the Core-level escape could ever fire.
+    """
+    config = replace(_all_off(), stuck_resources_enabled=True)
+    decider = ComposedDecider(config)
+    core_actions: list[CoreActionType | None] = []
+    for tick in range(1, STARVATION_RESPAWN_TICKS + 40):
+        plan = decider.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=(_worker("w1", 3, 0),),
+                resources=0,
+                population=1,
+                core_position=Coordinate(0, 0),
+            )
+        )
+        core_actions.append(None if plan.core_action is None else plan.core_action.type)
+    assert CoreActionType.SELF_DESTRUCT in core_actions
+    assert core_actions[0] is not CoreActionType.SELF_DESTRUCT
+
+
+def test_starvation_respawn_waits_for_an_active_migration() -> None:
+    """A migrating Core is already executing a recovery lever: do not destroy it.
+
+    Migration walks the Core toward the higher-density origin, so the escape
+    window stays suspended until the Core is stationary again.
+    """
+    config = replace(_all_off(), stuck_resources_enabled=True)
+    decider = ComposedDecider(config)
+    core_actions: list[CoreActionType | None] = []
+    for tick in range(1, STARVATION_RESPAWN_TICKS + 40):
+        plan = decider.decide_snapshot(
+            _snapshot(
+                tick=tick,
+                units=(_worker("w1", 3, 0),),
+                resources=0,
+                population=1,
+                core_position=Coordinate(0, 0),
+                core_state="migrating",
+            )
+        )
+        core_actions.append(None if plan.core_action is None else plan.core_action.type)
+    assert CoreActionType.SELF_DESTRUCT not in core_actions
+
+
+def test_decider_prunes_state_of_gone_units() -> None:
+    """Per-unit state must not accumulate for units that no longer exist.
+
+    Production showed 74/166/49/180 trail entries against 12/6/9/10 living
+    workers after 35 days without a restart.
+    """
+    decider = ComposedDecider(replace(_all_off(), movement_guard_enabled=True))
+    decider.decide_snapshot(
+        _snapshot(
+            tick=1,
+            units=(_worker("w1", 0, 0), _worker("w2", 3, 0)),
+            resources=10,
+            population=2,
+            core_position=Coordinate(0, 0),
+        )
+    )
+    assert decider.state_summary()["loopTrails"] == 2
+    decider.decide_snapshot(
+        _snapshot(
+            tick=2,
+            units=(_worker("w1", 0, 0),),
+            resources=10,
+            population=1,
+            core_position=Coordinate(0, 0),
+        )
+    )
+    summary = decider.state_summary()
+    assert summary["loopTrails"] == 1
+    assert summary["moveBackoff"] == 1
+
+
 def test_terrain_trap_hook_spares_cargo_carrying_worker() -> None:
     """FFA regression: a cargo-carrying worker standing on the Core is
     mid-deposit, not trapped.  Killing it dropped the cargo and delayed the

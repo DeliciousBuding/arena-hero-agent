@@ -14,6 +14,11 @@
 
 - 研究层默认开启：economy budget/expansion、raid quota、exploration v2、respawn
   recovery、movement guard、stuck guard、survey burst。
+- 移动健壮性：已知障碍回避（任何角色的 MOVE 都不会踩进已记录的地形障碍；
+  军事单位同样学习 `MOVE_BLOCKED_TERRAIN` 目标格，沿墙滑行而非反复撞墙）；
+  零存量殖民地同样计入饥饿重生窗口。
+- 状态回收：按单位 id 的决策器状态（trail/backoff/escape/deposit/trap）在单位
+  消失后即时剪除，长期运行不再累积死单位条目。
 - 性能：exploration 与 worker 路由的 BFS flood 均为整数坐标元组实现（障碍 key
   只解码一次），无每邻居 `Coordinate`+string 分配。
 - 防御/经济韧性（后续波次）：工人威胁规避、低产迁移触发、逼近储备等，详见
